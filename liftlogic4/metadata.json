@@ -1,0 +1,5 @@
+{
+  "name": "LiftLogic",
+  "description": "A smart, minimalist workout tracker that calculates your progressive overload. Tracks specific exercises for Biceps, Chest, Shoulders, Back, and Triceps with edit/delete capabilities.",
+  "requestFramePermissions": []
+}
