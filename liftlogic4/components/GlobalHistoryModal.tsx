@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { WorkoutLog, DayType } from '../types';
+import { WorkoutLog, DayType, ExerciseDef } from '../types';
 import { EXERCISES } from '../constants';
 import { X, Dumbbell, Calendar, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
 
@@ -8,13 +8,29 @@ interface GlobalHistoryModalProps {
   currentDayType?: DayType | null;
   onClose: () => void;
   onImport: (logs: WorkoutLog[]) => void;
+  customExercises?: ExerciseDef[];
 }
 
-export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ logs, currentDayType, onClose, onImport }) => {
+export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ 
+  logs, 
+  currentDayType, 
+  onClose, 
+  onImport,
+  customExercises = []
+}) => {
   const [copied, setCopied] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importText, setImportText] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Combine definitions to lookup names
+  const allExercisesMap = useMemo(() => {
+    const map = { ...EXERCISES };
+    customExercises.forEach(ex => {
+      map[ex.id as any] = ex;
+    });
+    return map;
+  }, [customExercises]);
 
   const stats = useMemo(() => {
     const totalWorkouts = logs.length;
@@ -37,7 +53,9 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ logs, cu
     // Filter logs for today AND matching the current day type (Push/Pull)
     const todaysRelevantLogs = logs.filter(l => {
         const isToday = new Date(l.timestamp).toDateString() === todayStr;
-        const isCorrectType = EXERCISES[l.exerciseId]?.dayType === currentDayType;
+        // Use map to check dayType safely
+        const exercise = allExercisesMap[l.exerciseId as any];
+        const isCorrectType = exercise?.dayType === currentDayType;
         return isToday && isCorrectType;
     });
 
@@ -45,7 +63,7 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ logs, cu
     const exercisesCount = new Set(todaysRelevantLogs.map(l => l.exerciseId)).size;
 
     return { volume, exercisesCount };
-  }, [logs, currentDayType]);
+  }, [logs, currentDayType, allExercisesMap]);
 
   const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
 
@@ -219,11 +237,13 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ logs, cu
                     </h3>
                     <div className="space-y-2">
                       {(dayLogs as WorkoutLog[]).map(log => {
-                        const exercise = EXERCISES[log.exerciseId];
+                        const exercise = allExercisesMap[log.exerciseId as any];
                         return (
                           <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
                             <div>
-                              <div className="font-bold text-slate-200">{exercise?.name || 'Unknown Exercise'}</div>
+                              <div className={`font-bold ${exercise ? 'text-slate-200' : 'text-slate-500 italic'}`}>
+                                {exercise ? exercise.name : 'Unknown Exercise (Deleted)'}
+                              </div>
                               <div className="text-xs text-slate-400 flex items-center gap-1">
                                 {exercise?.muscleGroup}
                               </div>
@@ -249,4 +269,4 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ logs, cu
       </div>
     </div>
   );
-};
+}

@@ -1,121 +1,250 @@
 import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
-import {  ChevronRight, TrendingUp, History, Layers } from 'lucide-react';
+import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Trash2, Layers } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
-  lastLog?: WorkoutLog;
+  exerciseLogs: WorkoutLog[]; // All logs for this exercise
   onLogClick: () => void;
   onHistoryClick: () => void;
+  onDelete?: () => void;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
   exercise, 
-  lastLog, 
+  exerciseLogs, 
   onLogClick, 
-  onHistoryClick 
+  onHistoryClick,
+  onDelete
 }) => {
   
+  // 1. Organize logs into sessions (grouped by date)
+  const sessions = useMemo(() => {
+    const grouped: Record<string, WorkoutLog[]> = {};
+    exerciseLogs.forEach(log => {
+      const dateKey = new Date(log.timestamp).toDateString();
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(log);
+    });
+    
+    // Sort keys descending (newest first)
+    const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    
+    return sortedKeys.map(key => ({
+      date: key,
+      logs: grouped[key]
+    }));
+  }, [exerciseLogs]);
+
+  // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
+  const todayDateStr = new Date().toDateString();
+  const todaySession = sessions.find(s => s.date === todayDateStr);
+  
+  // The session we use to calculate the goal is the *last completed session* before today
+  // If we haven't done anything today, it's just the first session in the list.
+  // If we HAVE done something today, it's the second session in the list.
+  const referenceSession = todaySession 
+    ? sessions.find(s => s.date !== todayDateStr) 
+    : sessions[0];
+
+  const isCompletedToday = useMemo(() => {
+    if (!todaySession) return false;
+    const targetSets = exercise.dayType === 'PULL' ? 4 : 3;
+    // Count total sets (logs with sets=1 count as 1, legacy logs with sets=3 count as 3)
+    const totalSets = todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    return totalSets >= targetSets;
+  }, [todaySession, exercise]);
+
+  // 3. Calculate Recommendation based on Reference Session
   const recommendation: ProgressionRecommendation = useMemo(() => {
-    if (!lastLog) {
+    if (!referenceSession) {
       return {
         weight: exercise.defaultWeight,
-        reps: 8,
+        reps: exercise.targetReps,
         reason: "Start light to build form."
       };
     }
 
-    const lastSets = lastLog.sets || 1;
-    const lastReps = lastLog.reps;
-    const lastWeight = lastLog.weight;
-
-    // RULE 1: Volume First.
-    // PUSH days target 3 sets. PULL days target 4 sets.
+    const logs = referenceSession.logs;
+    const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    
+    // Find the weight used (assuming mostly constant weight for now, or take the max)
+    const usedWeight = Math.max(...logs.map(l => l.weight));
+    
+    // Check reps across all sets
+    // If ANY set fell significantly below target, we hold.
+    // Standard Double Progression: If you hit target reps on ALL sets, move up.
+    // Smart Logic: If average reps >= target OR min reps is very close to target (within 1-2 reps on last set)
+    
+    // Simplify: Check if minimum reps across sets >= Target Reps
+    const minReps = Math.min(...logs.map(l => l.reps));
+    
+    // Rule 1: Volume
     const targetSets = exercise.dayType === 'PULL' ? 4 : 3;
-
-    if (lastSets < targetSets) {
-      return {
-        weight: lastWeight,
-        reps: Math.max(lastReps, exercise.targetReps),
-        reason: `Focus on completing ${targetSets} full sets at this weight.`
-      };
+    if (totalSets < targetSets) {
+       return {
+         weight: usedWeight,
+         reps: exercise.targetReps,
+         reason: `Build Volume: Complete ${targetSets} sets.`
+       };
     }
 
-    // RULE 2: Progressive Overload.
-    // If they did the target sets (or more), check if they hit the Rep Target.
-    if (lastReps >= exercise.targetReps) {
-      // User hit the target reps for target sets -> Increase Weight
+    // Rule 2: Overload
+    if (minReps >= exercise.targetReps) {
       return {
-        weight: lastWeight + exercise.increment,
-        reps: Math.max(6, exercise.targetReps - 4), // Drop reps slightly when weight goes up
-        reason: `You hit ${lastReps} reps for ${lastSets} sets! Increase weight.`
+        weight: usedWeight + exercise.increment,
+        reps: Math.max(6, exercise.targetReps - 4),
+        reason: `Overload: All sets hit ${exercise.targetReps}+ reps!`
       };
     } else {
-      // User did target sets, but hasn't hit the Rep Target yet -> Keep Weight
       return {
-        weight: lastWeight,
-        reps: Math.min(lastReps + 1, exercise.targetReps),
-        reason: `Good volume (${lastSets} sets). Now aim for ${exercise.targetReps} reps.`
+        weight: usedWeight,
+        reps: exercise.targetReps,
+        reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
       };
     }
-  }, [lastLog, exercise]);
+  }, [referenceSession, exercise]);
+
+  const isWeightIncrease = referenceSession ? recommendation.weight > Math.max(...referenceSession.logs.map(l => l.weight)) : false;
+
+  // Formatter for previous sets text
+  const previousText = useMemo(() => {
+    const session = todaySession || referenceSession;
+    if (!session) return "No logs yet";
+
+    // Group reps by weight? Or just list them? 
+    // Simple format: "60lbs • 10, 11, 7"
+    const weights = Array.from(new Set(session.logs.map(l => l.weight)));
+    if (weights.length === 1) {
+      const w = weights[0];
+      const repList = session.logs.map(l => l.reps).join(', ');
+      return (
+        <span>
+          <span className="font-bold text-lg">{w}</span>
+          <span className="text-xs text-slate-500 ml-0.5">lbs</span>
+          <span className="mx-2 text-slate-600">•</span>
+          <span className="text-slate-300">{repList}</span>
+        </span>
+      );
+    } else {
+      // Mixed weights, just show "Mixed" or first one
+      return <span className="text-slate-400 italic">Mixed Weights</span>;
+    }
+  }, [todaySession, referenceSession]);
 
   return (
-    <div className="bg-slate-800 rounded-xl p-5 mb-4 shadow-lg border border-slate-700">
-      <div className="flex justify-between items-start mb-2">
+    <div 
+      className={`relative rounded-xl p-5 mb-4 shadow-lg border transition-all duration-300 ${
+        isCompletedToday
+          ? "bg-slate-900/40 border-green-500/50" 
+          : "bg-slate-800 border-slate-700"
+      }`}
+    >
+      {/* Completed Overlay Badge */}
+      {isCompletedToday && (
+        <div className="absolute top-4 right-4 flex items-center gap-2 text-green-400 font-bold bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20 shadow-sm animate-in fade-in zoom-in">
+          <CheckCircle2 size={16} />
+          <span className="text-xs uppercase tracking-wider">Done</span>
+        </div>
+      )}
+
+      <div className="flex justify-between items-start mb-2 pr-20"> 
         <div>
-          <h3 className="text-xl font-bold text-white">{exercise.name}</h3>
+          <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
+            {exercise.name}
+          </h3>
           <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
             {exercise.muscleGroup}
           </span>
         </div>
+      </div>
+
+      <div className={`grid grid-cols-2 gap-4 mt-4 transition-opacity ${isCompletedToday ? 'opacity-50 grayscale-[0.5]' : 'opacity-100'}`}>
+        {/* Last Workout Box */}
+        <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 flex flex-col justify-between">
+          <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
+            {todaySession ? "Today's Lift" : "Previous"}
+          </p>
+          <div className="text-white font-mono leading-tight">
+            {previousText}
+          </div>
+          {/* Show set count if applicable */}
+          {(todaySession || referenceSession) && (
+             <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+               <Layers size={10} /> {(todaySession || referenceSession)?.logs.length} Sets
+             </div>
+          )}
+        </div>
+
+        {/* Goal Box */}
+        <div className={`p-3 rounded-lg relative overflow-hidden border ${
+          isWeightIncrease 
+            ? "bg-emerald-500/10 border-emerald-500/30" 
+            : "bg-blue-600/20 border-blue-500/30"
+        }`}>
+          <div className="absolute top-0 right-0 p-1 opacity-20">
+            {isWeightIncrease ? (
+              <ArrowUpCircle size={40} className="text-emerald-500" />
+            ) : (
+              <TrendingUp size={40} className="text-blue-500" />
+            )}
+          </div>
+          <p className={`text-[10px] font-bold uppercase mb-1 ${isWeightIncrease ? 'text-emerald-400' : 'text-blue-300'}`}>
+            {isWeightIncrease ? 'Increase Weight' : 'Target Goal'}
+          </p>
+          <div className="text-white font-mono z-10 relative">
+            <span className={`text-xl font-bold ${isWeightIncrease ? 'text-emerald-100' : 'text-blue-100'}`}>
+              {recommendation.weight}
+            </span> <span className="text-xs">lbs</span>
+            <div className="text-xs flex items-center gap-1">
+              {recommendation.reps} reps
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={`flex items-start gap-2 mt-3 p-2 rounded bg-slate-900/30 ${isCompletedToday ? 'hidden' : 'block'}`}>
+        <Repeat size={14} className="text-slate-500 mt-0.5 min-w-[14px]" />
+        <p className="text-xs text-slate-400 italic leading-tight">
+          {recommendation.reason}
+        </p>
+      </div>
+
+      <div className="flex gap-2 mt-4">
+        {exercise.isCustom && onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-3 bg-slate-800 hover:bg-red-900/20 text-slate-500 hover:text-red-400 rounded-lg border border-slate-700 transition-colors"
+            title="Delete Exercise"
+            aria-label="Delete Exercise"
+          >
+            <Trash2 size={20} />
+          </button>
+        )}
+
         <button 
           onClick={onHistoryClick}
-          className="p-2 text-slate-400 hover:text-white transition-colors"
+          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
           aria-label="View History"
         >
           <History size={20} />
         </button>
+
+        <button
+          onClick={onLogClick}
+          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
+            isCompletedToday
+              ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
+              : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20"
+          }`}
+        >
+          {isCompletedToday ? "View Today's Log" : (todaySession ? "Add Another Set" : "Start Workout")} 
+          {!isCompletedToday && <ChevronRight size={18} />}
+        </button>
       </div>
-
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        <div className="bg-slate-900/50 p-3 rounded-lg">
-          <p className="text-xs text-slate-400 mb-1">Last Workout</p>
-          {lastLog ? (
-            <div className="text-slate-200 font-mono">
-              <span className="text-lg font-bold">{lastLog.weight}</span> lbs
-              <div className="text-sm flex items-center gap-1">
-                {(lastLog.sets || 1) > 1 && <span className="text-slate-400">{lastLog.sets} x</span>}
-                {lastLog.reps} reps
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500 italic">No logs yet</p>
-          )}
-        </div>
-
-        <div className="bg-blue-600/20 border border-blue-500/30 p-3 rounded-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-1 opacity-20">
-            <TrendingUp size={40} className="text-blue-500" />
-          </div>
-          <p className="text-xs text-blue-300 mb-1 font-semibold">Goal for Today</p>
-          <div className="text-white font-mono z-10 relative">
-            <span className="text-xl font-bold text-blue-100">{recommendation.weight}</span> lbs
-            <div className="text-sm">x {recommendation.reps} reps</div>
-          </div>
-        </div>
-      </div>
-
-      <p className="text-xs text-slate-400 mt-3 italic">
-        "{recommendation.reason}"
-      </p>
-
-      <button
-        onClick={onLogClick}
-        className="mt-4 w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all"
-      >
-        Log Result <ChevronRight size={18} />
-      </button>
     </div>
   );
 };

@@ -5,7 +5,8 @@ import { ExerciseCard } from './components/ExerciseCard';
 import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut } from 'lucide-react';
+import { AddExerciseModal } from './components/AddExerciseModal';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus } from 'lucide-react';
 
 const API_URL = '/.netlify/functions/gym-api';
 
@@ -24,18 +25,30 @@ const App: React.FC = () => {
 
   // App State
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
-  const [editingLog, setEditingLog] = useState<WorkoutLog | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false); // Changed default to false, set true during fetch
+  const [isLoading, setIsLoading] = useState(false);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Check Auth on Mount
+  // Custom Exercises State
+  const [customExercises, setCustomExercises] = useState<ExerciseDef[]>([]);
+
+  // Check Auth on Mount & Load Custom Exercises
   useEffect(() => {
     const storedAuth = localStorage.getItem('liftlogic_auth');
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
+    }
+    
+    // Load custom exercises
+    const storedCustom = localStorage.getItem('liftlogic_custom_exercises');
+    if (storedCustom) {
+      try {
+        setCustomExercises(JSON.parse(storedCustom));
+      } catch (e) {
+        console.error("Failed to parse custom exercises", e);
+      }
     }
   }, []);
 
@@ -94,24 +107,45 @@ const App: React.FC = () => {
   };
 
   // Helpers
-  const getLogsForExercise = (id: ExerciseId) => {
+  const getLogsForExercise = (id: string) => {
     return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
   };
 
-  const getLastLog = (id: ExerciseId) => {
-    const exerciseLogs = getLogsForExercise(id);
-    return exerciseLogs.length > 0 ? exerciseLogs[0] : undefined;
+  // Get today's logs for a specific exercise
+  const getTodaysLogs = (id: string) => {
+    const today = new Date().toDateString();
+    // Default sort is Descending (Newest first). 
+    // We want Ascending (Oldest first) for the input modal so they appear in order of entry (Set 1, Set 2...).
+    return getLogsForExercise(id)
+      .filter(l => new Date(l.timestamp).toDateString() === today)
+      .reverse();
   };
 
+  // Get logs from the LAST session that isn't today
+  const getLastSessionLogs = (id: string) => {
+    const all = getLogsForExercise(id);
+    const today = new Date().toDateString();
+    
+    // Find the first log that isn't from today
+    const lastLogNotToday = all.find(l => new Date(l.timestamp).toDateString() !== today);
+    
+    if (!lastLogNotToday) return [];
+
+    const lastDate = new Date(lastLogNotToday.timestamp).toDateString();
+    return all.filter(l => new Date(l.timestamp).toDateString() === lastDate);
+  };
+
+  // Combine Default and Custom Exercises
+  const allExercises = [...Object.values(EXERCISES), ...customExercises];
+
   // Filter exercises based on selected day
-  const displayedExercises = Object.values(EXERCISES).filter(
+  const displayedExercises = allExercises.filter(
     ex => workoutDay ? ex.dayType === workoutDay : true
   );
 
   // Handlers
   const openLogModal = (exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
-    setEditingLog(undefined);
     setActiveModal('log');
   };
 
@@ -120,36 +154,21 @@ const App: React.FC = () => {
     setActiveModal('history');
   };
 
-  const handleSaveLog = async (data: { weight: number; reps: number; sets: number }) => {
+  const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
     if (!selectedExercise) return;
 
-    let logToSave: WorkoutLog;
-
-    if (editingLog) {
-      logToSave = { ...editingLog, ...data };
-    } else {
-      logToSave = {
-        id: generateId(),
-        exerciseId: selectedExercise.id,
-        timestamp: Date.now(),
-        weight: data.weight,
-        reps: data.reps,
-        sets: data.sets
-      };
-    }
+    // Create a NEW log entry for this specific set
+    const logToSave: WorkoutLog = {
+      id: generateId(),
+      exerciseId: selectedExercise.id,
+      timestamp: Date.now(),
+      weight: data.weight,
+      reps: data.reps,
+      sets: 1 // Explicitly 1 set per entry now
+    };
 
     // Optimistic Update
-    setLogs(prev => {
-      const exists = prev.find(l => l.id === logToSave.id);
-      if (exists) {
-        return prev.map(l => l.id === logToSave.id ? logToSave : l);
-      }
-      return [...prev, logToSave];
-    });
-
-    setActiveModal(null);
-    setEditingLog(undefined);
-    setSelectedExercise(null);
+    setLogs(prev => [...prev, logToSave]);
 
     try {
       await fetch(API_URL, {
@@ -177,10 +196,36 @@ const App: React.FC = () => {
       fetchLogs();
     }
   };
+  
+  // Used only for history modal editing (not the main flow anymore)
+  const handleEditLog = async (log: WorkoutLog) => {
+      // Optimistic update
+      setLogs(prev => prev.map(l => l.id === log.id ? log : l));
+      setActiveModal(null);
+      
+      try {
+        await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(log)
+        });
+      } catch (err) {
+          fetchLogs();
+      }
+  };
 
   const handleEditInit = (log: WorkoutLog) => {
-    setEditingLog(log);
-    setActiveModal('log');
+    // For now, redirect to history modal edit or unimplemented
+    // Simpler: Just allow delete and re-add in the new flow
+    // Or if invoked from HistoryModal, we can show a simple edit prompt
+    const newWeight = prompt("Enter new weight:", log.weight.toString());
+    const newReps = prompt("Enter new reps:", log.reps.toString());
+    if (newWeight && newReps) {
+        handleEditLog({
+            ...log,
+            weight: Number(newWeight),
+            reps: Number(newReps)
+        });
+    }
   };
 
   const handleImportLogs = async (importedLogs: WorkoutLog[]) => {
@@ -206,6 +251,38 @@ const App: React.FC = () => {
       alert(`Import finished with ${errorCount} errors.`);
     } else {
       alert("Import successful!");
+    }
+  };
+
+  const handleSaveNewExercise = (newExercise: ExerciseDef) => {
+    const updatedCustom = [...customExercises, newExercise];
+    setCustomExercises(updatedCustom);
+    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
+    setActiveModal(null);
+  };
+
+  const handleDeleteExercise = async (exerciseId: string) => {
+    if (window.confirm("Are you sure you want to delete this exercise?")) {
+      if (window.confirm("This action cannot be undone and will delete ALL HISTORY for this exercise. Are you REALLY sure?")) {
+         
+         // 1. Update Custom Exercises List
+         const updatedCustom = customExercises.filter(e => e.id !== exerciseId);
+         setCustomExercises(updatedCustom);
+         localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
+
+         // 2. Remove relevant logs from local state immediately to prevent "Unknown Exercise" ghosts
+         setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
+
+         // 3. Call API to delete logs from DB
+         try {
+             await fetch(API_URL, {
+                 method: 'DELETE',
+                 body: JSON.stringify({ exerciseId })
+             });
+         } catch (err) {
+             console.error("Failed to delete exercise logs from cloud", err);
+         }
+      }
     }
   };
 
@@ -324,6 +401,7 @@ const App: React.FC = () => {
             currentDayType={workoutDay}
             onClose={() => setActiveModal(null)}
             onImport={handleImportLogs}
+            customExercises={customExercises}
           />
         )}
       </div>
@@ -372,15 +450,27 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-md mx-auto p-4 animate-in slide-in-from-right-4 fade-in duration-300">
         <div className="space-y-6">
-          {displayedExercises.map((exercise) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              lastLog={getLastLog(exercise.id)}
-              onLogClick={() => openLogModal(exercise)}
-              onHistoryClick={() => openHistoryModal(exercise)}
-            />
-          ))}
+          {displayedExercises.map((exercise) => {
+            return (
+              <ExerciseCard
+                key={exercise.id}
+                exercise={exercise}
+                exerciseLogs={getLogsForExercise(exercise.id)}
+                onLogClick={() => openLogModal(exercise)}
+                onHistoryClick={() => openHistoryModal(exercise)}
+                onDelete={exercise.isCustom ? () => handleDeleteExercise(exercise.id) : undefined}
+              />
+            );
+          })}
+
+          {/* Add Exercise Button */}
+          <button
+            onClick={() => setActiveModal('addExercise')}
+            className="w-full border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-xl p-4 flex items-center justify-center gap-2 text-slate-500 hover:text-white hover:bg-slate-800/50 transition-all group"
+          >
+            <Plus size={20} className="group-hover:text-blue-500 transition-colors" />
+            <span className="font-medium">Add New Exercise</span>
+          </button>
         </div>
       </main>
 
@@ -388,10 +478,11 @@ const App: React.FC = () => {
       {activeModal === 'log' && selectedExercise && (
         <LogModal
           exercise={selectedExercise}
-          existingLog={editingLog}
-          lastLog={getLastLog(selectedExercise.id)}
+          todaysLogs={getTodaysLogs(selectedExercise.id)}
+          lastSessionLogs={getLastSessionLogs(selectedExercise.id)}
           onClose={() => setActiveModal(null)}
-          onSave={handleSaveLog}
+          onSave={handleAddSet}
+          onDelete={handleDeleteLog}
         />
       )}
 
@@ -411,6 +502,15 @@ const App: React.FC = () => {
           currentDayType={workoutDay}
           onClose={() => setActiveModal(null)}
           onImport={handleImportLogs}
+          customExercises={customExercises}
+        />
+      )}
+
+      {activeModal === 'addExercise' && workoutDay && (
+        <AddExerciseModal 
+          dayType={workoutDay}
+          onClose={() => setActiveModal(null)}
+          onSave={handleSaveNewExercise}
         />
       )}
     </div>

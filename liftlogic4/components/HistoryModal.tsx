@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { X, Trash2, Edit2, BrainCircuit, Layers } from 'lucide-react';
 import { getWorkoutInsight } from '../services/geminiService';
@@ -21,9 +21,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   const [insight, setInsight] = useState<string | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
 
-  const filteredLogs = logs
+  const filteredLogs = useMemo(() => logs
     .filter(log => log.exerciseId === exercise.id)
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort((a, b) => b.timestamp - a.timestamp), [logs, exercise.id]);
 
   const handleGetInsight = async () => {
     setLoadingInsight(true);
@@ -44,67 +44,70 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           </button>
         </div>
 
-        {/* AI Insight Section */}
-        <div className="p-4 bg-indigo-900/20 border-b border-indigo-900/50">
-          {!insight ? (
-            <button 
-              onClick={handleGetInsight}
-              disabled={loadingInsight}
-              className="flex items-center gap-2 text-indigo-400 text-sm font-medium hover:text-indigo-300 transition-colors w-full justify-center py-2 border border-dashed border-indigo-700/50 rounded-lg hover:bg-indigo-900/30"
-            >
-              <BrainCircuit size={16} />
-              {loadingInsight ? "Analyzing..." : "Analyze Progress with AI"}
-            </button>
-          ) : (
-            <div className="text-sm text-indigo-200 bg-indigo-950/50 p-3 rounded-lg border border-indigo-500/30">
-              <div className="flex gap-2 items-center mb-1 text-indigo-400 font-bold uppercase text-xs">
-                <BrainCircuit size={12} /> Coach Insight
+        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+          
+          {/* AI Insight Section */}
+          <div className="bg-indigo-900/10 border border-indigo-900/30 rounded-xl p-4">
+            {!insight ? (
+              <button 
+                onClick={handleGetInsight}
+                disabled={loadingInsight}
+                className="flex items-center gap-2 text-indigo-400 text-sm font-medium hover:text-indigo-300 transition-colors w-full justify-center py-2 border border-dashed border-indigo-700/50 rounded-lg hover:bg-indigo-900/30"
+              >
+                <BrainCircuit size={16} />
+                {loadingInsight ? "Analyzing..." : "Analyze Progress with AI"}
+              </button>
+            ) : (
+              <div className="text-sm text-indigo-200">
+                <div className="flex gap-2 items-center mb-2 text-indigo-400 font-bold uppercase text-xs">
+                  <BrainCircuit size={12} /> Coach Insight
+                </div>
+                {insight}
               </div>
-              {insight}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Scrollable List */}
-        <div className="overflow-y-auto flex-1 p-4 space-y-3">
-          {filteredLogs.length === 0 ? (
-            <div className="text-center text-slate-500 py-10">No history available yet.</div>
-          ) : (
-            filteredLogs.map((log) => (
-              <div key={log.id} className="bg-slate-800 p-3 rounded-lg flex justify-between items-center border border-slate-700">
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">
-                    {new Date(log.timestamp).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </div>
-                  <div className="text-white font-mono font-medium">
-                    <span className="text-lg">{log.weight}</span> lbs
-                    <div className="text-sm text-slate-400 flex items-center gap-1">
-                       <Layers size={12} /> {log.sets || 1} x {log.reps}
+          {/* Logs List */}
+          <div className="space-y-3">
+            {filteredLogs.length === 0 ? (
+              <div className="text-center text-slate-500 py-10">No history available yet.</div>
+            ) : (
+              filteredLogs.map((log) => (
+                <div key={log.id} className="bg-slate-800 p-3 rounded-lg flex justify-between items-center border border-slate-700">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">
+                      {new Date(log.timestamp).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="text-white font-mono font-medium">
+                      <span className="text-lg">{log.weight}</span> lbs
+                      <div className="text-sm text-slate-400 flex items-center gap-1">
+                         <Layers size={12} /> {log.sets || 1} x {log.reps}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                     <button 
+                      type="button"
+                      onClick={() => onEdit(log)}
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if(window.confirm('Delete this log?')) onDelete(log.id);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                   <button 
-                    type="button"
-                    onClick={() => onEdit(log)}
-                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if(window.confirm('Delete this log?')) onDelete(log.id);
-                    }}
-                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

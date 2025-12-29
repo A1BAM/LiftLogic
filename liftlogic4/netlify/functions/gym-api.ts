@@ -67,16 +67,23 @@ export const handler = async (event: any) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
-    // DELETE: Remove a log
+    // DELETE: Remove a log OR all logs for an exercise
     if (event.httpMethod === 'DELETE') {
-      const { id } = JSON.parse(event.body || '{}');
+      const { id, exerciseId } = JSON.parse(event.body || '{}');
       
-      if (!id) {
-        return { statusCode: 400, headers, body: "Missing ID" };
+      if (exerciseId) {
+        // Delete all logs for this exercise
+        await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
       }
 
-      await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+      if (id) {
+        // Delete specific log
+        await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+      }
+
+      return { statusCode: 400, headers, body: "Missing ID or Exercise ID" };
     }
 
     return { statusCode: 405, headers, body: "Method Not Allowed" };
