@@ -9,6 +9,7 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus } from 'lucide-react';
 
 const API_URL = '/.netlify/functions/gym-api';
+const DEFINITION_ID = '__DEFINITION__'; // Special ID to store exercise definitions in the DB
 
 // Robust ID generator fallback
 const generateId = () => {
@@ -34,28 +35,18 @@ const App: React.FC = () => {
   // Custom Exercises State
   const [customExercises, setCustomExercises] = useState<ExerciseDef[]>([]);
 
-  // Check Auth on Mount & Load Custom Exercises
+  // Check Auth on Mount
   useEffect(() => {
     const storedAuth = localStorage.getItem('liftlogic_auth');
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
     }
-    
-    // Load custom exercises
-    const storedCustom = localStorage.getItem('liftlogic_custom_exercises');
-    if (storedCustom) {
-      try {
-        setCustomExercises(JSON.parse(storedCustom));
-      } catch (e) {
-        console.error("Failed to parse custom exercises", e);
-      }
-    }
   }, []);
 
-  // Fetch Logs when Authenticated
+  // Fetch Logs & Definitions when Authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      fetchLogs();
+      fetchDataAndSync();
     }
   }, [isAuthenticated]);
 
@@ -90,13 +81,73 @@ const App: React.FC = () => {
     setWorkoutDay(null);
   };
 
-  const fetchLogs = async () => {
+  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
+    const payload = {
+      id: `def_${exercise.id}`,
+      exerciseId: DEFINITION_ID, // Use special ID to distinguish from logs
+      timestamp: Date.now(),
+      weight: 0, 
+      reps: 0, 
+      sets: 0,
+      notes: JSON.stringify(exercise)
+    };
+    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  };
+
+  const fetchDataAndSync = async () => {
     try {
       setIsLoading(true);
       const res = await fetch(API_URL);
       if (!res.ok) throw new Error('Failed to fetch data');
-      const data = await res.json();
-      setLogs(data);
+      const allData = await res.json();
+      
+      // Separate actual workout logs from exercise definitions
+      const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
+      const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
+
+      // Parse Cloud Definitions
+      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: any) => {
+        try {
+          return JSON.parse(def.notes);
+        } catch (e) { return null; }
+      }).filter(Boolean);
+
+      // Load Local Storage Definitions (The "Source of Truth" for the phone currently)
+      let localExercises: ExerciseDef[] = [];
+      const storedCustom = localStorage.getItem('liftlogic_custom_exercises');
+      if (storedCustom) {
+        try {
+          localExercises = JSON.parse(storedCustom);
+        } catch (e) { console.error(e); }
+      }
+
+      // SYNC LOGIC:
+      // 1. If Local has it, but Cloud doesn't -> Upload to Cloud (Sync Up)
+      // 2. If Cloud has it, but Local doesn't -> Update Local (Sync Down)
+      
+      const cloudIds = new Set(cloudExercises.map(e => e.id));
+      const localIds = new Set(localExercises.map(e => e.id));
+
+      const missingFromCloud = localExercises.filter(e => !cloudIds.has(e.id));
+      
+      // Upload missing exercises to cloud
+      if (missingFromCloud.length > 0) {
+        console.log("Syncing up exercises to cloud:", missingFromCloud.length);
+        for (const exercise of missingFromCloud) {
+          await saveDefinitionToCloud(exercise);
+        }
+      }
+
+      // Merge lists (Cloud is now authoritative + what we just uploaded)
+      const mergedExercises = [...cloudExercises, ...missingFromCloud];
+
+      // Update State
+      setCustomExercises(mergedExercises);
+      setLogs(fetchedLogs);
+      
+      // Update LocalStorage to match Cloud (Sync Down)
+      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(mergedExercises));
+
       setError(null);
     } catch (err: any) {
       console.error(err);
@@ -114,8 +165,7 @@ const App: React.FC = () => {
   // Get today's logs for a specific exercise
   const getTodaysLogs = (id: string) => {
     const today = new Date().toDateString();
-    // Default sort is Descending (Newest first). 
-    // We want Ascending (Oldest first) for the input modal so they appear in order of entry (Set 1, Set 2...).
+    // Ascending (Oldest first) for the input modal
     return getLogsForExercise(id)
       .filter(l => new Date(l.timestamp).toDateString() === today)
       .reverse();
@@ -178,7 +228,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to save log", err);
       alert("Failed to save to cloud.");
-      fetchLogs();
+      fetchDataAndSync();
     }
   };
 
@@ -193,11 +243,10 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to delete log", err);
       alert("Failed to delete from cloud.");
-      fetchLogs();
+      fetchDataAndSync();
     }
   };
   
-  // Used only for history modal editing (not the main flow anymore)
   const handleEditLog = async (log: WorkoutLog) => {
       // Optimistic update
       setLogs(prev => prev.map(l => l.id === log.id ? log : l));
@@ -209,14 +258,11 @@ const App: React.FC = () => {
             body: JSON.stringify(log)
         });
       } catch (err) {
-          fetchLogs();
+          fetchDataAndSync();
       }
   };
 
   const handleEditInit = (log: WorkoutLog) => {
-    // For now, redirect to history modal edit or unimplemented
-    // Simpler: Just allow delete and re-add in the new flow
-    // Or if invoked from HistoryModal, we can show a simple edit prompt
     const newWeight = prompt("Enter new weight:", log.weight.toString());
     const newReps = prompt("Enter new reps:", log.reps.toString());
     if (newWeight && newReps) {
@@ -254,11 +300,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveNewExercise = (newExercise: ExerciseDef) => {
+  const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
+    // 1. Update State
     const updatedCustom = [...customExercises, newExercise];
     setCustomExercises(updatedCustom);
+    
+    // 2. Update Local Storage (Immediate feedback)
     localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
     setActiveModal(null);
+
+    // 3. Save to Cloud DB
+    try {
+      await saveDefinitionToCloud(newExercise);
+    } catch (e) {
+      console.error("Failed to sync new exercise to cloud", e);
+      alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
+    }
   };
 
   const handleDeleteExercise = async (exerciseId: string) => {
@@ -270,15 +327,23 @@ const App: React.FC = () => {
          setCustomExercises(updatedCustom);
          localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
 
-         // 2. Remove relevant logs from local state immediately to prevent "Unknown Exercise" ghosts
+         // 2. Remove relevant logs from local state immediately
          setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
          // 3. Call API to delete logs from DB
          try {
+             // Delete Logs
              await fetch(API_URL, {
                  method: 'DELETE',
                  body: JSON.stringify({ exerciseId })
              });
+             
+             // Delete Definition using the special definition ID format
+             await fetch(API_URL, {
+                method: 'DELETE',
+                body: JSON.stringify({ id: `def_${exerciseId}` })
+            });
+
          } catch (err) {
              console.error("Failed to delete exercise logs from cloud", err);
          }
@@ -342,7 +407,7 @@ const App: React.FC = () => {
         <AlertCircle className="text-red-500 mb-4" size={48} />
         <p className="text-white text-xl font-bold mb-2">Connection Error</p>
         <p className="mb-6">{error}</p>
-        <button onClick={fetchLogs} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold mr-4">Retry</button>
+        <button onClick={fetchDataAndSync} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold mr-4">Retry</button>
       </div>
     );
   }
