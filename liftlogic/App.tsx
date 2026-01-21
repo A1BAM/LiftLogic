@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, ExerciseId, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -6,7 +6,8 @@ import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus } from 'lucide-react';
+import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 
 const API_URL = '/.netlify/functions/gym-api';
 const DEFINITION_ID = '__DEFINITION__'; // Special ID to store exercise definitions in the DB
@@ -26,14 +27,14 @@ const App: React.FC = () => {
 
   // App State
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Custom Exercises State
-  const [customExercises, setCustomExercises] = useState<ExerciseDef[]>([]);
+  // Synced Exercises State (Contains Custom Exercises + Overrides for Default Exercises)
+  const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
 
   // Check Auth on Mount
   useEffect(() => {
@@ -112,7 +113,7 @@ const App: React.FC = () => {
         } catch (e) { return null; }
       }).filter(Boolean);
 
-      // Load Local Storage Definitions (The "Source of Truth" for the phone currently)
+      // Load Local Storage Definitions
       let localExercises: ExerciseDef[] = [];
       const storedCustom = localStorage.getItem('liftlogic_custom_exercises');
       if (storedCustom) {
@@ -122,12 +123,7 @@ const App: React.FC = () => {
       }
 
       // SYNC LOGIC:
-      // 1. If Local has it, but Cloud doesn't -> Upload to Cloud (Sync Up)
-      // 2. If Cloud has it, but Local doesn't -> Update Local (Sync Down)
-      
       const cloudIds = new Set(cloudExercises.map(e => e.id));
-      const localIds = new Set(localExercises.map(e => e.id));
-
       const missingFromCloud = localExercises.filter(e => !cloudIds.has(e.id));
       
       // Upload missing exercises to cloud
@@ -138,15 +134,18 @@ const App: React.FC = () => {
         }
       }
 
-      // Merge lists (Cloud is now authoritative + what we just uploaded)
+      // Merge lists (Cloud is authoritative)
       const mergedExercises = [...cloudExercises, ...missingFromCloud];
+      
+      // Deduplicate by ID
+      const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       // Update State
-      setCustomExercises(mergedExercises);
+      setSyncedExercises(uniqueExercises);
       setLogs(fetchedLogs);
       
-      // Update LocalStorage to match Cloud (Sync Down)
-      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(mergedExercises));
+      // Update LocalStorage
+      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(uniqueExercises));
 
       setError(null);
     } catch (err: any) {
@@ -162,36 +161,41 @@ const App: React.FC = () => {
     return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
   };
 
-  // Get today's logs for a specific exercise
   const getTodaysLogs = (id: string) => {
     const today = new Date().toDateString();
-    // Ascending (Oldest first) for the input modal
     return getLogsForExercise(id)
       .filter(l => new Date(l.timestamp).toDateString() === today)
       .reverse();
   };
 
-  // Get logs from the LAST session that isn't today
   const getLastSessionLogs = (id: string) => {
     const all = getLogsForExercise(id);
     const today = new Date().toDateString();
-    
-    // Find the first log that isn't from today
     const lastLogNotToday = all.find(l => new Date(l.timestamp).toDateString() !== today);
-    
     if (!lastLogNotToday) return [];
-
     const lastDate = new Date(lastLogNotToday.timestamp).toDateString();
     return all.filter(l => new Date(l.timestamp).toDateString() === lastDate);
   };
 
-  // Combine Default and Custom Exercises
-  const allExercises = [...Object.values(EXERCISES), ...customExercises];
+  // Combine Default and Synced Exercises (Synced overrides Default)
+  const allExercises = useMemo(() => {
+    const combined = { ...EXERCISES }; // Start with defaults
+    syncedExercises.forEach(ex => {
+      combined[ex.id as any] = ex; // Override if exists in cloud/local
+    });
+    return Object.values(combined);
+  }, [syncedExercises]);
 
-  // Filter exercises based on selected day
+  // Filter exercises based on selected day AND archive status
   const displayedExercises = allExercises.filter(
-    ex => workoutDay ? ex.dayType === workoutDay : true
+    ex => {
+      if (ex.isArchived) return false; // Hide archived
+      if (workoutDay) return ex.dayType === workoutDay;
+      return true;
+    }
   );
+  
+  const archivedExercises = allExercises.filter(ex => ex.isArchived);
 
   // Handlers
   const openLogModal = (exercise: ExerciseDef) => {
@@ -206,18 +210,15 @@ const App: React.FC = () => {
 
   const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
     if (!selectedExercise) return;
-
-    // Create a NEW log entry for this specific set
     const logToSave: WorkoutLog = {
       id: generateId(),
       exerciseId: selectedExercise.id,
       timestamp: Date.now(),
       weight: data.weight,
       reps: data.reps,
-      sets: 1 // Explicitly 1 set per entry now
+      sets: 1
     };
 
-    // Optimistic Update
     setLogs(prev => [...prev, logToSave]);
 
     try {
@@ -248,10 +249,8 @@ const App: React.FC = () => {
   };
   
   const handleEditLog = async (log: WorkoutLog) => {
-      // Optimistic update
       setLogs(prev => prev.map(l => l.id === log.id ? log : l));
       setActiveModal(null);
-      
       try {
         await fetch(API_URL, {
             method: 'POST',
@@ -292,24 +291,16 @@ const App: React.FC = () => {
         errorCount++;
       }
     }
-
-    if (errorCount > 0) {
-      alert(`Import finished with ${errorCount} errors.`);
-    } else {
-      alert("Import successful!");
-    }
+    if (errorCount > 0) alert(`Import finished with ${errorCount} errors.`);
+    else alert("Import successful!");
   };
 
   const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
-    // 1. Update State
-    const updatedCustom = [...customExercises, newExercise];
-    setCustomExercises(updatedCustom);
-    
-    // 2. Update Local Storage (Immediate feedback)
-    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
+    const updatedSynced = [...syncedExercises, newExercise];
+    setSyncedExercises(updatedSynced);
+    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
     setActiveModal(null);
 
-    // 3. Save to Cloud DB
     try {
       await saveDefinitionToCloud(newExercise);
     } catch (e) {
@@ -318,19 +309,55 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteExercise = async (exerciseId: string) => {
-    if (window.confirm("Are you sure you want to delete this exercise?")) {
-      if (window.confirm("This action cannot be undone and will delete ALL HISTORY for this exercise. Are you REALLY sure?")) {
-         
-         // 1. Update Custom Exercises List
-         const updatedCustom = customExercises.filter(e => e.id !== exerciseId);
-         setCustomExercises(updatedCustom);
-         localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedCustom));
+  const handleArchiveExercise = async (exercise: ExerciseDef) => {
+      const updatedExercise = { ...exercise, isArchived: true };
+      
+      // Update state: Add to synced list if not already there, or update existing
+      const existingIndex = syncedExercises.findIndex(ex => ex.id === exercise.id);
+      let updatedSynced;
+      if (existingIndex >= 0) {
+        updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? updatedExercise : ex);
+      } else {
+        updatedSynced = [...syncedExercises, updatedExercise];
+      }
 
-         // 2. Remove relevant logs from local state immediately
+      setSyncedExercises(updatedSynced);
+      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
+      
+      try {
+        await saveDefinitionToCloud(updatedExercise);
+      } catch (e) {
+        console.error("Failed to sync archive status", e);
+      }
+  };
+
+  const handleRestoreExercise = async (exercise: ExerciseDef) => {
+    const updatedExercise = { ...exercise, isArchived: false };
+    
+    const updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? updatedExercise : ex);
+    setSyncedExercises(updatedSynced);
+    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
+    
+    try {
+      await saveDefinitionToCloud(updatedExercise);
+    } catch (e) {
+      console.error("Failed to sync restore status", e);
+    }
+};
+
+  const handleDeleteExercisePermanently = async (exerciseId: string) => {
+    if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
+      if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
+         
+         // 1. Update Synced Exercises List (Remove override/custom def)
+         const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
+         setSyncedExercises(updatedSynced);
+         localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
+
+         // 2. Remove logs from local state
          setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
-         // 3. Call API to delete logs from DB
+         // 3. Call API to delete logs and definition from DB
          try {
              // Delete Logs
              await fetch(API_URL, {
@@ -338,7 +365,7 @@ const App: React.FC = () => {
                  body: JSON.stringify({ exerciseId })
              });
              
-             // Delete Definition using the special definition ID format
+             // Delete Definition
              await fetch(API_URL, {
                 method: 'DELETE',
                 body: JSON.stringify({ id: `def_${exerciseId}` })
@@ -438,7 +465,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-sm space-y-4">
           <button 
             onClick={() => setWorkoutDay('PUSH')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-8 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
           >
             <span>Push Day</span>
             <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Chest • Shoulders • Triceps</span>
@@ -446,19 +473,36 @@ const App: React.FC = () => {
 
           <button 
             onClick={() => setWorkoutDay('PULL')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-8 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
           >
             <span>Pull Day</span>
             <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Back • Biceps</span>
           </button>
+
+          <button 
+            onClick={() => setWorkoutDay('LEGS')}
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+          >
+            <span>Leg Day</span>
+            <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Quads • Hamstrings • Calves</span>
+          </button>
         </div>
 
-        <button 
-          onClick={() => setActiveModal('globalHistory')}
-          className="mt-12 flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
-        >
-          <ClipboardList size={16} /> View Journal
-        </button>
+        <div className="mt-12 flex gap-6">
+          <button 
+            onClick={() => setActiveModal('globalHistory')}
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
+          >
+            <ClipboardList size={16} /> View Journal
+          </button>
+          
+          <button 
+            onClick={() => setActiveModal('archived')}
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
+          >
+            <Archive size={16} /> Archived Exercises
+          </button>
+        </div>
 
          {activeModal === 'globalHistory' && (
           <GlobalHistoryModal
@@ -466,7 +510,16 @@ const App: React.FC = () => {
             currentDayType={workoutDay}
             onClose={() => setActiveModal(null)}
             onImport={handleImportLogs}
-            customExercises={customExercises}
+            customExercises={syncedExercises}
+          />
+        )}
+
+        {activeModal === 'archived' && (
+          <ArchivedExercisesModal 
+            exercises={archivedExercises}
+            onClose={() => setActiveModal(null)}
+            onRestore={handleRestoreExercise}
+            onDelete={handleDeleteExercisePermanently}
           />
         )}
       </div>
@@ -487,8 +540,8 @@ const App: React.FC = () => {
               <ChevronLeft size={28} />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white leading-none">
-                {workoutDay === 'PUSH' ? 'Push Day' : 'Pull Day'}
+              <h1 className="text-xl font-bold text-white leading-none capitalize">
+                {workoutDay?.toLowerCase()} Day
               </h1>
               <p className="text-xs text-blue-400 font-medium">LiftLogic</p>
             </div>
@@ -523,7 +576,7 @@ const App: React.FC = () => {
                 exerciseLogs={getLogsForExercise(exercise.id)}
                 onLogClick={() => openLogModal(exercise)}
                 onHistoryClick={() => openHistoryModal(exercise)}
-                onDelete={exercise.isCustom ? () => handleDeleteExercise(exercise.id) : undefined}
+                onArchive={() => handleArchiveExercise(exercise)}
               />
             );
           })}
@@ -567,7 +620,7 @@ const App: React.FC = () => {
           currentDayType={workoutDay}
           onClose={() => setActiveModal(null)}
           onImport={handleImportLogs}
-          customExercises={customExercises}
+          customExercises={syncedExercises}
         />
       )}
 

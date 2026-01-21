@@ -23,9 +23,10 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({
   const [importText, setImportText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Combine definitions to lookup names
+  // Combine definitions to lookup names correctly (including synced defaults)
   const allExercisesMap = useMemo(() => {
     const map = { ...EXERCISES };
+    // Override defaults with custom/synced versions
     customExercises.forEach(ex => {
       map[ex.id as any] = ex;
     });

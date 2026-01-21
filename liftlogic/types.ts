@@ -7,7 +7,7 @@ export enum ExerciseId {
   TRICEP_PUSHDOWN = 'TRICEP_PUSHDOWN'
 }
 
-export type DayType = 'PUSH' | 'PULL';
+export type DayType = 'PUSH' | 'PULL' | 'LEGS';
 
 export interface ExerciseDef {
   id: string; // Changed from ExerciseId to string to allow custom IDs
@@ -18,6 +18,7 @@ export interface ExerciseDef {
   targetReps: number; // Reps to hit before moving up in weight
   dayType: DayType;
   isCustom?: boolean; // Flag to identify user-created exercises
+  isArchived?: boolean; // Flag to hide exercise without deleting data
 }
 
 export interface WorkoutLog {

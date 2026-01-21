@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
-import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Trash2, Layers } from 'lucide-react';
+import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
   onLogClick: () => void;
   onHistoryClick: () => void;
-  onDelete?: () => void;
+  onArchive?: () => void;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
@@ -15,7 +15,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exerciseLogs, 
   onLogClick, 
   onHistoryClick,
-  onDelete
+  onArchive
 }) => {
   
   // 1. Organize logs into sessions (grouped by date)
@@ -39,18 +39,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
   const todayDateStr = new Date().toDateString();
   const todaySession = sessions.find(s => s.date === todayDateStr);
-  
-  // The session we use to calculate the goal is the *last completed session* before today
-  // If we haven't done anything today, it's just the first session in the list.
-  // If we HAVE done something today, it's the second session in the list.
   const referenceSession = todaySession 
     ? sessions.find(s => s.date !== todayDateStr) 
     : sessions[0];
 
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
-    const targetSets = exercise.dayType === 'PULL' ? 4 : 3;
-    // Count total sets (logs with sets=1 count as 1, legacy logs with sets=3 count as 3)
+    // Set Logic: All days now default to 3 sets
+    const targetSets = 3;
     const totalSets = todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
     return totalSets >= targetSets;
   }, [todaySession, exercise]);
@@ -67,20 +63,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
     const logs = referenceSession.logs;
     const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    
-    // Find the weight used (assuming mostly constant weight for now, or take the max)
     const usedWeight = Math.max(...logs.map(l => l.weight));
-    
-    // Check reps across all sets
-    // If ANY set fell significantly below target, we hold.
-    // Standard Double Progression: If you hit target reps on ALL sets, move up.
-    // Smart Logic: If average reps >= target OR min reps is very close to target (within 1-2 reps on last set)
-    
-    // Simplify: Check if minimum reps across sets >= Target Reps
     const minReps = Math.min(...logs.map(l => l.reps));
     
     // Rule 1: Volume
-    const targetSets = exercise.dayType === 'PULL' ? 4 : 3;
+    const targetSets = 3;
     if (totalSets < targetSets) {
        return {
          weight: usedWeight,
@@ -107,13 +94,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
   const isWeightIncrease = referenceSession ? recommendation.weight > Math.max(...referenceSession.logs.map(l => l.weight)) : false;
 
-  // Formatter for previous sets text
   const previousText = useMemo(() => {
     const session = todaySession || referenceSession;
     if (!session) return "No logs yet";
 
-    // Group reps by weight? Or just list them? 
-    // Simple format: "60lbs • 10, 11, 7"
     const weights = Array.from(new Set(session.logs.map(l => l.weight)));
     if (weights.length === 1) {
       const w = weights[0];
@@ -127,7 +111,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </span>
       );
     } else {
-      // Mixed weights, just show "Mixed" or first one
       return <span className="text-slate-400 italic">Mixed Weights</span>;
     }
   }, [todaySession, referenceSession]);
@@ -140,7 +123,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           : "bg-slate-800 border-slate-700"
       }`}
     >
-      {/* Completed Overlay Badge */}
       {isCompletedToday && (
         <div className="absolute top-4 right-4 flex items-center gap-2 text-green-400 font-bold bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20 shadow-sm animate-in fade-in zoom-in">
           <CheckCircle2 size={16} />
@@ -160,7 +142,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
 
       <div className={`grid grid-cols-2 gap-4 mt-4 transition-opacity ${isCompletedToday ? 'opacity-50 grayscale-[0.5]' : 'opacity-100'}`}>
-        {/* Last Workout Box */}
         <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 flex flex-col justify-between">
           <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
             {todaySession ? "Today's Lift" : "Previous"}
@@ -168,7 +149,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <div className="text-white font-mono leading-tight">
             {previousText}
           </div>
-          {/* Show set count if applicable */}
           {(todaySession || referenceSession) && (
              <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
                <Layers size={10} /> {(todaySession || referenceSession)?.logs.length} Sets
@@ -176,7 +156,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           )}
         </div>
 
-        {/* Goal Box */}
         <div className={`p-3 rounded-lg relative overflow-hidden border ${
           isWeightIncrease 
             ? "bg-emerald-500/10 border-emerald-500/30" 
@@ -211,17 +190,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
 
       <div className="flex gap-2 mt-4">
-        {exercise.isCustom && onDelete && (
+        {onArchive && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete();
+              if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
             }}
-            className="p-3 bg-slate-800 hover:bg-red-900/20 text-slate-500 hover:text-red-400 rounded-lg border border-slate-700 transition-colors"
-            title="Delete Exercise"
-            aria-label="Delete Exercise"
+            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
+            title="Archive Exercise"
+            aria-label="Archive Exercise"
           >
-            <Trash2 size={20} />
+            <Archive size={20} />
           </button>
         )}
 
