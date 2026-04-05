@@ -1,11 +1,25 @@
 import { Pool } from '@neondatabase/serverless';
 
 export const handler = async (event: any) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'; // Should be updated in Netlify env
+  const requestOrigin = event.headers.origin || event.headers.Origin;
+
+  // In a production environment, you should explicitly list allowed origins
+  // For this fix, we'll allow the configured origin or default to '*' if not set (to avoid breaking current state while allowing for fix via env var)
+  // However, the best practice is to match against a whitelist.
+
+  const headers: { [key: string]: string } = {
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Vary': 'Origin'
   };
+
+  if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
+    headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+  } else {
+    // If not allowed, we can still set a default or just not include the header
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
