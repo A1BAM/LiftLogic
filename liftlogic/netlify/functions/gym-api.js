@@ -1,12 +1,21 @@
 import { Pool } from '@neondatabase/serverless';
 
 export default async (req, context) => {
-  // 1. Setup CORS headers so the frontend can talk to this function
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
+  const requestOrigin = req.headers.get('origin') || req.headers.get('Origin');
+
+  // Setup CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Vary': 'Origin'
   };
+
+  if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
+    headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+  } else {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
 
   // 2. Handle Preflight Options request (CORS)
   if (req.method === 'OPTIONS') {
