@@ -21,14 +21,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // 1. Organize logs into sessions (grouped by date)
   const sessions = useMemo(() => {
     const grouped: Record<string, WorkoutLog[]> = {};
+    const dateToTimestamp: Record<string, number> = {};
+
     exerciseLogs.forEach(log => {
       const dateKey = new Date(log.timestamp).toDateString();
-      if (!grouped[dateKey]) grouped[dateKey] = [];
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+        dateToTimestamp[dateKey] = log.timestamp;
+      }
       grouped[dateKey].push(log);
     });
     
     // Sort keys descending (newest first)
-    const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const sortedKeys = Object.keys(grouped).sort((a, b) => dateToTimestamp[b] - dateToTimestamp[a]);
     
     return sortedKeys.map(key => ({
       date: key,
