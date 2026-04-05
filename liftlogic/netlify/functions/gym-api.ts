@@ -39,23 +39,35 @@ export const handler = async (event: any) => {
   try {
     // GET: Fetch all logs
     if (event.httpMethod === 'GET') {
-      const { rows } = await pool.query('SELECT * FROM workouts ORDER BY timestamp DESC');
-      
-      const logs = rows.map((row: any) => ({
-        id: row.id,
-        exerciseId: row.exercise_id,
-        timestamp: Number(row.timestamp),
-        weight: Number(row.weight),
-        reps: row.reps,
-        sets: row.sets,
-        notes: row.notes
-      }));
+      try {
+        const { rows } = await pool.query('SELECT * FROM workouts ORDER BY timestamp DESC');
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(logs)
-      };
+        const logs = rows.map((row: any) => ({
+          id: row.id,
+          exerciseId: row.exercise_id,
+          timestamp: Number(row.timestamp),
+          weight: Number(row.weight),
+          reps: row.reps,
+          sets: row.sets,
+          notes: row.notes
+        }));
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(logs)
+        };
+      } catch (err: any) {
+        // Fallback for dummy database in local development
+        if (connectionString.includes('dummy')) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify([])
+          };
+        }
+        throw err;
+      }
     }
 
     // POST: Create or Update (Upsert)
