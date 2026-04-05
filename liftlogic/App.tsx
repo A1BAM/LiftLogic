@@ -279,13 +279,17 @@ const App: React.FC = () => {
     });
 
     let errorCount = 0;
-    for (const log of importedLogs) {
-      try {
-        await fetch(API_URL, {
+    const results = await Promise.allSettled(
+      importedLogs.map(log =>
+        fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify(log)
-        });
-      } catch (e) {
+        })
+      )
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
         errorCount++;
       }
     }
