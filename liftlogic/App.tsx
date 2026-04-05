@@ -129,9 +129,7 @@ const App: React.FC = () => {
       // Upload missing exercises to cloud
       if (missingFromCloud.length > 0) {
         console.log("Syncing up exercises to cloud:", missingFromCloud.length);
-        for (const exercise of missingFromCloud) {
-          await saveDefinitionToCloud(exercise);
-        }
+        await Promise.all(missingFromCloud.map(exercise => saveDefinitionToCloud(exercise)));
       }
 
       // Merge lists (Cloud is authoritative)
