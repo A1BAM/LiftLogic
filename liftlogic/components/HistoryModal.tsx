@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
-import { X, Trash2, Edit2, BrainCircuit, Layers } from 'lucide-react';
-import { getWorkoutInsight } from '../services/geminiService';
+import { X, Trash2, Edit2, Layers } from 'lucide-react';
 
 interface HistoryModalProps {
   exercise: ExerciseDef;
@@ -18,19 +17,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   onDelete,
   onEdit
 }) => {
-  const [insight, setInsight] = useState<string | null>(null);
-  const [loadingInsight, setLoadingInsight] = useState(false);
-
   const filteredLogs = useMemo(() => logs
     .filter(log => log.exerciseId === exercise.id)
     .sort((a, b) => b.timestamp - a.timestamp), [logs, exercise.id]);
-
-  const handleGetInsight = async () => {
-    setLoadingInsight(true);
-    const result = await getWorkoutInsight(logs, exercise);
-    setInsight(result);
-    setLoadingInsight(false);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -45,28 +34,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         </div>
 
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
-          
-          {/* AI Insight Section */}
-          <div className="bg-indigo-900/10 border border-indigo-900/30 rounded-xl p-4">
-            {!insight ? (
-              <button 
-                onClick={handleGetInsight}
-                disabled={loadingInsight}
-                className="flex items-center gap-2 text-indigo-400 text-sm font-medium hover:text-indigo-300 transition-colors w-full justify-center py-2 border border-dashed border-indigo-700/50 rounded-lg hover:bg-indigo-900/30"
-              >
-                <BrainCircuit size={16} />
-                {loadingInsight ? "Analyzing..." : "Analyze Progress with AI"}
-              </button>
-            ) : (
-              <div className="text-sm text-indigo-200">
-                <div className="flex gap-2 items-center mb-2 text-indigo-400 font-bold uppercase text-xs">
-                  <BrainCircuit size={12} /> Coach Insight
-                </div>
-                {insight}
-              </div>
-            )}
-          </div>
-
           {/* Logs List */}
           <div className="space-y-3">
             {filteredLogs.length === 0 ? (
