@@ -1,5 +1,8 @@
 import { ExerciseId, ExerciseDef } from './types';
 
+export const API_URL = '/.netlify/functions/gym-api';
+export const DEFINITION_ID = '__DEFINITION__'; // Special ID to store exercise definitions in the DB
+
 export const EXERCISES: Record<ExerciseId, ExerciseDef> = {
   [ExerciseId.DUMBBELL_CURL]: {
     id: ExerciseId.DUMBBELL_CURL,
