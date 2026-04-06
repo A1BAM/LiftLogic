@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EXERCISES } from './constants';
-import { WorkoutLog, ExerciseDef, ExerciseId, DayType } from './types';
+import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
 import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
@@ -8,33 +8,35 @@ import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
-
-const API_URL = '/.netlify/functions/gym-api';
-const DEFINITION_ID = '__DEFINITION__'; // Special ID to store exercise definitions in the DB
-
-// Robust ID generator fallback
-const generateId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+import { useWorkoutData } from './hooks/useWorkoutData';
 
 const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
 
-  // App State
-  const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // Synced Exercises State (Contains Custom Exercises + Overrides for Default Exercises)
-  const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
+  // Hook for data and sync
+  const {
+    logs,
+    syncedExercises,
+    isLoading,
+    error,
+    fetchDataAndSync,
+    addLog,
+    removeLog,
+    updateLog,
+    importLogs,
+    saveExercise,
+    deleteExercisePermanently,
+    getLogsForExercise,
+    getTodaysLogs,
+    getLastSessionLogs
+  } = useWorkoutData(isAuthenticated);
 
   // Check Auth on Mount
   useEffect(() => {
@@ -43,13 +45,6 @@ const App: React.FC = () => {
       setIsAuthenticated(true);
     }
   }, []);
-
-  // Fetch Logs & Definitions when Authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchDataAndSync();
-    }
-  }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,97 +77,101 @@ const App: React.FC = () => {
     setWorkoutDay(null);
   };
 
-  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
-    const payload = {
-      id: `def_${exercise.id}`,
-      exerciseId: DEFINITION_ID, // Use special ID to distinguish from logs
-      timestamp: Date.now(),
-      weight: 0, 
-      reps: 0, 
-      sets: 0,
-      notes: JSON.stringify(exercise)
-    };
-    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  // UI Handlers
+  const openLogModal = (exercise: ExerciseDef) => {
+    setSelectedExercise(exercise);
+    setActiveModal('log');
   };
 
-  const fetchDataAndSync = async () => {
+  const openHistoryModal = (exercise: ExerciseDef) => {
+    setSelectedExercise(exercise);
+    setActiveModal('history');
+  };
+
+  const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
+    if (!selectedExercise) return;
     try {
-      setIsLoading(true);
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error('Failed to fetch data');
-      const allData = await res.json();
-      
-      // Separate actual workout logs from exercise definitions
-      const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
-      const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
-
-      // Parse Cloud Definitions
-      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: any) => {
-        try {
-          return JSON.parse(def.notes);
-        } catch (e) { return null; }
-      }).filter(Boolean);
-
-      // Load Local Storage Definitions
-      let localExercises: ExerciseDef[] = [];
-      const storedCustom = localStorage.getItem('liftlogic_custom_exercises');
-      if (storedCustom) {
-        try {
-          localExercises = JSON.parse(storedCustom);
-        } catch (e) { console.error(e); }
-      }
-
-      // SYNC LOGIC:
-      const cloudIds = new Set(cloudExercises.map(e => e.id));
-      const missingFromCloud = localExercises.filter(e => !cloudIds.has(e.id));
-      
-      // Upload missing exercises to cloud
-      if (missingFromCloud.length > 0) {
-        console.log("Syncing up exercises to cloud:", missingFromCloud.length);
-        await Promise.all(missingFromCloud.map(exercise => saveDefinitionToCloud(exercise)));
-      }
-
-      // Merge lists (Cloud is authoritative)
-      const mergedExercises = [...cloudExercises, ...missingFromCloud];
-      
-      // Deduplicate by ID
-      const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
-
-      // Update State
-      setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
-      
-      // Update LocalStorage
-      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(uniqueExercises));
-
-      setError(null);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Could not load workout history.");
-    } finally {
-      setIsLoading(false);
+      await addLog(selectedExercise.id, data.weight, data.reps);
+    } catch (err) {
+      alert("Failed to save to cloud.");
     }
   };
 
-  // Helpers
-  const getLogsForExercise = (id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  const handleDeleteLog = async (logId: string) => {
+    try {
+      await removeLog(logId);
+    } catch (err) {
+      alert("Failed to delete from cloud.");
+    }
+  };
+  
+  const handleEditLog = async (log: WorkoutLog) => {
+      setActiveModal(null);
+      try {
+        await updateLog(log);
+      } catch (err) {
+          // Handled in hook
+      }
   };
 
-  const getTodaysLogs = (id: string) => {
-    const today = new Date().toDateString();
-    return getLogsForExercise(id)
-      .filter(l => new Date(l.timestamp).toDateString() === today)
-      .reverse();
+  const handleEditInit = (log: WorkoutLog) => {
+    const newWeight = prompt("Enter new weight:", log.weight.toString());
+    const newReps = prompt("Enter new reps:", log.reps.toString());
+    if (newWeight && newReps) {
+        handleEditLog({
+            ...log,
+            weight: Number(newWeight),
+            reps: Number(newReps)
+        });
+    }
   };
 
-  const getLastSessionLogs = (id: string) => {
-    const all = getLogsForExercise(id);
-    const today = new Date().toDateString();
-    const lastLogNotToday = all.find(l => new Date(l.timestamp).toDateString() !== today);
-    if (!lastLogNotToday) return [];
-    const lastDate = new Date(lastLogNotToday.timestamp).toDateString();
-    return all.filter(l => new Date(l.timestamp).toDateString() === lastDate);
+  const handleImportLogs = async (importedLogs: WorkoutLog[]) => {
+    try {
+      await importLogs(importedLogs);
+      alert("Import successful!");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
+    setActiveModal(null);
+    try {
+      await saveExercise(newExercise);
+    } catch (e) {
+      alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
+    }
+  };
+
+  const handleArchiveExercise = async (exercise: ExerciseDef) => {
+      const updatedExercise = { ...exercise, isArchived: true };
+      try {
+        await saveExercise(updatedExercise);
+      } catch (e) {
+        console.error("Failed to sync archive status", e);
+      }
+  };
+
+  const handleRestoreExercise = async (exercise: ExerciseDef) => {
+    const updatedExercise = { ...exercise, isArchived: false };
+    try {
+      await saveExercise(updatedExercise);
+    } catch (e) {
+      console.error("Failed to sync restore status", e);
+    }
+};
+
+  const handleDeleteExercisePermanently = async (exerciseId: string) => {
+    if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
+      if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
+         try {
+             await deleteExercisePermanently(exerciseId);
+         } catch (err) {
+             console.error("Failed to delete exercise logs from cloud", err);
+         }
+      }
+    }
   };
 
   // Combine Default and Synced Exercises (Synced overrides Default)
@@ -192,193 +191,8 @@ const App: React.FC = () => {
       return true;
     }
   );
-  
+
   const archivedExercises = allExercises.filter(ex => ex.isArchived);
-
-  // Handlers
-  const openLogModal = (exercise: ExerciseDef) => {
-    setSelectedExercise(exercise);
-    setActiveModal('log');
-  };
-
-  const openHistoryModal = (exercise: ExerciseDef) => {
-    setSelectedExercise(exercise);
-    setActiveModal('history');
-  };
-
-  const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
-    if (!selectedExercise) return;
-    const logToSave: WorkoutLog = {
-      id: generateId(),
-      exerciseId: selectedExercise.id,
-      timestamp: Date.now(),
-      weight: data.weight,
-      reps: data.reps,
-      sets: 1
-    };
-
-    setLogs(prev => [...prev, logToSave]);
-
-    try {
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(logToSave)
-      });
-    } catch (err) {
-      console.error("Failed to save log", err);
-      alert("Failed to save to cloud.");
-      fetchDataAndSync();
-    }
-  };
-
-  const handleDeleteLog = async (logId: string) => {
-    setLogs(prev => prev.filter(l => l.id !== logId));
-
-    try {
-      await fetch(API_URL, {
-        method: 'DELETE',
-        body: JSON.stringify({ id: logId })
-      });
-    } catch (err) {
-      console.error("Failed to delete log", err);
-      alert("Failed to delete from cloud.");
-      fetchDataAndSync();
-    }
-  };
-  
-  const handleEditLog = async (log: WorkoutLog) => {
-      setLogs(prev => prev.map(l => l.id === log.id ? log : l));
-      setActiveModal(null);
-      try {
-        await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(log)
-        });
-      } catch (err) {
-          fetchDataAndSync();
-      }
-  };
-
-  const handleEditInit = (log: WorkoutLog) => {
-    const newWeight = prompt("Enter new weight:", log.weight.toString());
-    const newReps = prompt("Enter new reps:", log.reps.toString());
-    if (newWeight && newReps) {
-        handleEditLog({
-            ...log,
-            weight: Number(newWeight),
-            reps: Number(newReps)
-        });
-    }
-  };
-
-  const handleImportLogs = async (importedLogs: WorkoutLog[]) => {
-    setLogs(prevLogs => {
-      const logMap = new Map(prevLogs.map(l => [l.id, l]));
-      importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
-    });
-
-    let errorCount = 0;
-    const results = await Promise.allSettled(
-      importedLogs.map(log =>
-        fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify(log)
-        })
-      )
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        errorCount++;
-      }
-    }
-    if (errorCount > 0) alert(`Import finished with ${errorCount} errors.`);
-    else alert("Import successful!");
-  };
-
-  const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
-    const updatedSynced = [...syncedExercises, newExercise];
-    setSyncedExercises(updatedSynced);
-    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
-    setActiveModal(null);
-
-    try {
-      await saveDefinitionToCloud(newExercise);
-    } catch (e) {
-      console.error("Failed to sync new exercise to cloud", e);
-      alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
-    }
-  };
-
-  const handleArchiveExercise = async (exercise: ExerciseDef) => {
-      const updatedExercise = { ...exercise, isArchived: true };
-      
-      // Update state: Add to synced list if not already there, or update existing
-      const existingIndex = syncedExercises.findIndex(ex => ex.id === exercise.id);
-      let updatedSynced;
-      if (existingIndex >= 0) {
-        updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? updatedExercise : ex);
-      } else {
-        updatedSynced = [...syncedExercises, updatedExercise];
-      }
-
-      setSyncedExercises(updatedSynced);
-      localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
-      
-      try {
-        await saveDefinitionToCloud(updatedExercise);
-      } catch (e) {
-        console.error("Failed to sync archive status", e);
-      }
-  };
-
-  const handleRestoreExercise = async (exercise: ExerciseDef) => {
-    const updatedExercise = { ...exercise, isArchived: false };
-    
-    const updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? updatedExercise : ex);
-    setSyncedExercises(updatedSynced);
-    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
-    
-    try {
-      await saveDefinitionToCloud(updatedExercise);
-    } catch (e) {
-      console.error("Failed to sync restore status", e);
-    }
-};
-
-  const handleDeleteExercisePermanently = async (exerciseId: string) => {
-    if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
-      if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
-         
-         // 1. Update Synced Exercises List (Remove override/custom def)
-         const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
-         setSyncedExercises(updatedSynced);
-         localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(updatedSynced));
-
-         // 2. Remove logs from local state
-         setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
-
-         // 3. Call API to delete logs and definition from DB
-         try {
-             // Delete Logs
-             await fetch(API_URL, {
-                 method: 'DELETE',
-                 body: JSON.stringify({ exerciseId })
-             });
-             
-             // Delete Definition
-             await fetch(API_URL, {
-                method: 'DELETE',
-                body: JSON.stringify({ id: `def_${exerciseId}` })
-            });
-
-         } catch (err) {
-             console.error("Failed to delete exercise logs from cloud", err);
-         }
-      }
-    }
-  };
 
   // --- RENDERING ---
 
