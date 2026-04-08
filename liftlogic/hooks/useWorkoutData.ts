@@ -27,7 +27,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const fetchDataAndSync = useCallback(async () => {
     try {
       setIsLoading(true);
-      const allData = await workoutService.fetchWorkouts();
+      const allData = await workoutService.fetchWorkouts() as any[];
 
       const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
       const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
