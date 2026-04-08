@@ -6,7 +6,7 @@
     "enabled": true
   },
   "assets": {
-    "directory": "liftlogic"
+    "directory": "liftlogic/dist"
   },
   "compatibility_flags": [
     "nodejs_compat"
