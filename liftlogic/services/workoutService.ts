@@ -1,5 +1,6 @@
 import { API_URL } from '../constants';
 import { ExerciseDef, WorkoutLog } from '../types';
+import { logger } from '../utils/logger';
 
 export const workoutService = {
   async fetchWorkouts() {
@@ -32,7 +33,7 @@ export const workoutService = {
     try {
       return JSON.parse(stored);
     } catch (e) {
-      console.error('Error parsing local exercises', e);
+      logger.error('Error parsing local exercises', e);
       return [];
     }
   },

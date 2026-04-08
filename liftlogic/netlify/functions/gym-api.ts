@@ -1,4 +1,5 @@
 import { Pool } from '@neondatabase/serverless';
+import { logger } from '../../utils/logger';
 
 export const handler = async (event: any) => {
   const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'; // Should be updated in Netlify env
@@ -30,7 +31,7 @@ export const handler = async (event: any) => {
   const connectionString = process.env.NETLIFY_DATABASE_URL;
 
   if (!connectionString) {
-    console.error("Missing NETLIFY_DATABASE_URL");
+    logger.error("Missing NETLIFY_DATABASE_URL");
     return { statusCode: 500, headers, body: "Database configuration missing" };
   }
 
@@ -115,7 +116,7 @@ export const handler = async (event: any) => {
     return { statusCode: 405, headers, body: "Method Not Allowed" };
 
   } catch (error: any) {
-    console.error('Database Error:', error);
+    logger.error('Database Error:', error);
     return {
       statusCode: 500,
       headers,
