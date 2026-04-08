@@ -117,8 +117,8 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({
       onImport(parsed as WorkoutLog[]);
       setIsImporting(false);
       setImportText('');
-    } catch (err: any) {
-      setError(err.message || "Invalid JSON data.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid JSON data.");
     }
   };
 

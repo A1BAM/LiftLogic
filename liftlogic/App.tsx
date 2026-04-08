@@ -148,9 +148,9 @@ const App: React.FC = () => {
       localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(uniqueExercises));
 
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Could not load workout history.");
+      setError(err instanceof Error ? err.message : "Could not load workout history.");
     } finally {
       setIsLoading(false);
     }

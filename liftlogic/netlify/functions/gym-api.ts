@@ -88,12 +88,15 @@ export const handler = async (event: any) => {
 
     return { statusCode: 405, headers, body: "Method Not Allowed" };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: "Internal Server Error", details: error.message })
+      body: JSON.stringify({
+        error: "Internal Server Error",
+        details: error instanceof Error ? error.message : String(error)
+      })
     };
   }
 };
