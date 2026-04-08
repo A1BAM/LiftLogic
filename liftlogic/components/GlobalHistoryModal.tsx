@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { WorkoutLog, DayType, ExerciseDef } from '../types';
 import { EXERCISES } from '../constants';
 import { X, Dumbbell, Calendar, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface GlobalHistoryModalProps {
   logs: WorkoutLog[];
@@ -88,7 +89,7 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('Failed to copy:', err);
       alert('Failed to copy data to clipboard');
     }
   };

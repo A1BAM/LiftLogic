@@ -3,6 +3,7 @@ import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
+import { logger } from '../utils/logger';
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
@@ -43,7 +44,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const missingFromCloud = localExercises.filter(e => !cloudIds.has(e.id));
 
       if (missingFromCloud.length > 0) {
-        console.log("Syncing up exercises to cloud:", missingFromCloud.length);
+        logger.info("Syncing up exercises to cloud:", missingFromCloud.length);
         await Promise.all(missingFromCloud.map(exercise => saveDefinitionToCloud(exercise)));
       }
 
@@ -55,7 +56,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
-      console.error(err);
+      logger.error("Fetch and sync error:", err);
       setError(err.message || "Could not load workout history.");
     } finally {
       setIsLoading(false);
@@ -83,7 +84,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await workoutService.saveItem(logToSave);
     } catch (err) {
-      console.error("Failed to save log", err);
+      logger.error("Failed to save log", err);
       fetchDataAndSync();
       throw err;
     }
@@ -94,7 +95,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await workoutService.deleteItem({ id: logId });
     } catch (err) {
-      console.error("Failed to delete log", err);
+      logger.error("Failed to delete log", err);
       fetchDataAndSync();
       throw err;
     }
@@ -105,7 +106,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await workoutService.saveItem(log);
     } catch (err) {
-      console.error("Failed to update log", err);
+      logger.error("Failed to update log", err);
       fetchDataAndSync();
       throw err;
     }
@@ -143,7 +144,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await saveDefinitionToCloud(exercise);
     } catch (err) {
-      console.error("Failed to sync exercise to cloud", err);
+      logger.error("Failed to sync exercise to cloud", err);
       throw err;
     }
   };
@@ -158,7 +159,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       await workoutService.deleteItem({ exerciseId });
       await workoutService.deleteItem({ id: `def_${exerciseId}` });
     } catch (err) {
-      console.error("Failed to delete exercise from cloud", err);
+      logger.error("Failed to delete exercise from cloud", err);
       throw err;
     }
   };
