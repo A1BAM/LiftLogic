@@ -1,0 +1,127 @@
+import { Pool } from '@neondatabase/serverless';
+import { logger } from '../utils/logger';
+
+export const onRequest = async (context: any) => {
+  const { request, env } = context;
+  const allowedOrigin = env.ALLOWED_ORIGIN || '*';
+  const requestOrigin = request.headers.get('origin');
+
+  const headers: { [key: string]: string } = {
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Vary': 'Origin',
+    'Content-Type': 'application/json'
+  };
+
+  if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
+    headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+  } else {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
+
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers });
+  }
+
+  // Use the environment variable for Cloudflare
+  const connectionString = env.DATABASE_URL;
+
+  if (!connectionString) {
+    logger.error("Missing DATABASE_URL");
+    return new Response("Database configuration missing", { status: 500, headers });
+  }
+
+  const pool = new Pool({ connectionString });
+
+  try {
+    // GET: Fetch all logs
+    if (request.method === 'GET') {
+      try {
+        const { rows } = await pool.query('SELECT * FROM workouts ORDER BY timestamp DESC');
+
+        const logs = rows.map((row: any) => ({
+          id: row.id,
+          exerciseId: row.exercise_id,
+          timestamp: Number(row.timestamp),
+          weight: Number(row.weight),
+          reps: row.reps,
+          sets: row.sets,
+          notes: row.notes
+        }));
+
+        return new Response(JSON.stringify(logs), {
+          status: 200,
+          headers
+        });
+      } catch (err: any) {
+        // Fallback for dummy database in local development
+        if (connectionString.includes('dummy')) {
+          return new Response(JSON.stringify([]), {
+            status: 200,
+            headers
+          });
+        }
+        throw err;
+      }
+    }
+
+    // POST: Create or Update (Upsert)
+    if (request.method === 'POST') {
+      const body = await request.json() as any;
+      const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
+
+      if (!id || !exerciseId) {
+        return new Response("Missing required fields", { status: 400, headers });
+      }
+
+      const query = `
+        INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          weight = EXCLUDED.weight,
+          reps = EXCLUDED.reps,
+          sets = EXCLUDED.sets,
+          notes = EXCLUDED.notes;
+      `;
+
+      await pool.query(query, [id, exerciseId, timestamp, weight, reps, sets || 1, notes || null]);
+
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+    }
+
+    // DELETE: Remove a log OR all logs for an exercise
+    if (request.method === 'DELETE') {
+      const body = await request.json() as any;
+      const { id, exerciseId } = body || {};
+      
+      if (exerciseId) {
+        // Delete all logs for this exercise
+        await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+      }
+
+      if (id) {
+        // Delete specific log
+        await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+      }
+
+      return new Response("Missing ID or Exercise ID", { status: 400, headers });
+    }
+
+    return new Response("Method Not Allowed", { status: 405, headers });
+
+  } catch (error: any) {
+    logger.error('Database Error:', error);
+    return new Response(JSON.stringify({ error: "Internal Server Error", details: error.message }), {
+      status: 500,
+      headers
+    });
+  } finally {
+    // In many serverless environments it's better to explicitly end the pool
+    // if we don't want it to hang around, but for Workers it's usually handled by the runtime.
+    // However, @neondatabase/serverless might need it.
+    await pool.end();
+  }
+};
