@@ -1,12 +1,19 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "liftlogic",
+  "main": "liftlogic/worker.ts",
   "compatibility_date": "2026-04-08",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "liftlogic/dist"
+    "directory": "liftlogic/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/gym-api",
+      "/gym-api/*"
+    ]
   },
   "compatibility_flags": [
     "nodejs_compat"
