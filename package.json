@@ -1,0 +1,7 @@
+{
+  "name": "liftlogic-root",
+  "private": true,
+  "scripts": {
+    "build": "cd liftlogic && npm install && npm run build"
+  }
+}
