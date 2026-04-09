@@ -1,62 +1,56 @@
 import React, { useMemo, useState } from 'react';
-import { WorkoutLog, DayType, ExerciseDef } from '../types';
-import { EXERCISES } from '../constants';
-import { X, Dumbbell, Calendar, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
+import { X, Calendar, Dumbbell, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
+import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
+import { EXERCISES } from '../constants';
 
 interface GlobalHistoryModalProps {
   logs: WorkoutLog[];
-  currentDayType?: DayType | null;
+  currentDayType: string | null;
   onClose: () => void;
   onImport: (logs: WorkoutLog[]) => void;
-  customExercises?: ExerciseDef[];
+  customExercises: ExerciseDef[];
 }
 
-export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({ 
-  logs, 
-  currentDayType, 
+export function GlobalHistoryModal({
   onClose, 
+  logs,
+  currentDayType,
   onImport,
-  customExercises = []
-}) => {
+  customExercises
+}: GlobalHistoryModalProps) {
   const [copied, setCopied] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importText, setImportText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Combine definitions to lookup names correctly (including synced defaults)
   const allExercisesMap = useMemo(() => {
-    const map = { ...EXERCISES };
-    // Override defaults with custom/synced versions
+    const combined: Record<string, ExerciseDef> = { ...EXERCISES };
     customExercises.forEach(ex => {
-      map[ex.id as any] = ex;
+      combined[ex.id] = ex;
     });
-    return map;
+    return combined;
   }, [customExercises]);
 
   const stats = useMemo(() => {
-    const totalWorkouts = logs.length;
-    // Calculate volume: weight * reps * sets
     const totalVolume = logs.reduce((acc, log) => acc + (log.weight * log.reps * (log.sets || 1)), 0);
-    
-    // Calculate unique days
-    const days = new Set(logs.map(l => new Date(l.timestamp).toDateString()));
-    const totalDays = days.size;
-
-    return { totalWorkouts, totalVolume, totalDays };
+    const uniqueDays = new Set(logs.map(log => new Date(log.timestamp).toDateString())).size;
+    return {
+      totalWorkouts: logs.length,
+      totalVolume,
+      totalDays: uniqueDays
+    };
   }, [logs]);
 
-  // Calculate Today's Summary for the Current Workout Day Type
   const todaySummary = useMemo(() => {
     if (!currentDayType) return null;
-    
     const todayStr = new Date().toDateString();
     
     // Filter logs for today AND matching the current day type (Push/Pull)
     const todaysRelevantLogs = logs.filter(l => {
         const isToday = new Date(l.timestamp).toDateString() === todayStr;
         // Use map to check dayType safely
-        const exercise = allExercisesMap[l.exerciseId as any];
+        const exercise = allExercisesMap[l.exerciseId];
         const isCorrectType = exercise?.dayType === currentDayType;
         return isToday && isCorrectType;
     });
@@ -72,10 +66,20 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({
   // Group by date
   const groupedLogs = useMemo(() => {
     const groups: Record<string, WorkoutLog[]> = {};
+    const dateCache = new Map();
+
     sortedLogs.forEach(log => {
-      const dateKey = new Date(log.timestamp).toLocaleDateString(undefined, {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      });
+      const d = new Date(log.timestamp);
+      const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+
+      let dateKey = dateCache.get(dayId);
+      if (!dateKey) {
+        dateKey = d.toLocaleDateString(undefined, {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        dateCache.set(dayId, dateKey);
+      }
+
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(log);
     });
@@ -239,7 +243,7 @@ export const GlobalHistoryModal: React.FC<GlobalHistoryModalProps> = ({
                     </h3>
                     <div className="space-y-2">
                       {(dayLogs as WorkoutLog[]).map(log => {
-                        const exercise = allExercisesMap[log.exerciseId as any];
+                        const exercise = allExercisesMap[log.exerciseId];
                         return (
                           <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
                             <div>
