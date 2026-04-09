@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "liftlogic",
+  // Note: DATABASE_URL is managed as a Secret in the Cloudflare dashboard.
+  // DO NOT add it to the "vars" block here, as it will overwrite the secret with a plain text value.
   "main": "./liftlogic/worker.ts",
   "build": {
     "command": "cd liftlogic && npm install && npm run build"
