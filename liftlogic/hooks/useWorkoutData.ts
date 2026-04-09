@@ -169,19 +169,28 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   }, [logs]);
 
   const getTodaysLogs = useCallback((id: string) => {
-    const today = new Date().toDateString();
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+
     return getLogsForExercise(id)
-      .filter(l => new Date(l.timestamp).toDateString() === today)
+      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
       .reverse();
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
     const all = getLogsForExercise(id);
-    const today = new Date().toDateString();
-    const lastLogNotToday = all.find(l => new Date(l.timestamp).toDateString() !== today);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
-    const lastDate = new Date(lastLogNotToday.timestamp).toDateString();
-    return all.filter(l => new Date(l.timestamp).toDateString() === lastDate);
+
+    const d = new Date(lastLogNotToday.timestamp);
+    const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
+
+    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
   }, [getLogsForExercise]);
 
   return {
