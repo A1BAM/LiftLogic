@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { workoutService } from './workoutService';
 import { logger } from '../utils/logger';
 import { ExerciseDef } from '../types';
+import { API_URL } from '../constants';
 
 describe('workoutService localStorage', () => {
   const STORAGE_KEY = 'liftlogic_custom_exercises';
@@ -64,6 +65,86 @@ describe('workoutService localStorage', () => {
 
       const stored = localStorage.getItem(STORAGE_KEY);
       expect(stored).toBe(JSON.stringify(mockExercises));
+    });
+  });
+});
+
+describe('workoutService API Interactions', () => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal('fetch', mockFetch);
+
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
+  describe('fetchWorkouts', () => {
+    it('should fetch and return workout data on success', async () => {
+      const mockData = [{ id: '1', exerciseId: 'DUMBBELL_CURL', weight: 20 }];
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData
+      });
+
+      const result = await workoutService.fetchWorkouts();
+
+      expect(mockFetch).toHaveBeenCalledWith(API_URL);
+      expect(result).toEqual(mockData);
+    });
+
+    it('should throw "Failed to fetch data" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.fetchWorkouts()).rejects.toThrow('Failed to fetch data');
+    });
+  });
+
+  describe('saveItem', () => {
+    it('should send a POST request with the correct body and return data on success', async () => {
+      const payload = { exerciseId: 'PUSH_UP', weight: 0 };
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.saveItem(payload);
+
+      expect(mockFetch).toHaveBeenCalledWith(API_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Failed to save item" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.saveItem({})).rejects.toThrow('Failed to save item');
+    });
+  });
+
+  describe('deleteItem', () => {
+    it('should send a DELETE request with the correct body and return data on success', async () => {
+      const payload = { id: 'log-123' };
+      const mockResponse = { deleted: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.deleteItem(payload);
+
+      expect(mockFetch).toHaveBeenCalledWith(API_URL, {
+        method: 'DELETE',
+        body: JSON.stringify(payload)
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Failed to delete item" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.deleteItem({})).rejects.toThrow('Failed to delete item');
     });
   });
 });
