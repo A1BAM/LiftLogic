@@ -2,15 +2,27 @@ import { API_URL } from '../constants';
 import { ExerciseDef, WorkoutLog } from '../types';
 import { logger } from '../utils/logger';
 
+const apiFetch = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('liftlogic_auth_token');
+  const headers = {
+    ...options.headers,
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+
+  const res = await fetch(url, { ...options, headers });
+  return res;
+};
+
 export const workoutService = {
   async fetchWorkouts() {
-    const res = await fetch(API_URL);
+    const res = await apiFetch(API_URL);
     if (!res.ok) throw new Error('Failed to fetch data');
     return res.json();
   },
 
   async saveItem(payload: any) {
-    const res = await fetch(API_URL, {
+    const res = await apiFetch(API_URL, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -19,7 +31,7 @@ export const workoutService = {
   },
 
   async deleteItem(payload: any) {
-    const res = await fetch(API_URL, {
+    const res = await apiFetch(API_URL, {
       method: 'DELETE',
       body: JSON.stringify(payload)
     });

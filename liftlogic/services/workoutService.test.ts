@@ -87,7 +87,11 @@ describe('workoutService API Interactions', () => {
 
       const result = await workoutService.fetchWorkouts();
 
-      expect(mockFetch).toHaveBeenCalledWith(API_URL);
+      expect(mockFetch).toHaveBeenCalledWith(API_URL, expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
       expect(result).toEqual(mockData);
     });
 
@@ -109,10 +113,13 @@ describe('workoutService API Interactions', () => {
 
       const result = await workoutService.saveItem(payload);
 
-      expect(mockFetch).toHaveBeenCalledWith(API_URL, {
+      expect(mockFetch).toHaveBeenCalledWith(API_URL, expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify(payload)
-      });
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
 
@@ -134,10 +141,13 @@ describe('workoutService API Interactions', () => {
 
       const result = await workoutService.deleteItem(payload);
 
-      expect(mockFetch).toHaveBeenCalledWith(API_URL, {
+      expect(mockFetch).toHaveBeenCalledWith(API_URL, expect.objectContaining({
         method: 'DELETE',
-        body: JSON.stringify(payload)
-      });
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
 
