@@ -4,6 +4,7 @@ import { logger } from './utils/logger';
 export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
+  TARGET_HASH?: string;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -30,6 +31,19 @@ export default {
       headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
     } else {
       headers['Access-Control-Allow-Origin'] = allowedOrigin;
+    }
+
+    // Security Check: Verify Bearer Token
+    const authHeader = request.headers.get('Authorization');
+    if (env.TARGET_HASH && request.method !== 'OPTIONS') {
+      if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: headers
+        });
+      }
+    } else if (!env.TARGET_HASH) {
+      logger.warn("TARGET_HASH not set. API is running without authentication.");
     }
 
     // Handle CORS preflight
@@ -127,7 +141,8 @@ export default {
 
     } catch (error: any) {
       logger.error('Database Error:', error);
-      return new Response(JSON.stringify({ error: "Internal Server Error", details: error.message }), {
+      // Security: Do not leak error details to the client
+      return new Response(JSON.stringify({ error: "Internal Server Error" }), {
         status: 500,
         headers
       });

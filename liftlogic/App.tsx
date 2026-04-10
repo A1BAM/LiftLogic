@@ -10,6 +10,7 @@ import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { RestTimer } from './components/RestTimer';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
+import { workoutService } from './services/workoutService';
 import { logger } from './utils/logger';
 
 const App: React.FC = () => {
@@ -57,19 +58,23 @@ const App: React.FC = () => {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
-      const TARGET_HASH = "3622f482c5a01c2cf2ce0526e40ef7f5075d3811b7e28431dee0bbd86b66b11f";
+      // Temporarily store the hash to attempt an authenticated request
+      localStorage.setItem('liftlogic_auth_token', hashHex);
 
-      if (hashHex === TARGET_HASH) {
+      try {
+        // Attempt to fetch workouts as a verification of the password/hash
+        await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         localStorage.setItem('liftlogic_auth', 'true');
         setPasswordInput('');
-      } else {
+      } catch (err) {
+        // If the request fails (e.g., 401 Unauthorized), the password was wrong
+        localStorage.removeItem('liftlogic_auth_token');
         alert("Wrong Password");
         setPasswordInput('');
       }
     } catch (err) {
       logger.error("Crypto error:", err);
-      // Fallback or alert if crypto isn't available (e.g. non-secure context)
       alert("Secure context required for login.");
     }
   };
@@ -77,6 +82,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('liftlogic_auth');
+    localStorage.removeItem('liftlogic_auth_token');
     setWorkoutDay(null);
   };
 
