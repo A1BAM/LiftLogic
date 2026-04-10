@@ -46,65 +46,74 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
             <Dumbbell size={20} className="text-blue-500" />
             Add New {dayType} Exercise
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={24} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div>
-            <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Exercise Name</label>
+            <label htmlFor="exercise-name" className="block text-slate-400 text-xs font-bold uppercase mb-2">Exercise Name</label>
             <input 
+              id="exercise-name"
               type="text" 
               required
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Incline Bench Press"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-700"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
             />
           </div>
 
           <div>
-            <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Muscle Group</label>
+            <label htmlFor="muscle-group" className="block text-slate-400 text-xs font-bold uppercase mb-2">Muscle Group</label>
             <input 
+              id="muscle-group"
               type="text" 
               required
               value={muscleGroup}
               onChange={e => setMuscleGroup(e.target.value)}
               placeholder="e.g. Upper Chest"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-700"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Start Weight (lbs)</label>
+              <label htmlFor="start-weight" className="block text-slate-400 text-xs font-bold uppercase mb-2">Start Weight (lbs)</label>
               <input 
+                id="start-weight"
                 type="number" 
                 required
                 min="0"
                 value={defaultWeight}
                 onChange={e => setDefaultWeight(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Target Reps</label>
+              <label htmlFor="target-reps" className="block text-slate-400 text-xs font-bold uppercase mb-2">Target Reps</label>
               <input 
+                id="target-reps"
                 type="number" 
                 required
                 min="1"
                 value={targetReps}
                 onChange={e => setTargetReps(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Progression Increment (lbs)</label>
+            <label htmlFor="progression-increment" className="block text-slate-400 text-xs font-bold uppercase mb-2">Progression Increment (lbs)</label>
             <div className="flex items-center gap-4">
                <input 
+                id="progression-increment"
                 type="range" 
                 min="2.5" 
                 max="20" 
@@ -120,7 +129,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
 
           <button 
             type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all mt-6"
+            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all mt-6"
           >
             <Save size={20} />
             Create Exercise

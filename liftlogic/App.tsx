@@ -7,6 +7,7 @@ import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
+import { RestTimer } from './components/RestTimer';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { logger } from './utils/logger';
@@ -20,6 +21,7 @@ const App: React.FC = () => {
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
+  const [restEndTime, setRestEndTime] = useState<number | null>(null);
 
   // Hook for data and sync
   const {
@@ -93,6 +95,8 @@ const App: React.FC = () => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
+      // Start 90s rest timer
+      setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
       alert("Failed to save to cloud.");
     }
@@ -446,6 +450,14 @@ const App: React.FC = () => {
           dayType={workoutDay}
           onClose={() => setActiveModal(null)}
           onSave={handleSaveNewExercise}
+        />
+      )}
+
+      {workoutDay && (
+        <RestTimer
+          endTime={restEndTime}
+          onCancel={() => setRestEndTime(null)}
+          onAdd={(seconds) => setRestEndTime(prev => prev ? prev + seconds * 1000 : null)}
         />
       )}
     </div>

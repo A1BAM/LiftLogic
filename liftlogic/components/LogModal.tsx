@@ -53,7 +53,11 @@ export const LogModal: React.FC<LogModalProps> = ({
             <h2 className="text-xl font-bold text-white">{exercise.name}</h2>
             <p className="text-xs text-slate-400">Log each set individually</p>
           </div>
-          <button onClick={onClose} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={20} />
           </button>
         </div>
@@ -83,7 +87,8 @@ export const LogModal: React.FC<LogModalProps> = ({
                   </div>
                   <button 
                     onClick={() => onDelete(log.id)}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg transition-colors"
+                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
+                    aria-label={`Delete set ${index + 1}`}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -99,13 +104,23 @@ export const LogModal: React.FC<LogModalProps> = ({
              <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Weight */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight</label>
+                  <label htmlFor="weight-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight</label>
                   <div className="flex items-center justify-between">
-                    <button type="button" onClick={() => adjustWeight(-5)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">
+                    <button
+                      type="button"
+                      onClick={() => adjustWeight(-5)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
+                      aria-label="Decrease weight by 5"
+                    >
                       <Minus size={16} />
                     </button>
-                    <div className="text-xl font-bold text-white font-mono">{weight}</div>
-                    <button type="button" onClick={() => adjustWeight(5)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">
+                    <div id="weight-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
+                    <button
+                      type="button"
+                      onClick={() => adjustWeight(5)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
+                      aria-label="Increase weight by 5"
+                    >
                       <Plus size={16} />
                     </button>
                   </div>
@@ -113,13 +128,23 @@ export const LogModal: React.FC<LogModalProps> = ({
 
                 {/* Reps */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
+                  <label htmlFor="reps-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
                   <div className="flex items-center justify-between">
-                    <button type="button" onClick={() => adjustReps(-1)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">
+                    <button
+                      type="button"
+                      onClick={() => adjustReps(-1)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
+                      aria-label="Decrease reps"
+                    >
                       <Minus size={16} />
                     </button>
-                    <div className="text-xl font-bold text-white font-mono">{reps}</div>
-                    <button type="button" onClick={() => adjustReps(1)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">
+                    <div id="reps-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
+                    <button
+                      type="button"
+                      onClick={() => adjustReps(1)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
+                      aria-label="Increase reps"
+                    >
                       <Plus size={16} />
                     </button>
                   </div>
@@ -128,7 +153,7 @@ export const LogModal: React.FC<LogModalProps> = ({
 
              <button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all"
+              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all"
             >
               <Plus size={20} />
               Add Set
