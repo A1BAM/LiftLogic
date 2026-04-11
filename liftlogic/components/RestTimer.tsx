@@ -3,11 +3,12 @@ import { Timer, X, Plus, Minus } from 'lucide-react';
 
 interface RestTimerProps {
   endTime: number | null;
+  totalDuration: number;
   onCancel: () => void;
   onAdd: (seconds: number) => void;
 }
 
-export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }) => {
+export const RestTimer: React.FC<RestTimerProps> = ({ endTime, totalDuration, onCancel, onAdd }) => {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -33,6 +34,8 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
 
   if (!endTime || timeLeft <= 0) return null;
 
+  const progress = totalDuration > 0 ? Math.min(100, Math.max(0, (timeLeft / totalDuration) * 100)) : 0;
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -41,7 +44,13 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center animate-in slide-in-from-bottom-5">
-      <div className="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-4 w-full max-w-sm">
+      <div className="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-4 w-full max-w-sm relative overflow-hidden">
+        {/* Progress Bar */}
+        <div
+          className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-1000 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
+
         <div className="bg-blue-600/20 p-3 rounded-full animate-pulse">
            <Timer className="text-blue-500" size={24} />
         </div>
