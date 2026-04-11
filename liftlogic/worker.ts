@@ -24,7 +24,11 @@ export default {
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';",
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer'
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -98,8 +102,27 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        // Strict Input Validation
+        if (!id || typeof id !== 'string' || id.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
+        }
+        if (!exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
+        }
+        if (typeof timestamp !== 'number' || timestamp <= 0) {
+          return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
+        }
+        if (typeof weight !== 'number' || weight < 0 || weight > 2000) {
+          return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
+        }
+        if (typeof reps !== 'number' || reps < 0 || reps > 1000) {
+          return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
+        }
+        if (sets !== undefined && (typeof sets !== 'number' || sets <= 0 || sets > 100)) {
+          return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
+        }
+        if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 10000)) {
+          return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
         }
 
         const query = `
