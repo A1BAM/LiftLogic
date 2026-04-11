@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
+  const [restDuration, setRestDuration] = useState<number>(90);
 
   // Hook for data and sync
   const {
@@ -102,6 +103,7 @@ const App: React.FC = () => {
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
       // Start 90s rest timer
+      setRestDuration(90);
       setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
       alert("Failed to save to cloud.");
@@ -221,7 +223,9 @@ const App: React.FC = () => {
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
+              <label htmlFor="password-input" className="sr-only">Password</label>
               <input 
+                id="password-input"
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
@@ -363,6 +367,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => setWorkoutDay(null)}
               className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Go back to dashboard"
             >
               <ChevronLeft size={28} />
             </button>
@@ -378,6 +383,7 @@ const App: React.FC = () => {
               onClick={() => setActiveModal('globalHistory')}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
@@ -385,6 +391,7 @@ const App: React.FC = () => {
               onClick={handleLogout}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>
@@ -462,8 +469,12 @@ const App: React.FC = () => {
       {workoutDay && (
         <RestTimer
           endTime={restEndTime}
+          totalDuration={restDuration}
           onCancel={() => setRestEndTime(null)}
-          onAdd={(seconds) => setRestEndTime(prev => prev ? prev + seconds * 1000 : null)}
+          onAdd={(seconds) => {
+            setRestDuration(prev => prev + seconds);
+            setRestEndTime(prev => prev ? prev + seconds * 1000 : null);
+          }}
         />
       )}
     </div>

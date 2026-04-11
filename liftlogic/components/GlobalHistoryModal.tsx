@@ -163,7 +163,11 @@ export function GlobalHistoryModal({
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-2 focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
+              aria-label="Close Journal"
+            >
               <X size={24} />
             </button>
           </div>
