@@ -25,7 +25,11 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
             <Archive className="text-amber-500" size={20} />
             Archived Exercises
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={24} />
           </button>
         </div>
@@ -45,17 +49,19 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
                   <p className="text-xs text-slate-500 uppercase font-bold">{ex.muscleGroup} • {ex.dayType}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => onRestore(ex)}
-                    className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-900/50 transition-colors"
+                    className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-900/50 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                     title="Restore"
+                    aria-label={`Restore ${ex.name}`}
                   >
                     <RefreshCw size={18} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => onDelete(ex.id)}
-                    className="p-2 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-red-900/30 transition-colors"
+                    className="p-2 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-red-900/30 focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                     title="Delete Permanently"
+                    aria-label={`Delete ${ex.name} permanently`}
                   >
                     <Trash2 size={18} />
                   </button>
