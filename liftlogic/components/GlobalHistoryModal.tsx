@@ -33,32 +33,47 @@ export function GlobalHistoryModal({
   }, [customExercises]);
 
   const stats = useMemo(() => {
-    const totalVolume = logs.reduce((acc, log) => acc + (log.weight * log.reps * (log.sets || 1)), 0);
-    const uniqueDays = new Set(logs.map(log => new Date(log.timestamp).toDateString())).size;
+    let totalVolume = 0;
+    const uniqueDays = new Set<number>();
+
+    // Performance: Single pass over logs using numeric day IDs
+    for (const log of logs) {
+      totalVolume += log.weight * log.reps * (log.sets || 1);
+      const d = new Date(log.timestamp);
+      uniqueDays.add(d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
+    }
+
     return {
       totalWorkouts: logs.length,
       totalVolume,
-      totalDays: uniqueDays
+      totalDays: uniqueDays.size
     };
   }, [logs]);
 
   const todaySummary = useMemo(() => {
     if (!currentDayType) return null;
-    const todayStr = new Date().toDateString();
     
-    // Filter logs for today AND matching the current day type (Push/Pull)
-    const todaysRelevantLogs = logs.filter(l => {
-        const isToday = new Date(l.timestamp).toDateString() === todayStr;
-        // Use map to check dayType safely
-        const exercise = allExercisesMap[l.exerciseId];
-        const isCorrectType = exercise?.dayType === currentDayType;
-        return isToday && isCorrectType;
-    });
+    const now = new Date();
+    const todayId = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
 
-    const volume = todaysRelevantLogs.reduce((acc, log) => acc + (log.weight * log.reps * (log.sets || 1)), 0);
-    const exercisesCount = new Set(todaysRelevantLogs.map(l => l.exerciseId)).size;
+    let volume = 0;
+    const uniqueExerciseIds = new Set<string>();
 
-    return { volume, exercisesCount };
+    // Performance: Single pass over logs using numeric day ID comparison
+    for (const log of logs) {
+      const d = new Date(log.timestamp);
+      const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+
+      if (dayId === todayId) {
+        const exercise = allExercisesMap[log.exerciseId];
+        if (exercise?.dayType === currentDayType) {
+          volume += log.weight * log.reps * (log.sets || 1);
+          uniqueExerciseIds.add(log.exerciseId);
+        }
+      }
+    }
+
+    return { volume, exercisesCount: uniqueExerciseIds.size };
   }, [logs, currentDayType, allExercisesMap]);
 
   const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
