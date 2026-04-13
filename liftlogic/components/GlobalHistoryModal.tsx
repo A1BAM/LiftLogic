@@ -144,6 +144,7 @@ export function GlobalHistoryModal({
                   onClick={() => setIsImporting(true)}
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                   title="Import Data"
+                  aria-label="Import workout data"
                 >
                   <Download size={20} />
                 </button>
@@ -163,7 +164,11 @@ export function GlobalHistoryModal({
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-2"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>

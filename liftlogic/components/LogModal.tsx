@@ -104,7 +104,7 @@ export const LogModal: React.FC<LogModalProps> = ({
              <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Weight */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="weight-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight</label>
+                  <label id="weight-label" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight</label>
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
@@ -114,7 +114,7 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="weight-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
+                    <div aria-labelledby="weight-label" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
                     <button
                       type="button"
                       onClick={() => adjustWeight(5)}
@@ -128,7 +128,7 @@ export const LogModal: React.FC<LogModalProps> = ({
 
                 {/* Reps */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="reps-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
+                  <label id="reps-label" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
@@ -138,7 +138,7 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="reps-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
+                    <div aria-labelledby="reps-label" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
                     <button
                       type="button"
                       onClick={() => adjustReps(1)}

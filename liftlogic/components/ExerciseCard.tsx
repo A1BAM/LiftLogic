@@ -48,13 +48,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     ? sessions.find(s => s.date !== todayDateStr) 
     : sessions[0];
 
+  const todaySetsCount = useMemo(() => {
+    if (!todaySession) return 0;
+    return todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+  }, [todaySession]);
+
   const isCompletedToday = useMemo(() => {
-    if (!todaySession) return false;
     // Set Logic: All days now default to 3 sets
     const targetSets = 3;
-    const totalSets = todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    return totalSets >= targetSets;
-  }, [todaySession, exercise]);
+    return todaySetsCount >= targetSets;
+  }, [todaySetsCount]);
 
   // 3. Calculate Recommendation based on Reference Session
   const recommendation: ProgressionRecommendation = useMemo(() => {
@@ -154,6 +157,22 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <div className="text-white font-mono leading-tight">
             {previousText}
           </div>
+
+          {todaySession && (
+            <div className="flex gap-1 mt-2 mb-1" aria-hidden="true">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                    todaySetsCount >= s
+                      ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]'
+                      : 'bg-slate-800'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
           {(todaySession || referenceSession) && (
              <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
                <Layers size={10} /> {(todaySession || referenceSession)?.logs.length} Sets
