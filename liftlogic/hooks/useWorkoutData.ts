@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -164,22 +164,40 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Performance Optimization: Index logs by exerciseId to avoid O(L) filtering in the render loop.
+  // This reduces complexity from O(E * L) to O(L log L) per update, and O(E) lookups per render.
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    logs.forEach(log => {
+      const existing = map.get(log.exerciseId);
+      if (existing) {
+        existing.push(log);
+      } else {
+        map.set(log.exerciseId, [log]);
+      }
+    });
+    // Sort each group once descending by timestamp
+    map.forEach(group => group.sort((a, b) => b.timestamp - a.timestamp));
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
+    // We can use the already sorted logs from the index
     return getLogsForExercise(id)
       .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+      .reverse(); // reverse to get chronological order for the modal
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
-    const all = getLogsForExercise(id);
+    const all = getLogsForExercise(id); // Already sorted desc
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
