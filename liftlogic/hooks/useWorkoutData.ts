@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -79,7 +79,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    // Prepend to maintain descending order (newest first)
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +117,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      // Ensure logs stay sorted descending after import
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -164,18 +166,32 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Performance optimization: Group logs by exercise ID once per logs update
+  // This avoids O(L) filtering in the render loop for every exercise card
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    logs.forEach(log => {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    });
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
+    // Filter from the already-grouped (and DESC sorted) list
     return getLogsForExercise(id)
       .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+      .reverse(); // reverse to get ASC for chronological set display
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
