@@ -362,7 +362,8 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setWorkoutDay(null)}
-              className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Back to dashboard"
             >
               <ChevronLeft size={28} />
             </button>
@@ -376,15 +377,17 @@ const App: React.FC = () => {
           <div className="flex gap-2">
             <button 
               onClick={() => setActiveModal('globalHistory')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
               title="View Workout Journal"
+              aria-label="View workout journal"
             >
               <ClipboardList size={24} />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>
