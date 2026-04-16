@@ -28,7 +28,11 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-bold text-white">{exercise.name} History</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={24} />
           </button>
         </div>
@@ -56,7 +60,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                      <button 
                       type="button"
                       onClick={() => onEdit(log)}
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                      aria-label="Edit log"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -66,7 +71,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                         e.stopPropagation();
                         if(window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
+                      aria-label="Delete log"
                     >
                       <Trash2 size={18} />
                     </button>

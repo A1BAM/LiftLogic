@@ -142,14 +142,15 @@ export function GlobalHistoryModal({
               <>
                 <button 
                   onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Import Data"
+                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>
                 <button 
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied' : 'Export'}
@@ -158,12 +159,16 @@ export function GlobalHistoryModal({
             ) : (
               <button 
                 onClick={() => { setIsImporting(false); setError(null); }}
-                className="text-slate-400 hover:text-white text-sm font-medium px-2"
+                className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
@@ -187,7 +192,7 @@ export function GlobalHistoryModal({
              )}
              <button 
                onClick={handleImportSubmit}
-               className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
+               className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 focus-visible:ring-2 focus-visible:ring-blue-400"
              >
                Import Logs
              </button>
