@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -6,7 +6,7 @@ import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
-  const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  const [logs, setLogs] = useState<WorkoutLog[]>([]); // Maintained in descending chronological order
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -69,6 +69,20 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, [isAuthenticated, fetchDataAndSync]);
 
+  // Performance Optimization: Group logs by exercise for O(1) retrieval in render loops
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    logs.forEach(log => {
+      const existing = map.get(log.exerciseId);
+      if (existing) {
+        existing.push(log);
+      } else {
+        map.set(log.exerciseId, [log]);
+      }
+    });
+    return map;
+  }, [logs]);
+
   const addLog = async (exerciseId: string, weight: number, reps: number) => {
     const logToSave: WorkoutLog = {
       id: generateId(),
@@ -79,7 +93,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +130,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      // Re-sort to maintain descending order after import
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -165,16 +180,17 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   };
 
   const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
-  }, [logs]);
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
 
+    // Filter today's logs and reverse to get chronological order (1st set first)
     return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
+      .filter(l => l.timestamp >= startOfToday && l.timestamp < endOfToday)
       .reverse();
   }, [getLogsForExercise]);
 
