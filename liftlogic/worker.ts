@@ -24,7 +24,10 @@ export default {
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer'
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -56,7 +59,10 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response("Database configuration missing", { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Database configuration missing" }), {
+        status: 500,
+        headers
+      });
     }
 
     const pool = new Pool({ connectionString });
@@ -95,11 +101,36 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
-        const body = await request.json() as any;
+        let body;
+        try {
+          body = await request.json() as any;
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+        }
+
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        // Validation
+        if (!id || typeof id !== 'string' || id.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid or missing ID" }), { status: 400, headers });
+        }
+        if (!exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid or missing Exercise ID" }), { status: 400, headers });
+        }
+        if (typeof timestamp !== 'number' || timestamp < 0) {
+          return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
+        }
+        if (typeof weight !== 'number' || weight < 0) {
+          return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
+        }
+        if (typeof reps !== 'number' || reps < 0) {
+          return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
+        }
+        if (typeof sets !== 'number' || sets < 0) {
+          return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
+        }
+        if (notes && (typeof notes !== 'string' || notes.length > 1000)) {
+          return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
         }
 
         const query = `
@@ -119,25 +150,37 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        const body = await request.json() as any;
+        let body;
+        try {
+          body = await request.json() as any;
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+        }
+
         const { id, exerciseId } = body || {};
 
         if (exerciseId) {
+          if (typeof exerciseId !== 'string' || exerciseId.length > 100) {
+            return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
+          }
           // Delete all logs for this exercise
           await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
         if (id) {
+          if (typeof id !== 'string' || id.length > 100) {
+            return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
+          }
           // Delete specific log
           await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
