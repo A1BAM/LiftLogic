@@ -201,7 +201,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               e.stopPropagation();
               if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
             }}
-            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
+            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 focus-visible:ring-2 focus-visible:ring-amber-500 transition-colors"
             title="Archive Exercise"
             aria-label="Archive Exercise"
           >
@@ -211,7 +211,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
         <button 
           onClick={onHistoryClick}
-          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
+          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
           aria-label="View History"
         >
           <History size={20} />
