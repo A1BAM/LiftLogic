@@ -128,7 +128,7 @@ export function GlobalHistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl">
         
         {/* Header */}
@@ -142,14 +142,15 @@ export function GlobalHistoryModal({
               <>
                 <button 
                   onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Import Data"
+                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>
                 <button 
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied' : 'Export'}
@@ -163,7 +164,11 @@ export function GlobalHistoryModal({
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
