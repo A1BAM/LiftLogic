@@ -195,15 +195,20 @@ const App: React.FC = () => {
   }, [syncedExercises]);
 
   // Filter exercises based on selected day AND archive status
-  const displayedExercises = allExercises.filter(
-    ex => {
-      if (ex.isArchived) return false; // Hide archived
-      if (workoutDay) return ex.dayType === workoutDay;
-      return true;
-    }
-  );
+  // Memoized to prevent redundant filtering on every render (e.g. during rest timer ticks)
+  const displayedExercises = useMemo(() => {
+    return allExercises.filter(
+      ex => {
+        if (ex.isArchived) return false; // Hide archived
+        if (workoutDay) return ex.dayType === workoutDay;
+        return true;
+      }
+    );
+  }, [allExercises, workoutDay]);
 
-  const archivedExercises = allExercises.filter(ex => ex.isArchived);
+  const archivedExercises = useMemo(() => {
+    return allExercises.filter(ex => ex.isArchived);
+  }, [allExercises]);
 
   // --- RENDERING ---
 
