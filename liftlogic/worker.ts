@@ -21,8 +21,11 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
       'Vary': 'Origin',
       'Content-Type': 'application/json'
     };
@@ -56,7 +59,7 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response("Database configuration missing", { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Database configuration missing" }), { status: 500, headers });
     }
 
     const pool = new Pool({ connectionString });
@@ -95,11 +98,27 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers });
+        }
+
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        // Security: Strict Input Validation
+        if (!id || typeof id !== 'string' || id.length > 100 ||
+            !exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid or missing ID/ExerciseID" }), { status: 400, headers });
+        }
+
+        if (typeof weight !== 'number' || weight < 0 ||
+            typeof reps !== 'number' || reps < 0 ||
+            typeof timestamp !== 'number' || timestamp < 0 ||
+            (sets !== undefined && (typeof sets !== 'number' || sets < 0)) ||
+            (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 1000))) {
+          return new Response(JSON.stringify({ error: "Invalid input values" }), { status: 400, headers });
         }
 
         const query = `
@@ -119,8 +138,22 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        const body = await request.json() as any;
+        let body: any;
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers });
+        }
+
         const { id, exerciseId } = body || {};
+
+        // Security: Input Validation
+        if (exerciseId !== undefined && (typeof exerciseId !== 'string' || exerciseId.length > 100)) {
+           return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
+        }
+        if (id !== undefined && (typeof id !== 'string' || id.length > 100)) {
+           return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
+        }
 
         if (exerciseId) {
           // Delete all logs for this exercise
@@ -134,10 +167,10 @@ export default {
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
