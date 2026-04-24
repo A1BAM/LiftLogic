@@ -376,15 +376,17 @@ const App: React.FC = () => {
           <div className="flex gap-2">
             <button 
               onClick={() => setActiveModal('globalHistory')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>
