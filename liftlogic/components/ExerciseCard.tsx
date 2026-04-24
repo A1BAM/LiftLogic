@@ -201,7 +201,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               e.stopPropagation();
               if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
             }}
-            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
+            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-amber-500"
             title="Archive Exercise"
             aria-label="Archive Exercise"
           >
@@ -211,7 +211,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
         <button 
           onClick={onHistoryClick}
-          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
+          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
           aria-label="View History"
         >
           <History size={20} />
@@ -219,10 +219,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
         <button
           onClick={onLogClick}
-          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all focus-visible:ring-2 ${
             isCompletedToday
-              ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
-              : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20"
+              ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 focus-visible:ring-blue-500"
+              : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 focus-visible:ring-blue-400"
           }`}
         >
           {isCompletedToday ? "View Today's Log" : (todaySession ? "Add Another Set" : "Start Workout")} 
