@@ -2,18 +2,28 @@ import { describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
 
 // Extracting logic for testing since we can't easily test the hook without full React environment
+// NOTE: These reflect the optimized versions in the hook
 const getLogsForExercise = (logs: WorkoutLog[], id: string) => {
+  // In the hook, this is backed by a pre-grouped Map and pre-sorted logs
   return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
 };
 
 const getTodaysLogs = (logs: WorkoutLog[], id: string) => {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-  return getLogsForExercise(logs, id)
-    .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-    .reverse();
+  const all = getLogsForExercise(logs, id);
+  const results: WorkoutLog[] = [];
+
+  for (const log of all) {
+    if (log.timestamp >= startOfDay) {
+      results.push(log);
+    } else {
+      break;
+    }
+  }
+
+  return results.reverse();
 };
 
 const getLastSessionLogs = (logs: WorkoutLog[], id: string) => {
@@ -21,14 +31,29 @@ const getLastSessionLogs = (logs: WorkoutLog[], id: string) => {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-  const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
-  if (!lastLogNotToday) return [];
+  let lastSessionLogIndex = -1;
+  for (let i = 0; i < all.length; i++) {
+      if (all[i].timestamp < startOfToday) {
+          lastSessionLogIndex = i;
+          break;
+      }
+  }
 
-  const d = new Date(lastLogNotToday.timestamp);
+  if (lastSessionLogIndex === -1) return [];
+
+  const d = new Date(all[lastSessionLogIndex].timestamp);
   const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-  return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+  const results: WorkoutLog[] = [];
+  for (let i = lastSessionLogIndex; i < all.length; i++) {
+      if (all[i].timestamp >= startOfLastDay) {
+          results.push(all[i]);
+      } else {
+          break;
+      }
+  }
+
+  return results;
 };
 
 describe('useWorkoutData filtering logic', () => {
