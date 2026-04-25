@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -10,6 +10,18 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Group logs by exercise ID for O(1) retrieval
+  // Since logs is pre-sorted, each group remains sorted
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    logs.forEach(log => {
+      const group = map.get(log.exerciseId) || [];
+      group.push(log);
+      map.set(log.exerciseId, group);
+    });
+    return map;
+  }, [logs]);
 
   const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
     const payload = {
@@ -29,7 +41,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setIsLoading(true);
       const allData = await workoutService.fetchWorkouts() as any[];
 
-      const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
+      const fetchedLogs = allData
+        .filter((item: any) => item.exerciseId !== DEFINITION_ID)
+        .sort((a, b) => b.timestamp - a.timestamp);
       const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
 
       const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: any) => {
@@ -79,7 +93,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +130,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -165,14 +179,16 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   };
 
   const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
-  }, [logs]);
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
+    // Fast-path: logs are sorted newest first.
+    // We can filter and then reverse to get chronological order for today's log display.
     return getLogsForExercise(id)
       .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
       .reverse();
