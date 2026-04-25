@@ -101,6 +101,8 @@ const App: React.FC = () => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
+      // Haptic feedback for added set
+      if ('vibrate' in navigator) navigator.vibrate(50);
       // Start 90s rest timer
       setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
@@ -363,6 +365,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => setWorkoutDay(null)}
               className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Go back"
             >
               <ChevronLeft size={28} />
             </button>
@@ -378,6 +381,7 @@ const App: React.FC = () => {
               onClick={() => setActiveModal('globalHistory')}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
@@ -385,6 +389,7 @@ const App: React.FC = () => {
               onClick={handleLogout}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>

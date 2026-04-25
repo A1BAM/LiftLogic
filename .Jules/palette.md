@@ -7,3 +7,7 @@
 ## 2025-04-10 - Form Label Accessibility
 **Learning:** Many form fields in the app were using `label` tags without `htmlFor` attributes, or just generic headings. This prevents screen readers from correctly associating labels with their inputs and reduces the clickable hit area for the labels.
 **Action:** Use proper `htmlFor` and `id` associations for all form fields to ensure full accessibility and better UX.
+
+## 2025-04-12 - Haptic Feedback for User Confirmation
+**Learning:** Adding subtle haptic feedback (`navigator.vibrate(50)`) on immediate actions like logging a set provides a satisfying tactile confirmation that the action was successful, especially important in physical environments like a gym where visual focus might be limited.
+**Action:** Use `navigator.vibrate(50)` for small, non-critical confirmation events on mobile-friendly interfaces.

@@ -144,6 +144,7 @@ export function GlobalHistoryModal({
                   onClick={() => setIsImporting(true)}
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                   title="Import Data"
+                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>
@@ -163,7 +164,11 @@ export function GlobalHistoryModal({
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
@@ -179,9 +184,11 @@ export function GlobalHistoryModal({
                placeholder='[{"id":"...", "weight": 20, ...}]'
                value={importText}
                onChange={(e) => setImportText(e.target.value)}
+               autoFocus
+               aria-label="Workout history JSON"
              />
              {error && (
-               <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
+               <div role="alert" className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
                  <AlertCircle size={16} /> {error}
                </div>
              )}
