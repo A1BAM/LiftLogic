@@ -2,33 +2,61 @@ import { describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
 
 // Extracting logic for testing since we can't easily test the hook without full React environment
-const getLogsForExercise = (logs: WorkoutLog[], id: string) => {
-  return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+const getLogsByExercise = (logs: WorkoutLog[]) => {
+  const map = new Map<string, WorkoutLog[]>();
+  // Match hook behavior: assume logs are pre-sorted DESC
+  const sorted = [...logs].sort((a, b) => b.timestamp - a.timestamp);
+  sorted.forEach(log => {
+    if (!map.has(log.exerciseId)) {
+      map.set(log.exerciseId, []);
+    }
+    map.get(log.exerciseId)!.push(log);
+  });
+  return map;
 };
 
-const getTodaysLogs = (logs: WorkoutLog[], id: string) => {
+const getLogsForExercise = (map: Map<string, WorkoutLog[]>, id: string) => {
+  return map.get(id) || [];
+};
+
+const getTodaysLogs = (map: Map<string, WorkoutLog[]>, id: string) => {
+  const all = getLogsForExercise(map, id);
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-  return getLogsForExercise(logs, id)
-    .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-    .reverse();
+  const results = [];
+  for (const log of all) {
+    if (log.timestamp < startOfDay) break;
+    results.push(log);
+  }
+  return results.reverse();
 };
 
-const getLastSessionLogs = (logs: WorkoutLog[], id: string) => {
-  const all = getLogsForExercise(logs, id);
+const getLastSessionLogs = (map: Map<string, WorkoutLog[]>, id: string) => {
+  const all = getLogsForExercise(map, id);
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-  const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
-  if (!lastLogNotToday) return [];
+  let firstPrevLogIndex = -1;
+  for (let i = 0; i < all.length; i++) {
+    if (all[i].timestamp < startOfToday) {
+      firstPrevLogIndex = i;
+      break;
+    }
+  }
 
-  const d = new Date(lastLogNotToday.timestamp);
+  if (firstPrevLogIndex === -1) return [];
+
+  const d = new Date(all[firstPrevLogIndex].timestamp);
   const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-  return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+  const results = [];
+  for (let i = firstPrevLogIndex; i < all.length; i++) {
+    const log = all[i];
+    if (log.timestamp < startOfLastDay) break;
+    results.push(log);
+  }
+  return results;
 };
 
 describe('useWorkoutData filtering logic', () => {
@@ -48,14 +76,16 @@ describe('useWorkoutData filtering logic', () => {
   ];
 
   it('getTodaysLogs returns only logs from today in reverse chronological order', () => {
-    const result = getTodaysLogs(logs, exerciseId);
+    const map = getLogsByExercise(logs);
+    const result = getTodaysLogs(map, exerciseId);
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe('1');
     expect(result[1].id).toBe('2');
   });
 
   it('getLastSessionLogs returns logs from the most recent session before today', () => {
-    const result = getLastSessionLogs(logs, exerciseId);
+    const map = getLogsByExercise(logs);
+    const result = getLastSessionLogs(map, exerciseId);
     expect(result).toHaveLength(2);
     expect(result.every(l => l.weight === 90)).toBe(true);
     // Order from getLogsForExercise is desc, so we check that
@@ -65,7 +95,8 @@ describe('useWorkoutData filtering logic', () => {
 
   it('getLastSessionLogs returns empty array if no logs before today', () => {
     const todayOnlyLogs = logs.filter(l => l.timestamp >= startOfToday);
-    const result = getLastSessionLogs(todayOnlyLogs, exerciseId);
+    const map = getLogsByExercise(todayOnlyLogs);
+    const result = getLastSessionLogs(map, exerciseId);
     expect(result).toHaveLength(0);
   });
 });
