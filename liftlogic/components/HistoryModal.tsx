@@ -22,13 +22,17 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
     .sort((a, b) => b.timestamp - a.timestamp), [logs, exercise.id]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl">
         
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-bold text-white">{exercise.name} History</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={24} />
           </button>
         </div>
@@ -56,7 +60,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                      <button 
                       type="button"
                       onClick={() => onEdit(log)}
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                      aria-label="Edit log"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -66,7 +71,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                         e.stopPropagation();
                         if(window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
+                      aria-label="Delete log"
                     >
                       <Trash2 size={18} />
                     </button>
