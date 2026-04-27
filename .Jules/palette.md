@@ -7,3 +7,7 @@
 ## 2025-04-10 - Form Label Accessibility
 **Learning:** Many form fields in the app were using `label` tags without `htmlFor` attributes, or just generic headings. This prevents screen readers from correctly associating labels with their inputs and reduces the clickable hit area for the labels.
 **Action:** Use proper `htmlFor` and `id` associations for all form fields to ensure full accessibility and better UX.
+
+## 2025-04-27 - Tactile Feedback for Immediate Actions
+**Learning:** In high-intensity environments like a gym, visual feedback on a screen can sometimes be missed. Adding a short vibration (`navigator.vibrate(50)`) provides a non-visual confirmation that an action (like adding a set) was successfully registered.
+**Action:** Use subtle tactile feedback for key immediate user actions to enhance the 'reactive' feel of the mobile experience.

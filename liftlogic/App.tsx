@@ -103,6 +103,9 @@ const App: React.FC = () => {
       await addLog(selectedExercise.id, data.weight, data.reps);
       // Start 90s rest timer
       setRestEndTime(Date.now() + 90 * 1000);
+
+      // Subtle tactile feedback
+      if ('vibrate' in navigator) navigator.vibrate(50);
     } catch (err) {
       alert("Failed to save to cloud.");
     }
