@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { validateWorkoutPayload } from './utils/validation';
 
 export interface Env {
   DATABASE_URL: string;
@@ -21,10 +22,13 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer'
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -56,7 +60,7 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response("Database configuration missing", { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Database configuration missing" }), { status: 500, headers });
     }
 
     const pool = new Pool({ connectionString });
@@ -96,10 +100,16 @@ export default {
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
         const body = await request.json() as any;
-        const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
+
+      const validationError = validateWorkoutPayload(body);
+      if (validationError) {
+        return new Response(JSON.stringify({ error: validationError }), { status: 400, headers });
+      }
+
+      const { id, exerciseId, timestamp, weight, reps, sets, notes } = body;
 
         if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers });
         }
 
         const query = `
@@ -120,6 +130,12 @@ export default {
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
         const body = await request.json() as any;
+
+      const validationError = validateWorkoutPayload(body);
+      if (validationError) {
+        return new Response(JSON.stringify({ error: validationError }), { status: 400, headers });
+      }
+
         const { id, exerciseId } = body || {};
 
         if (exerciseId) {
@@ -134,10 +150,10 @@ export default {
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+      return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+    return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
