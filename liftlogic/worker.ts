@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { validateWorkoutLog, validateDeleteRequest } from './utils/validation';
 
 export interface Env {
   DATABASE_URL: string;
@@ -56,7 +57,7 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response("Database configuration missing", { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Database configuration missing" }), { status: 500, headers });
     }
 
     const pool = new Pool({ connectionString });
@@ -98,8 +99,9 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        const validation = validateWorkoutLog(body);
+        if (!validation.isValid) {
+          return new Response(JSON.stringify({ error: validation.error }), { status: 400, headers });
         }
 
         const query = `
@@ -122,6 +124,11 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId } = body || {};
 
+        const validation = validateDeleteRequest(body);
+        if (!validation.isValid) {
+          return new Response(JSON.stringify({ error: validation.error }), { status: 400, headers });
+        }
+
         if (exerciseId) {
           // Delete all logs for this exercise
           await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
@@ -134,10 +141,10 @@ export default {
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
