@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -52,7 +52,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -79,7 +79,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +116,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -164,18 +164,42 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Group logs by exerciseId for O(1) retrieval
+  // Assume 'logs' is already sorted newest first
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    logs.forEach(log => {
+      const group = map.get(log.exerciseId);
+      if (group) {
+        group.push(log);
+      } else {
+        map.set(log.exerciseId, [log]);
+      }
+    });
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+    const exerciseLogs = getLogsForExercise(id);
+    const results: WorkoutLog[] = [];
+
+    // Exercise logs are already sorted newest first
+    for (const log of exerciseLogs) {
+      if (log.timestamp < startOfDay) break; // Optimization: stop when we go before today
+      if (log.timestamp < endOfDay) {
+        results.push(log);
+      }
+    }
+    // Return chronological for log display
+    return results.reverse();
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
@@ -183,14 +207,24 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
+    // 1. Find the first log that isn't today
     const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
 
+    // 2. Determine that session's date boundaries
     const d = new Date(lastLogNotToday.timestamp);
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+    // 3. Collect logs within that specific day
+    const results: WorkoutLog[] = [];
+    for (const log of all) {
+      if (log.timestamp < startOfLastDay) break; // Optimization: stop when we go before that session
+      if (log.timestamp < endOfLastDay) {
+        results.push(log);
+      }
+    }
+    return results;
   }, [getLogsForExercise]);
 
   return {
