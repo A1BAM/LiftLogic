@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { validateWorkoutLog, validateDeleteRequest } from './utils/validation';
 
 export interface Env {
   DATABASE_URL: string;
@@ -21,10 +22,13 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer'
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -96,11 +100,13 @@ export default {
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
         const body = await request.json() as any;
-        const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        const validation = validateWorkoutLog(body);
+        if (!validation.valid) {
+          return new Response(JSON.stringify({ error: validation.error }), { status: 400, headers });
         }
+
+        const { id, exerciseId, timestamp, weight, reps, sets, notes } = body;
 
         const query = `
           INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
@@ -120,7 +126,13 @@ export default {
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
         const body = await request.json() as any;
-        const { id, exerciseId } = body || {};
+
+        const validation = validateDeleteRequest(body);
+        if (!validation.valid) {
+          return new Response(JSON.stringify({ error: validation.error }), { status: 400, headers });
+        }
+
+        const { id, exerciseId } = body;
 
         if (exerciseId) {
           // Delete all logs for this exercise
