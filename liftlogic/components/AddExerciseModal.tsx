@@ -48,7 +48,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors outline-none"
             aria-label="Close"
           >
             <X size={24} />
