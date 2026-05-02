@@ -21,7 +21,7 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
       'Content-Type': 'application/json'
