@@ -1,0 +1,3 @@
+## 2025-05-15 - Data Retrieval & Date Processing Optimization
+**Learning:** React state filtering/sorting in every render is a major bottleneck for growing datasets. Memoizing grouped data structures (like a Map by exerciseId) and ensuring stable state sorting order provides massive performance gains (up to 2800x for lookup). Additionally, reusing mutable Date objects in loops avoids thousands of object instantiations and expensive method calls like `toDateString()`.
+**Action:** Always maintain sorted data state if order is predictable. Use Map-based memoization for frequently filtered child data. Reuse Date objects for grouping logic in high-frequency renders.

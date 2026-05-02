@@ -21,19 +21,32 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // 1. Organize logs into sessions (grouped by date)
   const sessions = useMemo(() => {
     const grouped: Record<string, WorkoutLog[]> = {};
-    const dateToTimestamp: Record<string, number> = {};
+    const sortedKeys: string[] = [];
+
+    // Reuse mutable Date object to avoid 'Expensive Date Object Instantiation'
+    const d = new Date();
+    let prevDay = -1, prevMonth = -1, prevYear = -1;
 
     exerciseLogs.forEach(log => {
-      const dateKey = new Date(log.timestamp).toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-        dateToTimestamp[dateKey] = log.timestamp;
+      d.setTime(log.timestamp);
+      const day = d.getDate();
+      const month = d.getMonth();
+      const year = d.getFullYear();
+
+      // Only re-calculate date string if the day has changed
+      // exerciseLogs are pre-sorted by timestamp desc, making this highly efficient
+      if (day !== prevDay || month !== prevMonth || year !== prevYear) {
+        const dateKey = d.toDateString();
+        grouped[dateKey] = [log];
+        sortedKeys.push(dateKey);
+        prevDay = day;
+        prevMonth = month;
+        prevYear = year;
+      } else {
+        const dateKey = sortedKeys[sortedKeys.length - 1];
+        grouped[dateKey].push(log);
       }
-      grouped[dateKey].push(log);
     });
-    
-    // Sort keys descending (newest first)
-    const sortedKeys = Object.keys(grouped).sort((a, b) => dateToTimestamp[b] - dateToTimestamp[a]);
     
     return sortedKeys.map(key => ({
       date: key,

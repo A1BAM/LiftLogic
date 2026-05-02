@@ -52,7 +52,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      // Sort logs descending by timestamp to allow faster retrieval and early exits
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -79,7 +80,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    // Prepend to maintain descending sort order (newest first)
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +118,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -153,6 +155,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
     setSyncedExercises(updatedSynced);
     workoutService.setLocalExercises(updatedSynced);
+    // Filtering doesn't change relative order, so no need to re-sort
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
     try {
@@ -164,18 +167,41 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Memoize logs grouped by exercise to avoid O(N) filtering on every render
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    for (const log of logs) {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    }
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    // Logs are already sorted by timestamp desc in the state
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+    const all = getLogsForExercise(id);
+    const todays: WorkoutLog[] = [];
+
+    // Since 'all' is sorted newest first, we can efficiently find today's logs
+    for (const log of all) {
+      if (log.timestamp >= startOfDay && log.timestamp < endOfDay) {
+        todays.push(log);
+      } else if (log.timestamp < startOfDay) {
+        // Early exit: logs are sorted, so no more logs from today
+        break;
+      }
+    }
+    return todays.reverse(); // Return oldest first for the log modal display
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
@@ -190,7 +216,16 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+    const lastSession: WorkoutLog[] = [];
+    for (const log of all) {
+       if (log.timestamp >= startOfLastDay && log.timestamp < endOfLastDay) {
+          lastSession.push(log);
+       } else if (log.timestamp < startOfLastDay) {
+          // Early exit
+          break;
+       }
+    }
+    return lastSession;
   }, [getLogsForExercise]);
 
   return {
