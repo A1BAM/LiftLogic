@@ -101,6 +101,7 @@ const App: React.FC = () => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
+      navigator.vibrate(50);
       // Start 90s rest timer
       setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
@@ -159,6 +160,7 @@ const App: React.FC = () => {
       const updatedExercise = { ...exercise, isArchived: true };
       try {
         await saveExercise(updatedExercise);
+        navigator.vibrate(50);
       } catch (e) {
         logger.error("Failed to sync archive status", e);
       }
@@ -168,6 +170,7 @@ const App: React.FC = () => {
     const updatedExercise = { ...exercise, isArchived: false };
     try {
       await saveExercise(updatedExercise);
+      navigator.vibrate(50);
     } catch (e) {
       logger.error("Failed to sync restore status", e);
     }
