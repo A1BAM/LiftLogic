@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -52,7 +52,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -79,7 +79,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +116,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -164,18 +164,41 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Optimization: Group logs by exerciseId once in a Map for O(1) retrieval
+  // Since logs is already kept sorted (newest first), each array in the Map is also sorted
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    for (const log of logs) {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    }
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+    const all = getLogsForExercise(id);
+    const results: WorkoutLog[] = [];
+
+    // logs are sorted descending, so we can early exit once we pass today
+    for (const log of all) {
+      if (log.timestamp >= startOfDay && log.timestamp < endOfDay) {
+        results.push(log);
+      } else if (log.timestamp < startOfDay) {
+        break; // Early exit: no more logs from today
+      }
+    }
+
+    return results.reverse(); // Standard UI expects today's sets in order they were added
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
@@ -183,6 +206,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
+    // Find the first log that is NOT from today
     const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
 
@@ -190,7 +214,16 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+    const results: WorkoutLog[] = [];
+    for (const log of all) {
+      if (log.timestamp >= startOfLastDay && log.timestamp < endOfLastDay) {
+        results.push(log);
+      } else if (log.timestamp < startOfLastDay) {
+        // Since logs are sorted descending, we can exit once we pass the target day
+        if (results.length > 0) break;
+      }
+    }
+    return results;
   }, [getLogsForExercise]);
 
   return {
