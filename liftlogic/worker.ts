@@ -21,10 +21,13 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -35,15 +38,20 @@ export default {
 
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
-    if (env.TARGET_HASH && request.method !== 'OPTIONS') {
+    if (request.method !== 'OPTIONS') {
+      if (!env.TARGET_HASH) {
+        logger.error("TARGET_HASH not set. API is running without authentication.");
+        return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+          status: 500,
+          headers: headers
+        });
+      }
       if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
         });
       }
-    } else if (!env.TARGET_HASH) {
-      logger.warn("TARGET_HASH not set. API is running without authentication.");
     }
 
     // Handle CORS preflight
@@ -98,8 +106,8 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        if (!id || !exerciseId || typeof id !== 'string' || typeof exerciseId !== 'string') {
+          return new Response("Missing or invalid required fields", { status: 400, headers });
         }
 
         const query = `
@@ -122,19 +130,19 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId } = body || {};
 
-        if (exerciseId) {
+        if (exerciseId && typeof exerciseId === 'string') {
           // Delete all logs for this exercise
           await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        if (id) {
+        if (id && typeof id === 'string') {
           // Delete specific log
           await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return new Response("Missing or invalid ID or Exercise ID", { status: 400, headers });
       }
 
       return new Response("Method Not Allowed", { status: 405, headers });
