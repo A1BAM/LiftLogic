@@ -22,9 +22,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const sessions = useMemo(() => {
     const grouped: Record<string, WorkoutLog[]> = {};
     const dateToTimestamp: Record<string, number> = {};
+    const tempDate = new Date();
 
     exerciseLogs.forEach(log => {
-      const dateKey = new Date(log.timestamp).toDateString();
+      tempDate.setTime(log.timestamp);
+      // Faster than calling toDateString() every time
+      // Use a consistent key format
+      const d = tempDate.getDate();
+      const m = tempDate.getMonth();
+      const y = tempDate.getFullYear();
+      const dateKey = `${y}-${m}-${d}`;
+
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
         dateToTimestamp[dateKey] = log.timestamp;
@@ -35,17 +43,27 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     // Sort keys descending (newest first)
     const sortedKeys = Object.keys(grouped).sort((a, b) => dateToTimestamp[b] - dateToTimestamp[a]);
     
-    return sortedKeys.map(key => ({
-      date: key,
-      logs: grouped[key]
-    }));
+    return sortedKeys.map(key => {
+      const logs = grouped[key];
+      return {
+        date: new Date(logs[0].timestamp).toDateString(),
+        logs
+      };
+    });
   }, [exerciseLogs]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  const todayDateStr = new Date().toDateString();
-  const todaySession = sessions.find(s => s.date === todayDateStr);
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const todaySession = sessions.find(s => {
+    const logDate = new Date(s.logs[0].timestamp);
+    return `${logDate.getFullYear()}-${logDate.getMonth()}-${logDate.getDate()}` === todayKey;
+  });
   const referenceSession = todaySession 
-    ? sessions.find(s => s.date !== todayDateStr) 
+    ? sessions.find(s => {
+        const logDate = new Date(s.logs[0].timestamp);
+        return `${logDate.getFullYear()}-${logDate.getMonth()}-${logDate.getDate()}` !== todayKey;
+      })
     : sessions[0];
 
   const isCompletedToday = useMemo(() => {

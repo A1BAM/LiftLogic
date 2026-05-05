@@ -1,0 +1,3 @@
+## 2025-05-15 - Memoized Log Retrieval & Early-Exit Optimization
+**Learning:** In data-intensive views like a workout dashboard, filtering the entire history ($O(N)$) for every exercise ($M$) leads to $O(M \times N)$ complexity, which degrades noticeably as the log history grows. Pre-indexing logs by exercise ID into a `Map` and maintaining a sorted invariant allows for $O(1)$ lookup and $O(K)$ filtering (where $K$ is the session size) via early-exit loops.
+**Action:** Always consider memoized indexing (Maps) and sorted early-exit strategies when rendering lists derived from a common historical dataset.
