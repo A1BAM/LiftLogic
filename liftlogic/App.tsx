@@ -101,6 +101,7 @@ const App: React.FC = () => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
+      if ('vibrate' in navigator) navigator.vibrate(50);
       // Start 90s rest timer
       setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
@@ -159,6 +160,7 @@ const App: React.FC = () => {
       const updatedExercise = { ...exercise, isArchived: true };
       try {
         await saveExercise(updatedExercise);
+        if ('vibrate' in navigator) navigator.vibrate(50);
       } catch (e) {
         logger.error("Failed to sync archive status", e);
       }
@@ -168,6 +170,7 @@ const App: React.FC = () => {
     const updatedExercise = { ...exercise, isArchived: false };
     try {
       await saveExercise(updatedExercise);
+      if ('vibrate' in navigator) navigator.vibrate(50);
     } catch (e) {
       logger.error("Failed to sync restore status", e);
     }
@@ -376,15 +379,17 @@ const App: React.FC = () => {
           <div className="flex gap-2">
             <button 
               onClick={() => setActiveModal('globalHistory')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>
