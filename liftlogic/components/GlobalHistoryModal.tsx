@@ -140,30 +140,39 @@ export function GlobalHistoryModal({
           <div className="flex items-center gap-2">
             {!isImporting ? (
               <>
-                <button 
+                <button
                   onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                   title="Import Data"
+                  aria-label="Import data from JSON"
                 >
                   <Download size={20} />
                 </button>
-                <button 
+                <button
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied' : 'Export'}
                 </button>
               </>
             ) : (
-              <button 
-                onClick={() => { setIsImporting(false); setError(null); }}
-                className="text-slate-400 hover:text-white text-sm font-medium px-2"
+              <button
+                onClick={() => {
+                  setIsImporting(false);
+                  setError(null);
+                }}
+                className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                aria-label="Cancel import"
               >
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
@@ -174,11 +183,12 @@ export function GlobalHistoryModal({
              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200">
                Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
              </div>
-             <textarea 
-               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 resize-none min-h-[200px]"
+             <textarea
+               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 resize-none min-h-[200px]"
                placeholder='[{"id":"...", "weight": 20, ...}]'
                value={importText}
                onChange={(e) => setImportText(e.target.value)}
+               aria-label="Workout history JSON"
              />
              {error && (
                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
