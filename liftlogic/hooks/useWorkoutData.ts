@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
+
+const EMPTY_LOGS: WorkoutLog[] = [];
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
@@ -29,7 +31,11 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setIsLoading(true);
       const allData = await workoutService.fetchWorkouts() as any[];
 
-      const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
+      // API returns sorted DESC, but we enforce it for consistency
+      const fetchedLogs = allData
+        .filter((item: any) => item.exerciseId !== DEFINITION_ID)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
       const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
 
       const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: any) => {
@@ -79,7 +85,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    // Prepend to maintain DESC order: O(N) but better than sorting O(N log N)
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +123,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -164,18 +171,42 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
-  const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Group logs by exercise for O(1) retrieval
+  // This Map provides stable array references for getLogsForExercise
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    // logs are already sorted DESC from fetchDataAndSync/addLog/importLogs
+    for (const log of logs) {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    }
+    return map;
   }, [logs]);
+
+  const getLogsForExercise = useCallback((id: string) => {
+    return logsByExercise.get(id) || EMPTY_LOGS;
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+    const all = getLogsForExercise(id);
+    const todays: WorkoutLog[] = [];
+
+    // Arrays are pre-sorted DESC, so we iterate until we fall out of today
+    for (const log of all) {
+      if (log.timestamp >= startOfDay && log.timestamp < endOfDay) {
+        todays.push(log);
+      } else if (log.timestamp < startOfDay) {
+        break; // Early exit: logs are sorted DESC
+      }
+    }
+
+    return todays.reverse(); // Original logic expected chronological order for today
   }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
@@ -183,14 +214,25 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
+    // 1. Find the first log before today
     const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
 
+    // 2. Determine that session's date boundaries
     const d = new Date(lastLogNotToday.timestamp);
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+    // 3. Extract all logs from that specific session
+    const sessionLogs: WorkoutLog[] = [];
+    for (const log of all) {
+      if (log.timestamp >= startOfLastDay && log.timestamp < endOfLastDay) {
+        sessionLogs.push(log);
+      } else if (log.timestamp < startOfLastDay) {
+        break; // Early exit
+      }
+    }
+    return sessionLogs;
   }, [getLogsForExercise]);
 
   return {

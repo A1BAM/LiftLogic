@@ -10,7 +10,7 @@ interface ExerciseCardProps {
   onArchive?: () => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
+export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   exercise, 
   exerciseLogs, 
   onLogClick, 
@@ -231,4 +231,4 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
     </div>
   );
-};
+});

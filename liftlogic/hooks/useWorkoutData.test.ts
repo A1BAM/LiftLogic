@@ -2,8 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
 
 // Extracting logic for testing since we can't easily test the hook without full React environment
+// These helpers simulate the optimized logic in useWorkoutData.ts
 const getLogsForExercise = (logs: WorkoutLog[], id: string) => {
-  return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
+  // Simulates logsByExercise lookup (assuming logs are already sorted DESC)
+  return logs.filter(l => l.exerciseId === id);
 };
 
 const getTodaysLogs = (logs: WorkoutLog[], id: string) => {
@@ -11,9 +13,18 @@ const getTodaysLogs = (logs: WorkoutLog[], id: string) => {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-  return getLogsForExercise(logs, id)
-    .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-    .reverse();
+  const all = getLogsForExercise(logs, id);
+  const todays: WorkoutLog[] = [];
+
+  for (const log of all) {
+    if (log.timestamp >= startOfDay && log.timestamp < endOfDay) {
+      todays.push(log);
+    } else if (log.timestamp < startOfDay) {
+      break;
+    }
+  }
+
+  return todays.reverse();
 };
 
 const getLastSessionLogs = (logs: WorkoutLog[], id: string) => {
@@ -28,7 +39,15 @@ const getLastSessionLogs = (logs: WorkoutLog[], id: string) => {
   const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-  return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+  const sessionLogs: WorkoutLog[] = [];
+  for (const log of all) {
+    if (log.timestamp >= startOfLastDay && log.timestamp < endOfLastDay) {
+      sessionLogs.push(log);
+    } else if (log.timestamp < startOfLastDay) {
+      break;
+    }
+  }
+  return sessionLogs;
 };
 
 describe('useWorkoutData filtering logic', () => {
@@ -40,10 +59,10 @@ describe('useWorkoutData filtering logic', () => {
   vi.setSystemTime(now);
 
   const logs: WorkoutLog[] = [
+    { id: '2', exerciseId, timestamp: startOfToday + 2000, weight: 100, reps: 10, sets: 1 }, // Today (newest)
     { id: '1', exerciseId, timestamp: startOfToday + 1000, weight: 100, reps: 10, sets: 1 }, // Today
-    { id: '2', exerciseId, timestamp: startOfToday + 2000, weight: 100, reps: 10, sets: 1 }, // Today
-    { id: '3', exerciseId, timestamp: startOfYesterday + 1000, weight: 90, reps: 10, sets: 1 }, // Yesterday
     { id: '4', exerciseId, timestamp: startOfYesterday + 2000, weight: 90, reps: 10, sets: 1 }, // Yesterday
+    { id: '3', exerciseId, timestamp: startOfYesterday + 1000, weight: 90, reps: 10, sets: 1 }, // Yesterday
     { id: '5', exerciseId, timestamp: startOfYesterday - 1000, weight: 80, reps: 10, sets: 1 }, // Day before yesterday
   ];
 
