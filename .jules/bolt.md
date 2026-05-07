@@ -1,0 +1,3 @@
+## 2026-05-07 - Pre-sorted State & Memoized Map for O(1) Retrieval
+**Learning:** In React applications managing large chronological datasets (like workout logs), repeated O(N) filtering and sorting within render-cycle hooks (e.g., `useWorkoutData`) becomes a major bottleneck as history grows. By maintaining the primary state in a pre-sorted order (newest first) and deriving a memoized Map for O(1) ID-based lookups, retrieval overhead is drastically reduced.
+**Action:** Always maintain chronological state in a consistent sort order and use memoized Maps for entity-specific grouping to enable O(1) lookups and O(K) early-exit iterations.
