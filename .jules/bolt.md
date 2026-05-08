@@ -1,0 +1,3 @@
+## 2025-05-22 - Optimized log retrieval with memoized Map and early-exit iteration
+**Learning:** In applications with append-only historical data (like workout logs), maintaining a sorted state for the primary data array enables highly efficient retrieval. Combining a memoized Map for O(1) grouping with early-exit loops for time-based filtering can achieve orders of magnitude faster performance compared to repeated `.filter().sort()` calls on the full dataset.
+**Action:** Use memoized Maps to group data by ID once per update, and implement manual `for...of` loops with `break` conditions for time-windowed queries on sorted data to avoid redundant iterations.

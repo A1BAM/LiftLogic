@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -8,6 +8,18 @@ import { logger } from '../utils/logger';
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
+
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    // logs are already sorted descending
+    for (const log of logs) {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    }
+    return map;
+  }, [logs]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +64,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -79,7 +91,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +128,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -165,33 +177,49 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   };
 
   const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
-  }, [logs]);
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
+    const exerciseLogs = logsByExercise.get(id) || [];
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
-  }, [getLogsForExercise]);
+    const results = [];
+    for (const log of exerciseLogs) {
+      if (log.timestamp >= startOfDay && log.timestamp < endOfDay) {
+        results.push(log);
+      } else if (log.timestamp < startOfDay) {
+        break; // Optimization: early exit
+      }
+    }
+    return results.reverse();
+  }, [logsByExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
-    const all = getLogsForExercise(id);
+    const exerciseLogs = logsByExercise.get(id) || [];
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
+    const lastLogNotToday = exerciseLogs.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
 
     const d = new Date(lastLogNotToday.timestamp);
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
-  }, [getLogsForExercise]);
+    const results = [];
+    for (const log of exerciseLogs) {
+      if (log.timestamp >= startOfLastDay && log.timestamp < endOfLastDay) {
+        results.push(log);
+      } else if (log.timestamp < startOfLastDay) {
+        // Optimization: early exit if we've passed the target day
+        if (results.length > 0) break;
+      }
+    }
+    return results;
+  }, [logsByExercise]);
 
   return {
     logs,
