@@ -21,29 +21,35 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
       'Vary': 'Origin',
       'Content-Type': 'application/json'
     };
 
-    if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
-      headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+    if (allowedOrigin === '*') {
+      headers['Access-Control-Allow-Origin'] = '*';
+    } else if (allowedOrigin === requestOrigin) {
+      headers['Access-Control-Allow-Origin'] = requestOrigin;
     } else {
       headers['Access-Control-Allow-Origin'] = allowedOrigin;
     }
 
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
-    if (env.TARGET_HASH && request.method !== 'OPTIONS') {
+    if (request.method !== 'OPTIONS') {
+      if (!env.TARGET_HASH) {
+        logger.error("TARGET_HASH not set. API is disabled for security.");
+        return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500, headers });
+      }
       if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
         });
       }
-    } else if (!env.TARGET_HASH) {
-      logger.warn("TARGET_HASH not set. API is running without authentication.");
     }
 
     // Handle CORS preflight
@@ -56,7 +62,7 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response("Database configuration missing", { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Database configuration missing" }), { status: 500, headers });
     }
 
     const pool = new Pool({ connectionString });
@@ -98,8 +104,15 @@ export default {
         const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        // Strict Input Validation
+        if (typeof id !== 'string' || typeof exerciseId !== 'string' ||
+            typeof timestamp !== 'number' || typeof weight !== 'number' ||
+            typeof reps !== 'number') {
+          return new Response(JSON.stringify({ error: "Invalid or missing required fields" }), { status: 400, headers });
+        }
+
+        if (notes && (typeof notes !== 'string' || notes.length > 500)) {
+          return new Response(JSON.stringify({ error: "Notes must be a string under 500 characters" }), { status: 400, headers });
         }
 
         const query = `
@@ -123,21 +136,23 @@ export default {
         const { id, exerciseId } = body || {};
 
         if (exerciseId) {
+          if (typeof exerciseId !== 'string') return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
           // Delete all logs for this exercise
           await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
         if (id) {
+          if (typeof id !== 'string') return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
           // Delete specific log
           await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
           return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
