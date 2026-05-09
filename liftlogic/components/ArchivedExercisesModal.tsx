@@ -16,7 +16,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
   onDelete 
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl">
         
         {/* Header */}
@@ -25,7 +25,11 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
             <Archive className="text-amber-500" size={20} />
             Archived Exercises
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            aria-label="Close"
+          >
             <X size={24} />
           </button>
         </div>
@@ -47,15 +51,17 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
                 <div className="flex gap-2">
                   <button 
                     onClick={() => onRestore(ex)}
-                    className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-900/50 transition-colors"
+                    className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-900/50 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
                     title="Restore"
+                    aria-label="Restore exercise"
                   >
                     <RefreshCw size={18} />
                   </button>
                   <button 
                     onClick={() => onDelete(ex.id)}
-                    className="p-2 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-red-900/30 transition-colors"
+                    className="p-2 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-red-900/30 focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                     title="Delete Permanently"
+                    aria-label="Delete exercise permanently"
                   >
                     <Trash2 size={18} />
                   </button>
