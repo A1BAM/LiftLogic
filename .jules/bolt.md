@@ -1,0 +1,3 @@
+## 2025-05-15 - O(1) Map Lookup and Early-Exit Iteration
+**Learning:** In applications with large chronological datasets (like workout logs), performing $O(N)$ filters on every render for multiple components (e.g., exercise cards on a dashboard) leads to $O(E \cdot N)$ complexity. Using a memoized Map for O(1) retrieval and maintaining a sorted source array allows for $O(K)$ early-exit iterations (where $K$ is the session size), significantly improving dashboard responsiveness.
+**Action:** Always prefer grouping flat arrays into Maps for component-level lookups and use `for...of` loops with `break` when working with sorted chronological data.
