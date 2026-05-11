@@ -7,3 +7,7 @@
 ## 2025-04-10 - Form Label Accessibility
 **Learning:** Many form fields in the app were using `label` tags without `htmlFor` attributes, or just generic headings. This prevents screen readers from correctly associating labels with their inputs and reduces the clickable hit area for the labels.
 **Action:** Use proper `htmlFor` and `id` associations for all form fields to ensure full accessibility and better UX.
+
+## 2025-05-11 - Semantic Labels for Non-Interactive Displays
+**Learning:** In stepper-style interfaces (like weight/reps in LogModal), using read-only `input` elements instead of `div` allows for proper semantic association with `label` tags via `htmlFor`. However, to avoid creating friction for keyboard users, these read-only inputs should have `tabIndex={-1}` so they are skipped in the tab order while still remaining accessible to screen readers.
+**Action:** Use `input readOnly tabIndex={-1}` for labeled numeric displays that are controlled by external buttons.

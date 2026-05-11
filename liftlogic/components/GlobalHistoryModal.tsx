@@ -163,7 +163,11 @@ export function GlobalHistoryModal({
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
@@ -171,14 +175,17 @@ export function GlobalHistoryModal({
 
         {isImporting ? (
            <div className="p-6 flex-1 flex flex-col gap-4">
-             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200">
+             <label htmlFor="import-logs-textarea" className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200 cursor-pointer">
                Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
-             </div>
+             </label>
              <textarea 
+               id="import-logs-textarea"
                className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 resize-none min-h-[200px]"
                placeholder='[{"id":"...", "weight": 20, ...}]'
                value={importText}
                onChange={(e) => setImportText(e.target.value)}
+               autoFocus
+               aria-label="Workout history JSON"
              />
              {error && (
                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">

@@ -34,8 +34,14 @@ export const LogModal: React.FC<LogModalProps> = ({
   const [weight, setWeight] = useState(defaults ? defaults.weight : exercise.defaultWeight);
   const [reps, setReps] = useState(defaults ? defaults.reps : exercise.targetReps);
 
-  const adjustWeight = (delta: number) => setWeight(Math.max(0, weight + delta));
-  const adjustReps = (delta: number) => setReps(Math.max(1, reps + delta));
+  const adjustWeight = (delta: number) => {
+    setWeight(Math.max(0, weight + delta));
+    navigator.vibrate?.(10);
+  };
+  const adjustReps = (delta: number) => {
+    setReps(Math.max(1, reps + delta));
+    navigator.vibrate?.(10);
+  };
 
   const handleAddSet = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +92,10 @@ export const LogModal: React.FC<LogModalProps> = ({
                     </div>
                   </div>
                   <button 
-                    onClick={() => onDelete(log.id)}
+                    onClick={() => {
+                      onDelete(log.id);
+                      navigator.vibrate?.(10);
+                    }}
                     className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                     aria-label={`Delete set ${index + 1}`}
                   >
@@ -114,7 +123,14 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="weight-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
+                    <input
+                      id="weight-input"
+                      readOnly
+                      tabIndex={-1}
+                      className="w-12 text-center bg-transparent text-xl font-bold text-white font-mono focus:outline-none cursor-default"
+                      value={weight}
+                      aria-live="polite"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustWeight(5)}
@@ -138,7 +154,14 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="reps-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
+                    <input
+                      id="reps-input"
+                      readOnly
+                      tabIndex={-1}
+                      className="w-8 text-center bg-transparent text-xl font-bold text-white font-mono focus:outline-none cursor-default"
+                      value={reps}
+                      aria-live="polite"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustReps(1)}
