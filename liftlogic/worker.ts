@@ -1,5 +1,31 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { timingSafeEqual } from './utils/security';
+
+async function deleteLogsByExercise(pool: Pool, exerciseId: string, headers: Record<string, string>): Promise<Response> {
+  await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
+  return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+}
+
+async function deleteLogById(pool: Pool, id: string, headers: Record<string, string>): Promise<Response> {
+  await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+  return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+}
+
+async function handleDeleteRequest(request: Request, pool: Pool, headers: Record<string, string>): Promise<Response> {
+  const body = await request.json() as any;
+  const { id, exerciseId } = body || {};
+
+  if (exerciseId) {
+    return await deleteLogsByExercise(pool, exerciseId, headers);
+  }
+
+  if (id) {
+    return await deleteLogById(pool, id, headers);
+  }
+
+  return new Response("Missing ID or Exercise ID", { status: 400, headers });
+}
 
 export interface Env {
   DATABASE_URL: string;
@@ -21,10 +47,13 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer'
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -36,7 +65,7 @@ export default {
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
     if (env.TARGET_HASH && request.method !== 'OPTIONS') {
-      if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
+      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -119,22 +148,7 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        const body = await request.json() as any;
-        const { id, exerciseId } = body || {};
-
-        if (exerciseId) {
-          // Delete all logs for this exercise
-          await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
-          return new Response(JSON.stringify({ success: true }), { status: 200, headers });
-        }
-
-        if (id) {
-          // Delete specific log
-          await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
-          return new Response(JSON.stringify({ success: true }), { status: 200, headers });
-        }
-
-        return new Response("Missing ID or Exercise ID", { status: 400, headers });
+        return await handleDeleteRequest(request, pool, headers);
       }
 
       return new Response("Method Not Allowed", { status: 405, headers });
