@@ -19,26 +19,37 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 }) => {
   
   // 1. Organize logs into sessions (grouped by date)
+  // Optimization: Single-pass grouping leveraging pre-sorted exerciseLogs (descending)
   const sessions = useMemo(() => {
-    const grouped: Record<string, WorkoutLog[]> = {};
-    const dateToTimestamp: Record<string, number> = {};
+    if (exerciseLogs.length === 0) return [];
 
-    exerciseLogs.forEach(log => {
-      const dateKey = new Date(log.timestamp).toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-        dateToTimestamp[dateKey] = log.timestamp;
+    const result: { date: string; logs: WorkoutLog[] }[] = [];
+    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
+    const tempDate = new Date();
+    let lastDay = -1, lastMonth = -1, lastYear = -1;
+
+    for (const log of exerciseLogs) {
+      tempDate.setTime(log.timestamp);
+      const day = tempDate.getDate();
+      const month = tempDate.getMonth();
+      const year = tempDate.getFullYear();
+
+      if (!currentSession || day !== lastDay || month !== lastMonth || year !== lastYear) {
+        const dateKey = tempDate.toDateString();
+        currentSession = {
+          date: dateKey,
+          logs: [log]
+        };
+        result.push(currentSession);
+        lastDay = day;
+        lastMonth = month;
+        lastYear = year;
+      } else {
+        currentSession.logs.push(log);
       }
-      grouped[dateKey].push(log);
-    });
+    }
     
-    // Sort keys descending (newest first)
-    const sortedKeys = Object.keys(grouped).sort((a, b) => dateToTimestamp[b] - dateToTimestamp[a]);
-    
-    return sortedKeys.map(key => ({
-      date: key,
-      logs: grouped[key]
-    }));
+    return result;
   }, [exerciseLogs]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
