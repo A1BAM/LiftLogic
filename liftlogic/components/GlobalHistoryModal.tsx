@@ -44,21 +44,25 @@ export function GlobalHistoryModal({
 
   const todaySummary = useMemo(() => {
     if (!currentDayType) return null;
-    const todayStr = new Date().toDateString();
     
-    // Filter logs for today AND matching the current day type (Push/Pull)
-    const todaysRelevantLogs = logs.filter(l => {
-        const isToday = new Date(l.timestamp).toDateString() === todayStr;
-        // Use map to check dayType safely
-        const exercise = allExercisesMap[l.exerciseId];
-        const isCorrectType = exercise?.dayType === currentDayType;
-        return isToday && isCorrectType;
-    });
+    const nowD = new Date();
+    const startOfToday = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate()).getTime();
+    const endOfToday = startOfToday + 86400000; // 24 * 60 * 60 * 1000
 
-    const volume = todaysRelevantLogs.reduce((acc, log) => acc + (log.weight * log.reps * (log.sets || 1)), 0);
-    const exercisesCount = new Set(todaysRelevantLogs.map(l => l.exerciseId)).size;
+    let volume = 0;
+    const todayExercises = new Set<string>();
 
-    return { volume, exercisesCount };
+    for (const log of logs) {
+      if (log.timestamp >= startOfToday && log.timestamp < endOfToday) {
+        const exercise = allExercisesMap[log.exerciseId];
+        if (exercise?.dayType === currentDayType) {
+          volume += log.weight * log.reps * (log.sets || 1);
+          todayExercises.add(log.exerciseId);
+        }
+      }
+    }
+
+    return { volume, exercisesCount: todayExercises.size };
   }, [logs, currentDayType, allExercisesMap]);
 
   const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
@@ -128,7 +132,7 @@ export function GlobalHistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl">
         
         {/* Header */}
@@ -142,14 +146,16 @@ export function GlobalHistoryModal({
               <>
                 <button 
                   onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+                  aria-label="Import Data"
                   title="Import Data"
+                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>
                 <button 
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied' : 'Export'}
@@ -158,12 +164,17 @@ export function GlobalHistoryModal({
             ) : (
               <button 
                 onClick={() => { setIsImporting(false); setError(null); }}
-                className="text-slate-400 hover:text-white text-sm font-medium px-2"
+                className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+                aria-label="Cancel import"
               >
                 Cancel
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              aria-label="Close"
+            >
               <X size={24} />
             </button>
           </div>
@@ -175,7 +186,9 @@ export function GlobalHistoryModal({
                Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
              </div>
              <textarea 
-               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 resize-none min-h-[200px]"
+               autoFocus
+               aria-label="Workout history JSON"
+               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 resize-none min-h-[200px]"
                placeholder='[{"id":"...", "weight": 20, ...}]'
                value={importText}
                onChange={(e) => setImportText(e.target.value)}

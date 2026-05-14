@@ -1,5 +1,31 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { timingSafeEqual } from './utils/security';
+
+async function deleteLogsByExercise(pool: Pool, exerciseId: string, headers: Record<string, string>): Promise<Response> {
+  await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
+  return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+}
+
+async function deleteLogById(pool: Pool, id: string, headers: Record<string, string>): Promise<Response> {
+  await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+  return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+}
+
+async function handleDeleteRequest(request: Request, pool: Pool, headers: Record<string, string>): Promise<Response> {
+  const body = await request.json() as any;
+  const { id, exerciseId } = body || {};
+
+  if (exerciseId) {
+    return deleteLogsByExercise(pool, exerciseId, headers);
+  }
+
+  if (id) {
+    return deleteLogById(pool, id, headers);
+  }
+
+  return new Response("Missing ID or Exercise ID", { status: 400, headers });
+}
 
 export interface Env {
   DATABASE_URL: string;
@@ -38,7 +64,7 @@ export default {
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
     if (env.TARGET_HASH && request.method !== 'OPTIONS') {
-      if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
+      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
