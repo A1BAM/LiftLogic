@@ -1,5 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { logger } from './utils/logger';
+import { timingSafeEqual } from './utils/security';
 
 export interface Env {
   DATABASE_URL: string;
@@ -36,7 +37,7 @@ export default {
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
     if (env.TARGET_HASH && request.method !== 'OPTIONS') {
-      if (!authHeader || authHeader !== `Bearer ${env.TARGET_HASH}`) {
+      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
