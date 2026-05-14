@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -7,6 +7,23 @@ import { logger } from '../utils/logger';
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
+
+  // Memoized Map to group logs by exerciseId for O(1) retrieval
+  const logsByExercise = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+
+    // Sort logs once here (newest first) to avoid sorting in every getter
+    const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
+
+    sortedLogs.forEach(log => {
+      if (!map.has(log.exerciseId)) {
+        map.set(log.exerciseId, []);
+      }
+      map.get(log.exerciseId)!.push(log);
+    });
+    return map;
+  }, [logs]);
+
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,33 +181,61 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   };
 
+  /**
+   * Performance: O(1) retrieval via memoized Map.
+   * Result is already sorted newest first by the Map generator.
+   */
   const getLogsForExercise = useCallback((id: string) => {
-    return logs.filter(l => l.exerciseId === id).sort((a, b) => b.timestamp - a.timestamp);
-  }, [logs]);
+    return logsByExercise.get(id) || [];
+  }, [logsByExercise]);
 
+  /**
+   * Performance: O(K) where K is the number of logs for this exercise.
+   * Uses early-exit since logs are sorted descending.
+   */
   const getTodaysLogs = useCallback((id: string) => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
-    return getLogsForExercise(id)
-      .filter(l => l.timestamp >= startOfDay && l.timestamp < endOfDay)
-      .reverse();
+    const exerciseLogs = getLogsForExercise(id);
+    const result: WorkoutLog[] = [];
+
+    // Efficiently collect today's logs using early exit
+    for (const log of exerciseLogs) {
+      if (log.timestamp >= endOfDay) continue; // Future dated logs
+      if (log.timestamp < startOfDay) break; // Reached yesterday, stop
+      result.push(log);
+    }
+
+    // App expects today's logs in ascending order (oldest first)
+    return result.reverse();
   }, [getLogsForExercise]);
 
+  /**
+   * Performance: O(K) where K is the number of logs for this exercise.
+   * Uses early-exit since logs are sorted descending.
+   */
   const getLastSessionLogs = useCallback((id: string) => {
-    const all = getLogsForExercise(id);
+    const exerciseLogs = getLogsForExercise(id);
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const lastLogNotToday = all.find(l => l.timestamp < startOfToday);
+    // Find first log before today (already sorted newest first)
+    const lastLogNotToday = exerciseLogs.find(l => l.timestamp < startOfToday);
     if (!lastLogNotToday) return [];
 
     const d = new Date(lastLogNotToday.timestamp);
     const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const endOfLastDay = startOfLastDay + 24 * 60 * 60 * 1000;
 
-    return all.filter(l => l.timestamp >= startOfLastDay && l.timestamp < endOfLastDay);
+    const result: WorkoutLog[] = [];
+    for (const log of exerciseLogs) {
+      if (log.timestamp >= endOfLastDay) continue;
+      if (log.timestamp < startOfLastDay) break;
+      result.push(log);
+    }
+    return result;
   }, [getLogsForExercise]);
 
   return {
