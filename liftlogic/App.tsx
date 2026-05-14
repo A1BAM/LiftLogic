@@ -11,7 +11,6 @@ import { RestTimer } from './components/RestTimer';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
-import { logger } from './utils/logger';
 
 const App: React.FC = () => {
   // Auth State
@@ -74,7 +73,7 @@ const App: React.FC = () => {
         setPasswordInput('');
       }
     } catch (err) {
-      logger.error("Crypto error:", err);
+      console.error("[ERROR] " + "Crypto error:", err);
       alert("Secure context required for login.");
     }
   };
@@ -160,7 +159,7 @@ const App: React.FC = () => {
       try {
         await saveExercise(updatedExercise);
       } catch (e) {
-        logger.error("Failed to sync archive status", e);
+        console.error("[ERROR] " + "Failed to sync archive status", e);
       }
   };
 
@@ -169,7 +168,7 @@ const App: React.FC = () => {
     try {
       await saveExercise(updatedExercise);
     } catch (e) {
-      logger.error("Failed to sync restore status", e);
+      console.error("[ERROR] " + "Failed to sync restore status", e);
     }
 };
 
@@ -179,7 +178,7 @@ const App: React.FC = () => {
          try {
              await deleteExercisePermanently(exerciseId);
          } catch (err) {
-             logger.error("Failed to delete exercise logs from cloud", err);
+             console.error("[ERROR] " + "Failed to delete exercise logs from cloud", err);
          }
       }
     }
