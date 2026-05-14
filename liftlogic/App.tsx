@@ -157,6 +157,7 @@ const App: React.FC = () => {
   const handleArchiveExercise = async (exercise: ExerciseDef) => {
       const updatedExercise = { ...exercise, isArchived: true };
       try {
+        navigator.vibrate?.(10);
         await saveExercise(updatedExercise);
       } catch (e) {
         console.error("[ERROR] " + "Failed to sync archive status", e);
@@ -166,6 +167,7 @@ const App: React.FC = () => {
   const handleRestoreExercise = async (exercise: ExerciseDef) => {
     const updatedExercise = { ...exercise, isArchived: false };
     try {
+      navigator.vibrate?.(10);
       await saveExercise(updatedExercise);
     } catch (e) {
       console.error("[ERROR] " + "Failed to sync restore status", e);
