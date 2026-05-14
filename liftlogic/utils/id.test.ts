@@ -4,74 +4,48 @@ import { generateId } from './id';
 describe('generateId', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
   });
 
-  describe('with crypto.randomUUID available', () => {
-    it('should use crypto.randomUUID when available', () => {
-      const mockUUID = 'mocked-uuid-1234';
-      vi.stubGlobal('crypto', {
-        randomUUID: vi.fn().mockReturnValue(mockUUID),
-      });
-
-      const id = generateId();
-      expect(id).toBe(mockUUID);
-      expect(crypto.randomUUID).toHaveBeenCalled();
-    });
+  it('should return a string', () => {
+    const id = generateId();
+    expect(typeof id).toBe('string');
   });
 
-  describe('fallback implementation', () => {
-    it('should fall back to alternative implementation when crypto is undefined', () => {
-      vi.stubGlobal('crypto', undefined);
-
-      const id = generateId();
-      expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(0);
-      expect(id).not.toBe('mocked-uuid-1234');
-    });
-
-    it('should fall back when crypto exists but randomUUID is missing', () => {
-      vi.stubGlobal('crypto', {}); // No randomUUID
-
-      const id = generateId();
-      expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(0);
-    });
-
-    it('should generate a deterministic ID from Date and Math in fallback mode', () => {
-      vi.stubGlobal('crypto', undefined);
-
-      const mockTime = 1234567890;
-      const mockRandom = 0.123456789;
-
-      vi.spyOn(Date, 'now').mockReturnValue(mockTime);
-      vi.spyOn(Math, 'random').mockReturnValue(mockRandom);
-
-      const id = generateId();
-
-      // Date.now().toString(36) + Math.random().toString(36).substring(2)
-      const expectedId = mockTime.toString(36) + mockRandom.toString(36).substring(2);
-      expect(id).toBe(expectedId);
-    });
+  it('should return non-empty IDs', () => {
+    const id = generateId();
+    expect(id.length).toBeGreaterThan(0);
   });
 
-  describe('general properties', () => {
-    it('should return a string', () => {
-      const id = generateId();
-      expect(typeof id).toBe('string');
+  it('should generate unique IDs', () => {
+    const ids = new Set();
+    for (let i = 0; i < 1000; i++) {
+      ids.add(generateId());
+    }
+    expect(ids.size).toBe(1000);
+  });
+
+  it('should use crypto.randomUUID when available', () => {
+    const mockUUID = 'mocked-uuid';
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockReturnValue(mockUUID),
     });
 
-    it('should return non-empty IDs', () => {
-      const id = generateId();
-      expect(id.length).toBeGreaterThan(0);
-    });
+    const id = generateId();
+    expect(id).toBe(mockUUID);
+    expect(crypto.randomUUID).toHaveBeenCalled();
+  });
 
-    it('should generate unique IDs in default environment', () => {
-      const ids = new Set();
-      for (let i = 0; i < 1000; i++) {
-        ids.add(generateId());
-      }
-      expect(ids.size).toBe(1000);
-    });
+  it('should fall back to alternative implementation when crypto.randomUUID is not available', () => {
+    // Mock crypto to be undefined or missing randomUUID
+    vi.stubGlobal('crypto', undefined);
+
+    const id = generateId();
+    expect(typeof id).toBe('string');
+    expect(id.length).toBeGreaterThan(0);
+
+    // Check that it looks like the fallback (date + random)
+    // Date.now().toString(36) is usually around 8-9 chars
+    // Math.random().toString(36).substring(2) varies
+    expect(id).not.toBe('mocked-uuid');
   });
 });

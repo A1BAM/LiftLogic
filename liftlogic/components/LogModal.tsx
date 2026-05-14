@@ -34,18 +34,11 @@ export const LogModal: React.FC<LogModalProps> = ({
   const [weight, setWeight] = useState(defaults ? defaults.weight : exercise.defaultWeight);
   const [reps, setReps] = useState(defaults ? defaults.reps : exercise.targetReps);
 
-  const adjustWeight = (delta: number) => {
-    navigator.vibrate?.(10);
-    setWeight(Math.max(0, weight + delta));
-  };
-  const adjustReps = (delta: number) => {
-    navigator.vibrate?.(10);
-    setReps(Math.max(1, reps + delta));
-  };
+  const adjustWeight = (delta: number) => setWeight(Math.max(0, weight + delta));
+  const adjustReps = (delta: number) => setReps(Math.max(1, reps + delta));
 
   const handleAddSet = (e: React.FormEvent) => {
     e.preventDefault();
-    navigator.vibrate?.(10);
     // Always save as 1 set when using this granular logger
     onSave({ weight, reps, sets: 1 });
   };
@@ -62,7 +55,7 @@ export const LogModal: React.FC<LogModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+            className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
             aria-label="Close"
           >
             <X size={20} />

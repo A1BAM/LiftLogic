@@ -55,20 +55,14 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
 
         <div className="flex flex-col gap-1">
            <button 
-             onClick={() => {
-               navigator.vibrate?.(10);
-               onAdd(30);
-             }}
+             onClick={() => onAdd(30)}
              className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
              aria-label="Add 30 seconds"
            >
              <Plus size={14} />
            </button>
            <button 
-             onClick={() => {
-               navigator.vibrate?.(10);
-               onAdd(-30);
-             }}
+             onClick={() => onAdd(-30)}
              className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
              aria-label="Subtract 30 seconds"
            >

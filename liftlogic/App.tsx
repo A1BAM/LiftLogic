@@ -11,6 +11,7 @@ import { RestTimer } from './components/RestTimer';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
+import { logger } from './utils/logger';
 
 const App: React.FC = () => {
   // Auth State
@@ -73,7 +74,7 @@ const App: React.FC = () => {
         setPasswordInput('');
       }
     } catch (err) {
-      console.error("[ERROR] " + "Crypto error:", err);
+      logger.error("Crypto error:", err);
       alert("Secure context required for login.");
     }
   };
@@ -100,7 +101,6 @@ const App: React.FC = () => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
-      navigator.vibrate?.(50);
       // Start 90s rest timer
       setRestEndTime(Date.now() + 90 * 1000);
     } catch (err) {
@@ -156,26 +156,20 @@ const App: React.FC = () => {
   };
 
   const handleArchiveExercise = async (exercise: ExerciseDef) => {
-      navigator.vibrate?.(10);
       const updatedExercise = { ...exercise, isArchived: true };
       try {
-        navigator.vibrate?.(10);
         await saveExercise(updatedExercise);
-        navigator.vibrate?.(50);
       } catch (e) {
-        console.error("[ERROR] " + "Failed to sync archive status", e);
+        logger.error("Failed to sync archive status", e);
       }
   };
 
   const handleRestoreExercise = async (exercise: ExerciseDef) => {
-    navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: false };
     try {
-      navigator.vibrate?.(10);
       await saveExercise(updatedExercise);
-      navigator.vibrate?.(50);
     } catch (e) {
-      console.error("[ERROR] " + "Failed to sync restore status", e);
+      logger.error("Failed to sync restore status", e);
     }
 };
 
@@ -185,7 +179,7 @@ const App: React.FC = () => {
          try {
              await deleteExercisePermanently(exerciseId);
          } catch (err) {
-             console.error("[ERROR] " + "Failed to delete exercise logs from cloud", err);
+             logger.error("Failed to delete exercise logs from cloud", err);
          }
       }
     }
@@ -193,9 +187,9 @@ const App: React.FC = () => {
 
   // Combine Default and Synced Exercises (Synced overrides Default)
   const allExercises = useMemo(() => {
-    const combined: Record<string, ExerciseDef> = { ...EXERCISES }; // Start with defaults
+    const combined = { ...EXERCISES }; // Start with defaults
     syncedExercises.forEach(ex => {
-      combined[ex.id] = ex; // Override if exists in cloud/local
+      combined[ex.id as any] = ex; // Override if exists in cloud/local
     });
     return Object.values(combined);
   }, [syncedExercises]);
