@@ -21,14 +21,16 @@ export default {
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
       'Content-Type': 'application/json'
     };
 
-    if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
-      headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+    if (allowedOrigin === '*') {
+      headers['Access-Control-Allow-Origin'] = '*';
+    } else if (allowedOrigin === requestOrigin) {
+      headers['Access-Control-Allow-Origin'] = requestOrigin;
     } else {
       headers['Access-Control-Allow-Origin'] = allowedOrigin;
     }
