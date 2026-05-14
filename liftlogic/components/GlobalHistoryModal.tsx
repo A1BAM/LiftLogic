@@ -149,7 +149,6 @@ export function GlobalHistoryModal({
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
                   aria-label="Import Data"
                   title="Import Data"
-                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>
