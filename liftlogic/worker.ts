@@ -17,11 +17,11 @@ async function handleDeleteRequest(request: Request, pool: Pool, headers: Record
   const { id, exerciseId } = body || {};
 
   if (exerciseId) {
-    return deleteLogsByExercise(pool, exerciseId, headers);
+    return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
   if (id) {
-    return deleteLogById(pool, id, headers);
+    return await deleteLogById(pool, id, headers);
   }
 
   return new Response("Missing ID or Exercise ID", { status: 400, headers });
@@ -148,7 +148,7 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        return handleDeleteRequest(request, pool, headers);
+        return await handleDeleteRequest(request, pool, headers);
       }
 
       return new Response("Method Not Allowed", { status: 405, headers });
