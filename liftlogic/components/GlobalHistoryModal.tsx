@@ -148,6 +148,7 @@ export function GlobalHistoryModal({
                   onClick={() => setIsImporting(true)}
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                   title="Import Data"
+                  aria-label="Import Data"
                 >
                   <Download size={20} />
                 </button>

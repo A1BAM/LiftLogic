@@ -53,6 +53,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
                     onClick={() => onRestore(ex)}
                     className="p-2 bg-blue-900/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-900/50 transition-colors"
                     title="Restore"
+                    aria-label="Restore Exercise"
                   >
                     <RefreshCw size={18} />
                   </button>
@@ -60,6 +61,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
                     onClick={() => onDelete(ex.id)}
                     className="p-2 bg-red-900/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-red-900/30 transition-colors"
                     title="Delete Permanently"
+                    aria-label="Delete Exercise Permanently"
                   >
                     <Trash2 size={18} />
                   </button>

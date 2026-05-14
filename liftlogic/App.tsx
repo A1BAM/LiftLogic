@@ -155,6 +155,7 @@ const App: React.FC = () => {
   };
 
   const handleArchiveExercise = async (exercise: ExerciseDef) => {
+      navigator.vibrate?.(10);
       const updatedExercise = { ...exercise, isArchived: true };
       try {
         navigator.vibrate?.(10);
@@ -165,6 +166,7 @@ const App: React.FC = () => {
   };
 
   const handleRestoreExercise = async (exercise: ExerciseDef) => {
+    navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: false };
     try {
       navigator.vibrate?.(10);
