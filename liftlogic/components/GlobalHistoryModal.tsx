@@ -44,21 +44,25 @@ export function GlobalHistoryModal({
 
   const todaySummary = useMemo(() => {
     if (!currentDayType) return null;
-    const todayStr = new Date().toDateString();
     
-    // Filter logs for today AND matching the current day type (Push/Pull)
-    const todaysRelevantLogs = logs.filter(l => {
-        const isToday = new Date(l.timestamp).toDateString() === todayStr;
-        // Use map to check dayType safely
-        const exercise = allExercisesMap[l.exerciseId];
-        const isCorrectType = exercise?.dayType === currentDayType;
-        return isToday && isCorrectType;
-    });
+    const nowD = new Date();
+    const startOfToday = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate()).getTime();
+    const endOfToday = startOfToday + 86400000; // 24 * 60 * 60 * 1000
 
-    const volume = todaysRelevantLogs.reduce((acc, log) => acc + (log.weight * log.reps * (log.sets || 1)), 0);
-    const exercisesCount = new Set(todaysRelevantLogs.map(l => l.exerciseId)).size;
+    let volume = 0;
+    const todayExercises = new Set<string>();
 
-    return { volume, exercisesCount };
+    for (const log of logs) {
+      if (log.timestamp >= startOfToday && log.timestamp < endOfToday) {
+        const exercise = allExercisesMap[log.exerciseId];
+        if (exercise?.dayType === currentDayType) {
+          volume += log.weight * log.reps * (log.sets || 1);
+          todayExercises.add(log.exerciseId);
+        }
+      }
+    }
+
+    return { volume, exercisesCount: todayExercises.size };
   }, [logs, currentDayType, allExercisesMap]);
 
   const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
