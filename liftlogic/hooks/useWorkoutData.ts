@@ -27,12 +27,12 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const fetchDataAndSync = useCallback(async () => {
     try {
       setIsLoading(true);
-      const allData = await workoutService.fetchWorkouts() as any[];
+      const allData = await workoutService.fetchWorkouts() as WorkoutLog[];
 
-      const fetchedLogs = allData.filter((item: any) => item.exerciseId !== DEFINITION_ID);
-      const fetchedDefinitions = allData.filter((item: any) => item.exerciseId === DEFINITION_ID);
+      const fetchedLogs = allData.filter((item) => item.exerciseId !== DEFINITION_ID);
+      const fetchedDefinitions = allData.filter((item) => item.exerciseId === DEFINITION_ID);
 
-      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: any) => {
+      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: WorkoutLog) => {
         try {
           return JSON.parse(def.notes);
         } catch (e) { return null; }
