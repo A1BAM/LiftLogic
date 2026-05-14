@@ -187,9 +187,9 @@ const App: React.FC = () => {
 
   // Combine Default and Synced Exercises (Synced overrides Default)
   const allExercises = useMemo(() => {
-    const combined = { ...EXERCISES }; // Start with defaults
+    const combined: Record<string, ExerciseDef> = { ...EXERCISES }; // Start with defaults
     syncedExercises.forEach(ex => {
-      combined[ex.id as any] = ex; // Override if exists in cloud/local
+      combined[ex.id] = ex; // Override if exists in cloud/local
     });
     return Object.values(combined);
   }, [syncedExercises]);
