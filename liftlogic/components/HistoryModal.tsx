@@ -59,8 +59,12 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                   <div className="flex gap-2">
                      <button 
                       type="button"
-                      onClick={() => onEdit(log)}
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
+                      onClick={() => {
+                        navigator.vibrate?.(10);
+                        onEdit(log);
+                      }}
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+                      aria-label="Edit set"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -68,9 +72,11 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        navigator.vibrate?.(10);
                         if(window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
+                      aria-label="Delete set"
                     >
                       <Trash2 size={18} />
                     </button>
