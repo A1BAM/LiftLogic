@@ -93,7 +93,10 @@ export const LogModal: React.FC<LogModalProps> = ({
                     </div>
                   </div>
                   <button 
-                    onClick={() => onDelete(log.id)}
+                    onClick={() => {
+                      navigator.vibrate?.(10);
+                      if (window.confirm('Delete this set?')) onDelete(log.id);
+                    }}
                     className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                     aria-label={`Delete set ${index + 1}`}
                   >
@@ -121,7 +124,14 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="weight-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
+                    <input
+                      id="weight-input"
+                      type="number"
+                      aria-label="Weight in lbs"
+                      value={weight}
+                      onChange={(e) => setWeight(Number(e.target.value))}
+                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustWeight(5)}
@@ -145,7 +155,14 @@ export const LogModal: React.FC<LogModalProps> = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="reps-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
+                    <input
+                      id="reps-input"
+                      type="number"
+                      aria-label="Number of reps"
+                      value={reps}
+                      onChange={(e) => setReps(Number(e.target.value))}
+                      className="w-12 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustReps(1)}
