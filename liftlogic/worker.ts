@@ -12,19 +12,24 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
-async function handleDeleteRequest(request: Request, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const body = await request.json() as any;
+async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
   const { id, exerciseId } = body || {};
 
   if (exerciseId) {
+    if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
+    }
     return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
   if (id) {
+    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
+    }
     return await deleteLogById(pool, id, headers);
   }
 
-  return new Response("Missing ID or Exercise ID", { status: 400, headers });
+  return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
 }
 
 export interface Env {
@@ -53,7 +58,9 @@ export default {
       'Content-Type': 'application/json',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'no-referrer'
+      'Referrer-Policy': 'no-referrer',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
     if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
@@ -91,6 +98,15 @@ export default {
     const pool = new Pool({ connectionString });
 
     try {
+      let body: any = null;
+      if (request.method === 'POST' || request.method === 'DELETE') {
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Malformed JSON" }), { status: 400, headers });
+        }
+      }
+
       // GET: Fetch all logs
       if (request.method === 'GET') {
         try {
@@ -124,11 +140,16 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
-        const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        if (!id || typeof id !== 'string' || id.length > 50 ||
+            !exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 50 ||
+            typeof timestamp !== 'number' || timestamp <= 0 ||
+            typeof weight !== 'number' || weight < 0 ||
+            typeof reps !== 'number' || reps < 0 ||
+            (sets !== undefined && (typeof sets !== 'number' || sets < 0)) ||
+            (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500))) {
+          return new Response(JSON.stringify({ error: "Invalid input data" }), { status: 400, headers });
         }
 
         const query = `
@@ -148,7 +169,7 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        return await handleDeleteRequest(request, pool, headers);
+        return await handleDeleteRequest(body, pool, headers);
       }
 
       return new Response("Method Not Allowed", { status: 405, headers });
