@@ -111,22 +111,33 @@ export const LogModal: React.FC<LogModalProps> = ({
              <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Weight */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="weight-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight</label>
+                  <label htmlFor="weight-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight (lbs)</label>
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => adjustWeight(-5)}
                       className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
                       aria-label="Decrease weight by 5"
+                      title="Decrease by 5"
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="weight-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{weight}</div>
+                    <input
+                      id="weight-input"
+                      type="number"
+                      value={weight}
+                      onChange={(e) => setWeight(Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      inputMode="decimal"
+                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      aria-live="polite"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustWeight(5)}
                       className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
                       aria-label="Increase weight by 5"
+                      title="Increase by 5"
                     >
                       <Plus size={16} />
                     </button>
@@ -142,15 +153,26 @@ export const LogModal: React.FC<LogModalProps> = ({
                       onClick={() => adjustReps(-1)}
                       className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
                       aria-label="Decrease reps"
+                      title="Decrease by 1"
                     >
                       <Minus size={16} />
                     </button>
-                    <div id="reps-input" className="text-xl font-bold text-white font-mono" aria-live="polite">{reps}</div>
+                    <input
+                      id="reps-input"
+                      type="number"
+                      value={reps}
+                      onChange={(e) => setReps(Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      inputMode="numeric"
+                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      aria-live="polite"
+                    />
                     <button
                       type="button"
                       onClick={() => adjustReps(1)}
                       className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500"
                       aria-label="Increase reps"
+                      title="Increase by 1"
                     >
                       <Plus size={16} />
                     </button>
@@ -160,7 +182,8 @@ export const LogModal: React.FC<LogModalProps> = ({
 
              <button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all"
+              disabled={reps < 1}
+              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all"
             >
               <Plus size={20} />
               Add Set
