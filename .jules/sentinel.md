@@ -7,3 +7,8 @@
 **Vulnerability:** The Bearer token verification used the strict inequality operator (`!==`), which is susceptible to timing attacks. An attacker could potentially deduce the `TARGET_HASH` by measuring the response time of requests with different tokens.
 **Learning:** String comparison in security-critical paths (like authentication) must be constant-time to prevent information leakage through execution time.
 **Prevention:** Always use a constant-time comparison function for secrets and tokens.
+
+## 2025-06-15 - [Input Validation and Safe JSON Parsing in Workers]
+**Vulnerability:** The API lacked strict input validation for `POST` and `DELETE` requests, potentially allowing malformed data or oversized payloads to reach the database. Malformed JSON also caused unhandled exceptions.
+**Learning:** Cloudflare Workers' `request.json()` can only be called once and throws on invalid JSON. Centralizing this call and implementing manual schema validation (since heavy libraries like Zod are avoided for performance) is critical for worker security and stability.
+**Prevention:** Always wrap `request.json()` in a try-catch and implement strict type/length/range validation for all user-provided fields before database operations.

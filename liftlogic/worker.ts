@@ -12,19 +12,21 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
-async function handleDeleteRequest(request: Request, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const body = await request.json() as any;
+async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
   const { id, exerciseId } = body || {};
 
-  if (exerciseId) {
+  if (typeof exerciseId === 'string' && exerciseId.length > 0 && exerciseId.length <= 50) {
     return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
-  if (id) {
+  if (typeof id === 'string' && id.length > 0 && id.length <= 50) {
     return await deleteLogById(pool, id, headers);
   }
 
-  return new Response("Missing ID or Exercise ID", { status: 400, headers });
+  return new Response(JSON.stringify({ error: "Missing or invalid ID or Exercise ID" }), {
+    status: 400,
+    headers
+  });
 }
 
 export interface Env {
@@ -91,6 +93,16 @@ export default {
     const pool = new Pool({ connectionString });
 
     try {
+      // Parse JSON body for POST and DELETE
+      let body: any = null;
+      if (request.method === 'POST' || request.method === 'DELETE') {
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+        }
+      }
+
       // GET: Fetch all logs
       if (request.method === 'GET') {
         try {
@@ -124,11 +136,29 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
-        const body = await request.json() as any;
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || !exerciseId) {
-          return new Response("Missing required fields", { status: 400, headers });
+        // Validation
+        if (typeof id !== 'string' || id.length === 0 || id.length > 50 ||
+            typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+          return new Response(JSON.stringify({ error: "Missing or invalid ID/Exercise ID" }), {
+            status: 400,
+            headers
+          });
+        }
+
+        if (typeof timestamp !== 'number' || timestamp <= 0) {
+          return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
+        }
+
+        if (typeof weight !== 'number' || weight < 0 ||
+            typeof reps !== 'number' || reps < 0 ||
+            (sets !== undefined && (typeof sets !== 'number' || sets < 0))) {
+          return new Response(JSON.stringify({ error: "Invalid weight, reps, or sets" }), { status: 400, headers });
+        }
+
+        if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+          return new Response(JSON.stringify({ error: "Notes too long or invalid" }), { status: 400, headers });
         }
 
         const query = `
@@ -148,10 +178,10 @@ export default {
 
       // DELETE: Remove a log OR all logs for an exercise
       if (request.method === 'DELETE') {
-        return await handleDeleteRequest(request, pool, headers);
+        return await handleDeleteRequest(body, pool, headers);
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
