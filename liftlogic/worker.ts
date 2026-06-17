@@ -15,21 +15,15 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
 async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
   const { id, exerciseId } = body || {};
 
-  if (exerciseId) {
-    if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-      return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
-    }
+  if (typeof exerciseId === 'string' && exerciseId.length > 0 && exerciseId.length <= 50) {
     return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
-  if (id) {
-    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-      return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
-    }
+  if (typeof id === 'string' && id.length > 0 && id.length <= 50) {
     return await deleteLogById(pool, id, headers);
   }
 
-  return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
+  return new Response(JSON.stringify({ error: "Missing or invalid ID or Exercise ID" }), { status: 400, headers });
 }
 
 export interface Env {
@@ -105,7 +99,7 @@ export default {
         try {
           body = await request.json();
         } catch (e) {
-          return new Response(JSON.stringify({ error: "Malformed JSON" }), { status: 400, headers });
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
         }
       }
 
@@ -144,14 +138,18 @@ export default {
       if (request.method === 'POST') {
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        if (!id || typeof id !== 'string' || id.length > 50 ||
-            !exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 50 ||
-            typeof timestamp !== 'number' || timestamp <= 0 ||
+        // Validation
+        if (typeof id !== 'string' || id.length === 0 || id.length > 50 ||
+            typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+          return new Response(JSON.stringify({ error: "Missing or invalid required fields" }), { status: 400, headers });
+        }
+
+        if (typeof timestamp !== 'number' || timestamp <= 0 ||
             typeof weight !== 'number' || weight < 0 ||
             typeof reps !== 'number' || reps < 0 ||
             (sets !== undefined && (typeof sets !== 'number' || sets < 0)) ||
             (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500))) {
-          return new Response(JSON.stringify({ error: "Invalid input data" }), { status: 400, headers });
+          return new Response(JSON.stringify({ error: "Invalid field values" }), { status: 400, headers });
         }
 
         const query = `

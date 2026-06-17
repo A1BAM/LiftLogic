@@ -8,7 +8,7 @@
 **Learning:** String comparison in security-critical paths (like authentication) must be constant-time to prevent information leakage through execution time.
 **Prevention:** Always use a constant-time comparison function for secrets and tokens.
 
-## 2025-06-15 - [API Input Validation and Security Headers]
-**Vulnerability:** The API lacked input validation, making it susceptible to malformed data and potential DoS or logic bypass. It also lacked modern security headers to prevent protocol downgrades and ensure restrictive resource access.
-**Learning:** Centralizing JSON parsing and implementing strict type/length validation at the entry point of the API handler significantly reduces the attack surface and improves error resilience.
-**Prevention:** Always validate all incoming request parameters (type, length, range) and include modern security headers like HSTS and CSP in all API responses.
+## 2026-05-21 - [Robust Input Validation and Secure JSON Parsing]
+**Vulnerability:** The API was vulnerable to DoS and potential data corruption because it did not validate the types or ranges of incoming fields, and it lacked error handling for malformed JSON payloads.
+**Learning:** Cloudflare Workers' `request.json()` throws on invalid JSON, which can lead to unhandled exceptions if not wrapped in try-catch. Centralizing body parsing and implementing a strict validation layer ensures the API fails gracefully with 400 Bad Request and protects downstream database integrity.
+**Prevention:** Always wrap JSON parsing in try-catch and enforce strict schema validation (types, lengths, ranges) before processing any write operations.
