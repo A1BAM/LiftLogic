@@ -97,10 +97,8 @@ export const LogModal: React.FC<LogModalProps> = ({
                   </div>
                   <button 
                     onClick={() => {
-                      if (window.confirm("Delete this set?")) {
-                        navigator.vibrate?.(50);
-                        onDelete(log.id);
-                      }
+                      navigator.vibrate?.(10);
+                      if (window.confirm('Delete this set?')) onDelete(log.id);
                     }}
                     className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
                     aria-label={`Delete set ${index + 1}`}
@@ -133,10 +131,10 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="weight-input"
                       type="number"
+                      aria-label="Weight in lbs"
                       value={weight}
-                      onChange={(e) => setWeight(Math.max(0, Number(e.target.value)))}
-                      className="w-full bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      aria-live="polite"
+                      onChange={(e) => setWeight(Number(e.target.value))}
+                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
                       type="button"
@@ -166,10 +164,10 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="reps-input"
                       type="number"
+                      aria-label="Number of reps"
                       value={reps}
-                      onChange={(e) => setReps(Math.max(1, Number(e.target.value)))}
-                      className="w-full bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      aria-live="polite"
+                      onChange={(e) => setReps(Number(e.target.value))}
+                      className="w-12 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
                       type="button"
