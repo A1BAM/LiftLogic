@@ -18,49 +18,33 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onArchive
 }) => {
   
-  // 1. Organize logs into sessions (grouped by date)
-  // Optimization: exerciseLogs is already pre-sorted descending (newest first).
-  // Single-pass iteration to group by date is O(N).
+  // 1. Organize logs into sessions (grouped by date) using single-pass O(N)
   const sessions = useMemo(() => {
-    const sessionList: { date: string; logs: WorkoutLog[] }[] = [];
-    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
-    let currentDayId: number | null = null;
-    const dateCache = new Map<number, string>();
+    const result: { date: string, logs: WorkoutLog[] }[] = [];
+    let lastDayId = -1;
 
+    // exerciseLogs is pre-sorted newest first in useWorkoutData.ts
     for (const log of exerciseLogs) {
       const d = new Date(log.timestamp);
-      // Faster than toDateString() inside loop
       const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 
-      if (dayId !== currentDayId) {
-        let dateKey = dateCache.get(dayId);
-        if (!dateKey) {
-          dateKey = d.toDateString();
-          dateCache.set(dayId, dateKey);
-        }
-        currentSession = { date: dateKey, logs: [] };
-        sessionList.push(currentSession);
-        currentDayId = dayId;
+      if (dayId !== lastDayId) {
+        lastDayId = dayId;
+        result.push({
+          date: d.toDateString(),
+          logs: [log]
+        });
+      } else {
+        result[result.length - 1].logs.push(log);
       }
-
-      currentSession!.logs.push(log);
     }
-
-    return sessionList;
+    return result;
   }, [exerciseLogs]);
 
-  // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  // Optimization: Since sessions are newest first, we can use direct index access instead of .find()
-  const { todaySession, referenceSession } = useMemo(() => {
-    const todayDateStr = new Date().toDateString();
-    const first = sessions[0];
-    const isToday = first?.date === todayDateStr;
-
-    return {
-      todaySession: isToday ? first : undefined,
-      referenceSession: isToday ? sessions[1] : first
-    };
-  }, [sessions]);
+  // 2. Identify sessions using direct index access for O(1) retrieval
+  const todayDateStr = new Date().toDateString();
+  const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
+  const referenceSession = todaySession ? sessions[1] : sessions[0];
 
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
