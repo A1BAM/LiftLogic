@@ -19,34 +19,48 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 }) => {
   
   // 1. Organize logs into sessions (grouped by date)
+  // Optimization: exerciseLogs is already pre-sorted descending (newest first).
+  // Single-pass iteration to group by date is O(N).
   const sessions = useMemo(() => {
-    const grouped: Record<string, WorkoutLog[]> = {};
-    const dateToTimestamp: Record<string, number> = {};
+    const sessionList: { date: string; logs: WorkoutLog[] }[] = [];
+    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
+    let currentDayId: number | null = null;
+    const dateCache = new Map<number, string>();
 
-    exerciseLogs.forEach(log => {
-      const dateKey = new Date(log.timestamp).toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-        dateToTimestamp[dateKey] = log.timestamp;
+    for (const log of exerciseLogs) {
+      const d = new Date(log.timestamp);
+      // Faster than toDateString() inside loop
+      const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+
+      if (dayId !== currentDayId) {
+        let dateKey = dateCache.get(dayId);
+        if (!dateKey) {
+          dateKey = d.toDateString();
+          dateCache.set(dayId, dateKey);
+        }
+        currentSession = { date: dateKey, logs: [] };
+        sessionList.push(currentSession);
+        currentDayId = dayId;
       }
-      grouped[dateKey].push(log);
-    });
-    
-    // Sort keys descending (newest first)
-    const sortedKeys = Object.keys(grouped).sort((a, b) => dateToTimestamp[b] - dateToTimestamp[a]);
-    
-    return sortedKeys.map(key => ({
-      date: key,
-      logs: grouped[key]
-    }));
+
+      currentSession!.logs.push(log);
+    }
+
+    return sessionList;
   }, [exerciseLogs]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  const todayDateStr = new Date().toDateString();
-  const todaySession = sessions.find(s => s.date === todayDateStr);
-  const referenceSession = todaySession 
-    ? sessions.find(s => s.date !== todayDateStr) 
-    : sessions[0];
+  // Optimization: Since sessions are newest first, we can use direct index access instead of .find()
+  const { todaySession, referenceSession } = useMemo(() => {
+    const todayDateStr = new Date().toDateString();
+    const first = sessions[0];
+    const isToday = first?.date === todayDateStr;
+
+    return {
+      todaySession: isToday ? first : undefined,
+      referenceSession: isToday ? sessions[1] : first
+    };
+  }, [sessions]);
 
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
