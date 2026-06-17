@@ -17,14 +17,14 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
 
   if (exerciseId) {
     if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-      return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "Invalid Exercise ID" }), { status: 400, headers });
     }
     return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
   if (id) {
     if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-      return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
     }
     return await deleteLogById(pool, id, headers);
   }
@@ -58,7 +58,9 @@ export default {
       'Content-Type': 'application/json',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'no-referrer'
+      'Referrer-Policy': 'no-referrer',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
     if (allowedOrigins.includes('*')) {
@@ -98,13 +100,12 @@ export default {
     const pool = new Pool({ connectionString });
 
     try {
-      // Parse body once for POST and DELETE
       let body: any = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
         try {
           body = await request.json();
         } catch (e) {
-          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+          return new Response(JSON.stringify({ error: "Malformed JSON" }), { status: 400, headers });
         }
       }
 
@@ -143,27 +144,14 @@ export default {
       if (request.method === 'POST') {
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
 
-        // Validation
-        if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-          return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
-        }
-        if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-          return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
-        }
-        if (typeof timestamp !== 'number' || timestamp <= 0) {
-          return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
-        }
-        if (typeof weight !== 'number' || weight < 0) {
-          return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
-        }
-        if (typeof reps !== 'number' || reps < 0) {
-          return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
-        }
-        if (sets !== undefined && (typeof sets !== 'number' || sets < 0)) {
-          return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
-        }
-        if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-          return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
+        if (!id || typeof id !== 'string' || id.length > 50 ||
+            !exerciseId || typeof exerciseId !== 'string' || exerciseId.length > 50 ||
+            typeof timestamp !== 'number' || timestamp <= 0 ||
+            typeof weight !== 'number' || weight < 0 ||
+            typeof reps !== 'number' || reps < 0 ||
+            (sets !== undefined && (typeof sets !== 'number' || sets < 0)) ||
+            (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500))) {
+          return new Response(JSON.stringify({ error: "Invalid input data" }), { status: 400, headers });
         }
 
         const query = `
