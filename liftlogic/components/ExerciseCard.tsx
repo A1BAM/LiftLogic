@@ -18,32 +18,35 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onArchive
 }) => {
   
-  // 1. Organize logs into sessions (grouped by date) using single-pass O(N)
+  // 1. Organize logs into sessions (grouped by date)
+  // Optimized: Single-pass grouping leveraging pre-sorted exerciseLogs (descending)
   const sessions = useMemo(() => {
-    const result: { date: string, logs: WorkoutLog[] }[] = [];
+    const results: { date: string; logs: WorkoutLog[] }[] = [];
+    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
     let lastDayId = -1;
 
-    // exerciseLogs is pre-sorted newest first in useWorkoutData.ts
     for (const log of exerciseLogs) {
       const d = new Date(log.timestamp);
+      // Create a numeric day identifier (YYYYMMDD) for O(1) comparison
       const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 
       if (dayId !== lastDayId) {
-        lastDayId = dayId;
-        result.push({
+        currentSession = {
           date: d.toDateString(),
-          logs: [log]
-        });
-      } else {
-        result[result.length - 1].logs.push(log);
+          logs: []
+        };
+        results.push(currentSession);
+        lastDayId = dayId;
       }
+      currentSession!.logs.push(log);
     }
-    return result;
+    return results;
   }, [exerciseLogs]);
 
-  // 2. Identify sessions using direct index access for O(1) retrieval
+  // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
+  // Optimized: Since sessions are sorted newest first, we use O(1) index access
   const todayDateStr = new Date().toDateString();
-  const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
+  const todaySession = sessions[0]?.date === todayDateStr ? sessions[0] : null;
   const referenceSession = todaySession ? sessions[1] : sessions[0];
 
   const isCompletedToday = useMemo(() => {
