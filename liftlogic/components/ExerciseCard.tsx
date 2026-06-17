@@ -21,22 +21,24 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // 1. Organize logs into sessions (grouped by date)
   // Optimization: Since exerciseLogs are already sorted descending (newest first),
   // we can group them in a single O(n) pass without subsequent sorting.
+  // We use boundary grouping to avoid instantiating a new Date object for every log.
   const sessions = useMemo(() => {
     const sessionsArr: { date: string; logs: WorkoutLog[] }[] = [];
-    let lastDayId = -1;
+    let currentDayStart = -1;
     let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
 
     for (const log of exerciseLogs) {
-      const d = new Date(log.timestamp);
-      // Create a unique numeric ID for the day (YYYYMMDD) to avoid string overhead
-      const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-
-      if (dayId !== lastDayId) {
+      // If the timestamp crosses the boundary to a previous day, or if it's the first log
+      if (log.timestamp < currentDayStart || !currentSession) {
+        const d = new Date(log.timestamp);
         currentSession = { date: d.toDateString(), logs: [] };
         sessionsArr.push(currentSession);
-        lastDayId = dayId;
+
+        // Calculate the start of this day (midnight local time)
+        const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        currentDayStart = startOfDay.getTime();
       }
-      currentSession!.logs.push(log);
+      currentSession.logs.push(log);
     }
     return sessionsArr;
   }, [exerciseLogs]);
