@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExerciseDef, WorkoutLog } from '../types';
-import { X, Plus, Minus, Trash2, History } from 'lucide-react';
+import { X, Plus, Minus, Trash2 } from 'lucide-react';
 
 interface LogModalProps {
   exercise: ExerciseDef;
@@ -31,16 +31,19 @@ export const LogModal: React.FC<LogModalProps> = ({
 
   const defaults = getLastLog();
 
-  const [weight, setWeight] = useState(defaults ? defaults.weight : exercise.defaultWeight);
-  const [reps, setReps] = useState(defaults ? defaults.reps : exercise.targetReps);
+  const [weightInput, setWeightInput] = useState((defaults ? defaults.weight : exercise.defaultWeight).toString());
+  const [repsInput, setRepsInput] = useState((defaults ? defaults.reps : exercise.targetReps).toString());
+
+  const weight = Number(weightInput) || 0;
+  const reps = Number(repsInput) || 0;
 
   const adjustWeight = (delta: number) => {
     navigator.vibrate?.(10);
-    setWeight(Math.max(0, weight + delta));
+    setWeightInput(prev => Math.max(0, (Number(prev) || 0) + delta).toString());
   };
   const adjustReps = (delta: number) => {
     navigator.vibrate?.(10);
-    setReps(Math.max(1, reps + delta));
+    setRepsInput(prev => Math.max(1, (Number(prev) || 0) + delta).toString());
   };
 
   const handleAddSet = (e: React.FormEvent) => {
@@ -146,7 +149,7 @@ export const LogModal: React.FC<LogModalProps> = ({
 
                 {/* Reps */}
                 <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="reps-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
+                  <label htmlFor="reps-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center cursor-pointer">Reps</label>
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
