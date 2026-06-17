@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { X, Calendar, Dumbbell, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
+import { validateWorkoutLogs } from '../utils/validation';
 import { EXERCISES } from '../constants';
 
 interface GlobalHistoryModalProps {
@@ -107,19 +108,9 @@ export function GlobalHistoryModal({
 
     try {
       const parsed = JSON.parse(importText);
-      if (!Array.isArray(parsed)) {
-        throw new Error("Data must be a list (array) of workouts.");
-      }
-      
-      // Basic validation of first item to ensure it looks like a log
-      if (parsed.length > 0) {
-        const sample = parsed[0];
-        if (!sample.id || !sample.exerciseId || !sample.timestamp) {
-           throw new Error("Invalid data format. Missing required fields.");
-        }
-      }
+      const validatedLogs = validateWorkoutLogs(parsed);
 
-      onImport(parsed as WorkoutLog[]);
+      onImport(validatedLogs);
       setIsImporting(false);
       setImportText('');
     } catch (err: any) {
