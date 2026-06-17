@@ -11,3 +11,7 @@
 ## 2025-05-15 - Standardizing Interactive Feedback and Controls
 **Learning:** Icon-only buttons MUST have explicit `aria-label` attributes to be accessible. Standardizing these across the app (especially Close, Restore, and Delete buttons) ensures a predictable experience for screen reader users. Additionally, providing subtle haptic feedback (`navigator.vibrate?.(10)`) on mobile devices significantly enhances the "tactile" feel of the UI during rapid interactions like logging sets.
 **Action:** Always verify `aria-label` on icon-only buttons and implement subtle haptic feedback for primary user actions to improve mobile UX.
+
+## 2025-05-16 - Handling Decimal Inputs in React
+**Learning:** Using numeric state (`useState<number>`) for controlled inputs that allow decimals can cause UX issues. When a user types a trailing decimal point (e.g., "135."), `Number("135.")` becomes `135`, which React then syncs back to the input, effectively preventing the user from typing the decimal point.
+**Action:** For numeric inputs that require decimal support, use string state (`useState<string>`) to preserve the literal characters as the user types, and parse to a number only when performing calculations or saving.
