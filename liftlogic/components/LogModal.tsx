@@ -133,7 +133,7 @@ export const LogModal: React.FC<LogModalProps> = ({
                       type="number"
                       aria-label="Weight in lbs"
                       value={weight}
-                      onChange={(e) => setWeight(Number(e.target.value))}
+                      onChange={(e) => setWeightInput(e.target.value)}
                       className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
@@ -166,7 +166,7 @@ export const LogModal: React.FC<LogModalProps> = ({
                       type="number"
                       aria-label="Number of reps"
                       value={reps}
-                      onChange={(e) => setReps(Number(e.target.value))}
+                      onChange={(e) => setRepsInput(e.target.value)}
                       className="w-12 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
