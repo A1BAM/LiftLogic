@@ -44,27 +44,41 @@ export function GlobalHistoryModal({
     let totalVolume = 0;
     let todayVolume = 0;
 
+    let currentDayStart = -1;
+    let currentDayId = -1;
+    let currentDateKey = '';
+    let isToday = false;
+
     for (const log of sortedLogs) {
       const vol = log.weight * log.reps * (log.sets || 1);
       totalVolume += vol;
 
-      const d = new Date(log.timestamp);
-      const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-      uniqueDays.add(dayId);
+      // Since sortedLogs is ordered newest-to-oldest, we can cache the Date
+      // instantiation for all logs that fall on the same day.
+      if (log.timestamp < currentDayStart || currentDayStart === -1) {
+        const d = new Date(log.timestamp);
+        currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+        currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+        let dateKey = dateCache.get(currentDayId);
+        if (!dateKey) {
+          dateKey = d.toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          });
+          dateCache.set(currentDayId, dateKey);
+        }
+        currentDateKey = dateKey;
+        isToday = (d.toDateString() === todayStr);
+      }
+
+      uniqueDays.add(currentDayId);
 
       // Grouping
-      let dateKey = dateCache.get(dayId);
-      if (!dateKey) {
-        dateKey = d.toLocaleDateString(undefined, {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-        dateCache.set(dayId, dateKey);
-      }
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(log);
+      if (!groups[currentDateKey]) groups[currentDateKey] = [];
+      groups[currentDateKey].push(log);
 
       // Today summary
-      if (currentDayType && d.toDateString() === todayStr) {
+      if (currentDayType && isToday) {
         const exercise = allExercisesMap[log.exerciseId];
         if (exercise?.dayType === currentDayType) {
           todayVolume += vol;
