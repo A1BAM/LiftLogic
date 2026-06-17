@@ -8,7 +8,7 @@
 **Learning:** String comparison in security-critical paths (like authentication) must be constant-time to prevent information leakage through execution time.
 **Prevention:** Always use a constant-time comparison function for secrets and tokens.
 
-## 2026-06-17 - [Permissive CORS and Origin Reflection]
-**Vulnerability:** The CORS configuration reflected the request's 'Origin' header back to the client if 'ALLOWED_ORIGIN' was set to '*', creating a security risk where any site could bypass cross-origin restrictions.
-**Learning:** Reflecting the 'Origin' header is a dangerous pattern that effectively disables CORS protections while appearing to enable them.
-**Prevention:** Use a strict whitelist of allowed origins. If '*' is required, it must be returned as a literal '*' without mirroring the request origin.
+## 2025-06-15 - [Input Validation and Safe JSON Parsing in Workers]
+**Vulnerability:** The API lacked strict input validation for `POST` and `DELETE` requests, potentially allowing malformed data or oversized payloads to reach the database. Malformed JSON also caused unhandled exceptions.
+**Learning:** Cloudflare Workers' `request.json()` can only be called once and throws on invalid JSON. Centralizing this call and implementing manual schema validation (since heavy libraries like Zod are avoided for performance) is critical for worker security and stability.
+**Prevention:** Always wrap `request.json()` in a try-catch and implement strict type/length/range validation for all user-provided fields before database operations.
