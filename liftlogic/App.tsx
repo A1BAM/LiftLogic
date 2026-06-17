@@ -43,34 +43,41 @@ const App: React.FC = () => {
 
   // Check Auth on Mount
   useEffect(() => {
-    const storedAuth = localStorage.getItem('liftlogic_auth');
-    if (storedAuth === 'true') {
-      setIsAuthenticated(true);
-    }
+    const checkAuth = async () => {
+      const token = localStorage.getItem("liftlogic_auth_token");
+      if (token) {
+        try {
+          await workoutService.fetchWorkouts();
+          setIsAuthenticated(true);
+        } catch (err) {
+          localStorage.removeItem("liftlogic_auth_token");
+        }
+      }
+    };
+    checkAuth();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const msgBuffer = new TextEncoder().encode(passwordInput);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
       
       // Temporarily store the hash to attempt an authenticated request
-      localStorage.setItem('liftlogic_auth_token', hashHex);
+      localStorage.setItem("liftlogic_auth_token", hashHex);
 
       try {
         // Attempt to fetch workouts as a verification of the password/hash
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
-        localStorage.setItem('liftlogic_auth', 'true');
-        setPasswordInput('');
+        setPasswordInput("");
       } catch (err) {
         // If the request fails (e.g., 401 Unauthorized), the password was wrong
-        localStorage.removeItem('liftlogic_auth_token');
+        localStorage.removeItem("liftlogic_auth_token");
         alert("Wrong Password");
-        setPasswordInput('');
+        setPasswordInput("");
       }
     } catch (err) {
       console.error("[ERROR] " + "Crypto error:", err);
@@ -80,8 +87,7 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('liftlogic_auth');
-    localStorage.removeItem('liftlogic_auth_token');
+    localStorage.removeItem("liftlogic_auth_token");
     setWorkoutDay(null);
   };
 
