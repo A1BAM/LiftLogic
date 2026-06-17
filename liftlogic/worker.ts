@@ -42,7 +42,7 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    const allowedOrigin = env.ALLOWED_ORIGIN || '*';
+    const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
@@ -52,13 +52,17 @@ export default {
       'Content-Type': 'application/json',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'no-referrer'
+      'Referrer-Policy': 'no-referrer',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
-    if (allowedOrigin === '*' || allowedOrigin === requestOrigin) {
-      headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
+    if (allowedOrigins.includes('*')) {
+      headers['Access-Control-Allow-Origin'] = '*';
+    } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      headers['Access-Control-Allow-Origin'] = requestOrigin;
     } else {
-      headers['Access-Control-Allow-Origin'] = allowedOrigin;
+      headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
     }
 
     // Security Check: Verify Bearer Token
@@ -168,7 +172,7 @@ export default {
         return await handleDeleteRequest(body, pool, headers);
       }
 
-      return new Response("Method Not Allowed", { status: 405, headers });
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
       logger.error('Database Error:', error);
