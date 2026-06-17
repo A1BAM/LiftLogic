@@ -1,5 +1,5 @@
 import { API_URL } from '../constants';
-import { ExerciseDef, WorkoutLog } from '../types';
+import { ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
 
 const apiFetch = async (url: string, options: RequestInit = {}) => {
