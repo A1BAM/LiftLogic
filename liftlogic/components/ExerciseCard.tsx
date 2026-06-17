@@ -19,34 +19,32 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 }) => {
   
   // 1. Organize logs into sessions (grouped by date)
-  // Optimized: Single-pass grouping leveraging pre-sorted exerciseLogs (descending)
+  // Optimization: Since exerciseLogs are already sorted descending (newest first),
+  // we can group them in a single O(n) pass without subsequent sorting.
   const sessions = useMemo(() => {
-    const results: { date: string; logs: WorkoutLog[] }[] = [];
-    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
+    const sessionsArr: { date: string; logs: WorkoutLog[] }[] = [];
     let lastDayId = -1;
+    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
 
     for (const log of exerciseLogs) {
       const d = new Date(log.timestamp);
-      // Create a numeric day identifier (YYYYMMDD) for O(1) comparison
+      // Create a unique numeric ID for the day (YYYYMMDD) to avoid string overhead
       const dayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 
       if (dayId !== lastDayId) {
-        currentSession = {
-          date: d.toDateString(),
-          logs: []
-        };
-        results.push(currentSession);
+        currentSession = { date: d.toDateString(), logs: [] };
+        sessionsArr.push(currentSession);
         lastDayId = dayId;
       }
       currentSession!.logs.push(log);
     }
-    return results;
+    return sessionsArr;
   }, [exerciseLogs]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  // Optimized: Since sessions are sorted newest first, we use O(1) index access
-  const todayDateStr = new Date().toDateString();
-  const todaySession = sessions[0]?.date === todayDateStr ? sessions[0] : null;
+  // Optimization: Use direct index access on sorted sessions instead of .find()
+  const todayDateStr = useMemo(() => new Date().toDateString(), []);
+  const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
   const referenceSession = todaySession ? sessions[1] : sessions[0];
 
   const isCompletedToday = useMemo(() => {
