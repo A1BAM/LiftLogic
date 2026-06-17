@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExerciseDef, WorkoutLog } from '../types';
-import { X, Plus, Minus, Trash2, History } from 'lucide-react';
+import { X, Plus, Minus, Trash2 } from 'lucide-react';
 
 interface LogModalProps {
   exercise: ExerciseDef;
