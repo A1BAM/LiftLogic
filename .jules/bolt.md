@@ -11,3 +11,7 @@
 **Optimization:** Replaced redundant `new Date()` and `.toDateString()` calls inside the `for (const log of sortedLogs)` loop with a bucketing approach.
 **Measurement:** By storing `currentDayStart` and taking advantage of the `newest-to-oldest` sorting order of `sortedLogs`, execution time for 100,000 logs was reduced from ~151ms to ~64ms (~2.3x speedup).
 **Learning:** For large date-sorted lists, instantiating `Date` objects inside the loop creates massive GC pressure and unnecessary CPU usage. Precomputing loop-invariant boundary variables solves this efficiently.
+
+## 2026-06-18 - Global Sorted State for Log History
+**Learning:** Maintaining the primary `logs` state in descending chronological order globally (via `unshift` or prepending) eliminates redundant $O(N \log N)$ sorting and $O(N)$ filtering across multiple UI components (HistoryModal, GlobalHistoryModal).
+**Action:** Establish a "source of truth" sort order in the primary data hook to allow $O(1)$ or early-exit $O(K)$ retrieval in child components.
