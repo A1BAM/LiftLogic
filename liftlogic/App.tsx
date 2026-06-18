@@ -447,7 +447,7 @@ const App: React.FC = () => {
       {activeModal === 'history' && selectedExercise && (
         <HistoryModal
           exercise={selectedExercise}
-          logs={logs}
+          logs={getLogsForExercise(selectedExercise.id)}
           onClose={() => setActiveModal(null)}
           onDelete={handleDeleteLog}
           onEdit={handleEditInit}

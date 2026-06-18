@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { X, Trash2, Edit2, Layers } from 'lucide-react';
 
@@ -17,10 +17,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   onDelete,
   onEdit
 }) => {
-  const filteredLogs = useMemo(() => logs
-    .filter(log => log.exerciseId === exercise.id)
-    .sort((a, b) => b.timestamp - a.timestamp), [logs, exercise.id]);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl">
@@ -40,10 +36,10 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
           {/* Logs List */}
           <div className="space-y-3">
-            {filteredLogs.length === 0 ? (
+            {logs.length === 0 ? (
               <div className="text-center text-slate-500 py-10">No history available yet.</div>
             ) : (
-              filteredLogs.map((log) => (
+              logs.map((log) => (
                 <div key={log.id} className="bg-slate-800 p-3 rounded-lg flex justify-between items-center border border-slate-700">
                   <div>
                     <div className="text-xs text-slate-400 mb-1">
