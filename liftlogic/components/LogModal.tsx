@@ -131,10 +131,13 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="weight-input"
                       type="number"
+                      autoFocus
+                      inputMode="decimal"
                       aria-label="Weight in lbs"
-                      value={weight}
+                      value={weightInput}
                       onChange={(e) => setWeightInput(e.target.value)}
-                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      onFocus={(e) => e.target.select()}
+                      className="w-20 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition-all"
                     />
                     <button
                       type="button"
@@ -164,10 +167,12 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="reps-input"
                       type="number"
+                      inputMode="numeric"
                       aria-label="Number of reps"
-                      value={reps}
+                      value={repsInput}
                       onChange={(e) => setRepsInput(e.target.value)}
-                      className="w-12 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      onFocus={(e) => e.target.select()}
+                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition-all"
                     />
                     <button
                       type="button"
