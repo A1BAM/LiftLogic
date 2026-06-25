@@ -52,7 +52,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      // Maintain descending chronological order (newest first)
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -79,7 +80,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    setLogs(prev => [...prev, logToSave]);
+    // Prepend to maintain descending chronological order (newest first)
+    setLogs(prev => [logToSave, ...prev]);
 
     try {
       await workoutService.saveItem(logToSave);
@@ -116,7 +118,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values());
+      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
     const results = await Promise.allSettled(
@@ -167,10 +169,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {
     const map = new Map<string, WorkoutLog[]>();
-    // Pre-sort logs descending (newest first) to enable early-exit optimizations
-    const sorted = [...logs].sort((a, b) => b.timestamp - a.timestamp);
-
-    for (const log of sorted) {
+    // logs is already maintained in descending chronological order (newest first)
+    // enabling early-exit optimizations in consumers like getTodaysLogs.
+    for (const log of logs) {
       if (!map.has(log.exerciseId)) {
         map.set(log.exerciseId, []);
       }
