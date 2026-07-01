@@ -152,3 +152,24 @@ describe('Worker API Validation', () => {
     });
   });
 });
+
+describe('CORS Validation', () => {
+  const ctx = {
+    waitUntil: vi.fn(),
+    passThroughOnException: vi.fn()
+  };
+
+  it('does not set Access-Control-Allow-Origin if ALLOWED_ORIGIN is undefined', async () => {
+    const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ASSETS: { fetch: vi.fn() } };
+    const request = new Request('http://localhost/gym-api', { method: 'OPTIONS' });
+    const response = await worker.fetch(request, env as any, ctx as any);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('sets Access-Control-Allow-Origin if ALLOWED_ORIGIN is valid', async () => {
+    const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ALLOWED_ORIGIN: 'http://localhost:3000', ASSETS: { fetch: vi.fn() } };
+    const request = new Request('http://localhost/gym-api', { method: 'OPTIONS', headers: { 'origin': 'http://localhost:3000' } });
+    const response = await worker.fetch(request, env as any, ctx as any);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:3000');
+  });
+});
