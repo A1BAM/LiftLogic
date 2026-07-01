@@ -34,7 +34,7 @@ export function GlobalHistoryModal({
   }, [customExercises]);
 
   const { stats, todaySummary, groupedLogs } = useMemo(() => {
-    const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
+    // Optimization: logs are already maintained DESC in useWorkoutData
     const groups: Record<string, WorkoutLog[]> = {};
     const dateCache = new Map<number, string>();
     const todayStr = new Date().toDateString();
@@ -49,7 +49,7 @@ export function GlobalHistoryModal({
     let currentDateKey = '';
     let isToday = false;
 
-    for (const log of sortedLogs) {
+    for (const log of logs) {
       const vol = log.weight * log.reps * (log.sets || 1);
       totalVolume += vol;
 

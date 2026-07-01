@@ -4,8 +4,8 @@ import { WorkoutLog } from '../types';
 // Mocking the optimized logic from useWorkoutData.ts for verification
 const getLogsByExerciseMap = (logs: WorkoutLog[]) => {
   const map = new Map<string, WorkoutLog[]>();
-  const sorted = [...logs].sort((a, b) => b.timestamp - a.timestamp);
-  for (const log of sorted) {
+  // Optimised: input logs are assumed pre-sorted DESC
+  for (const log of logs) {
     if (!map.has(log.exerciseId)) map.set(log.exerciseId, []);
     map.get(log.exerciseId)!.push(log);
   }
@@ -61,19 +61,19 @@ describe('useWorkoutData filtering logic', () => {
   vi.setSystemTime(now);
 
   const logs: WorkoutLog[] = [
-    { id: '1', exerciseId, timestamp: startOfToday + 1000, weight: 100, reps: 10, sets: 1 }, // Today
     { id: '2', exerciseId, timestamp: startOfToday + 2000, weight: 100, reps: 10, sets: 1 }, // Today
-    { id: '3', exerciseId, timestamp: startOfYesterday + 1000, weight: 90, reps: 10, sets: 1 }, // Yesterday
+    { id: '1', exerciseId, timestamp: startOfToday + 1000, weight: 100, reps: 10, sets: 1 }, // Today
     { id: '4', exerciseId, timestamp: startOfYesterday + 2000, weight: 90, reps: 10, sets: 1 }, // Yesterday
+    { id: '3', exerciseId, timestamp: startOfYesterday + 1000, weight: 90, reps: 10, sets: 1 }, // Yesterday
     { id: '5', exerciseId, timestamp: startOfYesterday - 1000, weight: 80, reps: 10, sets: 1 }, // Day before yesterday
   ];
 
-  it('getTodaysLogs returns only logs from today in reverse chronological order', () => {
+  it('getTodaysLogs returns only logs from today in chronological order (oldest first for UI)', () => {
     const map = getLogsByExerciseMap(logs);
     const result = getTodaysLogs(map, exerciseId);
     expect(result).toHaveLength(2);
-    expect(result[0].id).toBe('1');
-    expect(result[1].id).toBe('2');
+    expect(result[0].id).toBe('1'); // Oldest today
+    expect(result[1].id).toBe('2'); // Newest today
   });
 
   it('getLastSessionLogs returns logs from the most recent session before today', () => {
