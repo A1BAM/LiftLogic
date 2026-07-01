@@ -34,7 +34,7 @@ export function GlobalHistoryModal({
   }, [customExercises]);
 
   const { stats, todaySummary, groupedLogs } = useMemo(() => {
-    // Optimization: logs are already maintained DESC in useWorkoutData
+    // logs are already maintained in descending chronological order (newest first)
     const groups: Record<string, WorkoutLog[]> = {};
     const dateCache = new Map<number, string>();
     const todayStr = new Date().toDateString();

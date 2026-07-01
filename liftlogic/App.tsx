@@ -447,6 +447,7 @@ const App: React.FC = () => {
       {activeModal === 'history' && selectedExercise && (
         <HistoryModal
           exercise={selectedExercise}
+          // Pass pre-filtered and pre-sorted logs for the specific exercise
           logs={getLogsForExercise(selectedExercise.id)}
           onClose={() => setActiveModal(null)}
           onDelete={handleDeleteLog}

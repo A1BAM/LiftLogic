@@ -12,7 +12,7 @@ interface HistoryModalProps {
 
 export const HistoryModal: React.FC<HistoryModalProps> = ({ 
   exercise, 
-  logs, 
+  logs, // logs are pre-filtered and pre-sorted by the caller
   onClose, 
   onDelete,
   onEdit
