@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import worker from './worker';
 
+const { mockQuery } = vi.hoisted(() => {
+  return { mockQuery: vi.fn().mockResolvedValue({ rows: [] }) };
+});
+
 // Mock Neon Database Pool
 vi.mock('@neondatabase/serverless', () => {
   return {
     Pool: class {
-      query = vi.fn().mockResolvedValue({ rows: [] });
+      query = mockQuery;
       end = vi.fn().mockResolvedValue(undefined);
     }
   };
@@ -125,4 +129,16 @@ describe('Worker API Validation', () => {
       expect(data.success).toBe(true);
     });
   });
+
+  describe('Database Errors', () => {
+    it('returns 500 when database throws an error', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('Database Error'));
+      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(500);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Internal Server Error');
+    });
+  });
+
 });
