@@ -66,7 +66,7 @@ export default {
       });
     }
 
-    const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
+    const allowedOrigins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map(o => o.trim()) : [];
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
@@ -78,12 +78,14 @@ export default {
       'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
-    if (allowedOrigins.includes('*')) {
-      headers['Access-Control-Allow-Origin'] = '*';
-    } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-      headers['Access-Control-Allow-Origin'] = requestOrigin;
-    } else {
-      headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
+    if (allowedOrigins.length > 0) {
+      if (allowedOrigins.includes('*')) {
+        headers['Access-Control-Allow-Origin'] = '*';
+      } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+        headers['Access-Control-Allow-Origin'] = requestOrigin;
+      } else {
+        headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
+      }
     }
 
     // Security Check: Verify Bearer Token
