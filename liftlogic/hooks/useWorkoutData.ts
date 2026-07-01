@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
-
-const EMPTY_LOGS: WorkoutLog[] = [];
-
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
@@ -32,23 +29,14 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setIsLoading(true);
       const allData = await workoutService.fetchWorkouts() as WorkoutLog[];
 
-      const fetchedLogs: WorkoutLog[] = [];
-      const cloudExercises: ExerciseDef[] = [];
+      const fetchedLogs = allData.filter((item) => item.exerciseId !== DEFINITION_ID);
+      const fetchedDefinitions = allData.filter((item) => item.exerciseId === DEFINITION_ID);
 
-      // Single-pass optimization: Separate logs and definitions in one loop
-      for (const item of allData) {
-        if (item.exerciseId === DEFINITION_ID) {
-          try {
-            const def = JSON.parse(item.notes);
-            if (def) cloudExercises.push(def);
-          } catch (e) { /* ignore malformed */ }
-        } else {
-          fetchedLogs.push(item);
-        }
-      }
-
-      // Sort logs descending (newest first) once
-      fetchedLogs.sort((a, b) => b.timestamp - a.timestamp);
+      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: WorkoutLog) => {
+        try {
+          return JSON.parse(def.notes);
+        } catch (e) { return null; }
+      }).filter(Boolean);
 
       const localExercises = workoutService.getLocalExercises();
 
@@ -64,7 +52,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const uniqueExercises = Array.from(new Map(mergedExercises.map(e => [e.id, e])).values());
 
       setSyncedExercises(uniqueExercises);
-      setLogs(fetchedLogs);
+      // Maintain descending chronological order (newest first)
+      setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: any) {
@@ -91,7 +80,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       sets: 1
     };
 
-    // Prepend to maintain DESC order
+    // Prepend to maintain descending chronological order (newest first)
     setLogs(prev => [logToSave, ...prev]);
 
     try {
@@ -129,7 +118,6 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
-      // Sort after merge to restore consistent DESC order
       return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
@@ -181,7 +169,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {
     const map = new Map<string, WorkoutLog[]>();
-    // Optimization: logs are already sorted DESC, no need to sort again
+    // logs is already maintained in descending chronological order (newest first)
+    // enabling early-exit optimizations in consumers like getTodaysLogs.
     for (const log of logs) {
       if (!map.has(log.exerciseId)) {
         map.set(log.exerciseId, []);
@@ -192,7 +181,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   }, [logs]);
 
   const getLogsForExercise = useCallback((id: string) => {
-    return logsByExercise.get(id) || EMPTY_LOGS;
+    return logsByExercise.get(id) || [];
   }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {

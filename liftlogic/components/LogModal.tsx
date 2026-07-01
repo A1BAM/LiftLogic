@@ -54,8 +54,14 @@ export const LogModal: React.FC<LogModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 w-full max-w-md sm:rounded-2xl border-t sm:border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 w-full max-w-md sm:rounded-2xl border-t sm:border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
@@ -131,9 +137,13 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="weight-input"
                       type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min="0"
                       aria-label="Weight in lbs"
-                      value={weight}
+                      value={weightInput}
                       onChange={(e) => setWeightInput(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
@@ -164,9 +174,12 @@ export const LogModal: React.FC<LogModalProps> = ({
                     <input
                       id="reps-input"
                       type="number"
+                      inputMode="numeric"
+                      min="1"
                       aria-label="Number of reps"
-                      value={reps}
+                      value={repsInput}
                       onChange={(e) => setRepsInput(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       className="w-12 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
                     />
                     <button
