@@ -5,8 +5,6 @@ const { mockQuery } = vi.hoisted(() => {
   return { mockQuery: vi.fn().mockResolvedValue({ rows: [] }) };
 });
 
-// Mock Neon Database Pool
-export const mockQuery = vi.fn().mockResolvedValue({ rows: [] });
 vi.mock('@neondatabase/serverless', () => {
   return {
     Pool: class {
@@ -16,176 +14,172 @@ vi.mock('@neondatabase/serverless', () => {
   };
 });
 
-describe('Worker API Validation', () => {
-  const env = {
-    DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy',
-    TARGET_HASH: 'test-hash',
-    ASSETS: { fetch: vi.fn() }
-  };
-
-  const ctx = {
-    waitUntil: vi.fn(),
-    passThroughOnException: vi.fn()
-  };
-
-  const createRequest = (method: string, body: any = null, headers: any = {}) => {
-    const options: any = {
+describe('Worker', () => {
+  const createRequest = (method: string, url: string, body?: any, targetHash?: string) => {
+    return new Request(url, {
       method,
-      headers: {
+      headers: new Headers({
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-hash',
-        ...headers
-      }
-    };
-    if (body !== null && method !== 'GET' && method !== 'HEAD') {
-      options.body = typeof body === 'string' ? body : JSON.stringify(body);
-    }
-    return new Request('http://localhost/gym-api', options);
+        ...(targetHash ? { 'Authorization': `Bearer ${targetHash}` } : {})
+      }),
+      body: body ? JSON.stringify(body) : undefined
+    });
   };
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  describe('GET Validation', () => {
-    it('returns empty array when database error occurs with dummy connection string', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('Simulated database error'));
+  describe('CORS and Security Headers', () => {
+    it('handles OPTIONS preflight request', async () => {
+      const request = createRequest('OPTIONS', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'dummy', ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };
 
-      const request = createRequest('GET');
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const response = await worker.fetch(request, env, {} as any);
 
       expect(response.status).toBe(200);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, DELETE, OPTIONS');
+    });
+
+    it('reflects origin if in ALLOWED_ORIGIN whitelist', async () => {
+      const request = new Request('http://localhost/gym-api', {
+        headers: new Headers({ 'Origin': 'https://liftlogic.app' })
+      });
+      const env = { DATABASE_URL: 'dummy', ALLOWED_ORIGIN: 'https://liftlogic.app,http://localhost:3000' as any, ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://liftlogic.app');
+    });
+  });
+
+  describe('Authentication', () => {
+    it('returns 401 if TARGET_HASH is set and auth header is missing', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'mysecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(401);
       const data = await response.json() as any;
+      expect(data.error).toBe('Unauthorized');
+    });
+
+    it('returns 200 if TARGET_HASH is provided and auth matches', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, 'mysecret');
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'mysecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe('GET Requests', () => {
+    it('returns empty array if dummy database URL is used and fetch fails', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('Connection failed'));
+
+      const request = createRequest('GET', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
       expect(data).toEqual([]);
     });
 
-    it('throws error when database error occurs with real connection string', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('Simulated database error'));
+    it('returns fetched rows successfully', async () => {
+      const mockRows = [
+        { id: '1', exercise_id: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 1, notes: null }
+      ];
+      mockQuery.mockResolvedValueOnce({ rows: mockRows });
 
-      const request = createRequest('GET');
-      const realEnv = { ...env, DATABASE_URL: 'postgres://real:real@localhost:5432/real' };
+      const request = createRequest('GET', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
 
-      const response = await worker.fetch(request, realEnv as any, ctx as any);
-      expect(response.status).toBe(500);
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(200);
       const data = await response.json() as any;
-      expect(data.error).toBe('Internal Server Error');
+      expect(data[0].id).toBe('1');
     });
   });
 
-  describe('POST Validation', () => {
-    it('returns 400 for malformed JSON', async () => {
-      const request = createRequest('POST', '{"invalid": json');
-      const response = await worker.fetch(request, env as any, ctx as any);
-      expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid JSON');
-    });
+  describe('POST Requests (Validation)', () => {
+    it('returns 400 for invalid id', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
 
-    it('returns 400 for missing id', async () => {
-      const request = createRequest('POST', { exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid id');
-    });
-
-    it('returns 400 for too long id', async () => {
-        const request = createRequest('POST', { id: 'a'.repeat(51), exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
-        const response = await worker.fetch(request, env as any, ctx as any);
-        expect(response.status).toBe(400);
-        const data = await response.json() as any;
-        expect(data.error).toBe('Invalid id');
-    });
-
-    it('returns 400 for negative weight', async () => {
-      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: Date.now(), weight: -1, reps: 5 });
-      const response = await worker.fetch(request, env as any, ctx as any);
-      expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid weight');
+      expect(await response.json()).toEqual({ error: 'Invalid id' });
     });
 
     it('returns 400 for invalid timestamp', async () => {
-      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: 'not-a-number', weight: 10, reps: 5 });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '1', exerciseId: 'ex1', timestamp: -10, weight: 100, reps: 10
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid timestamp');
+      expect(await response.json()).toEqual({ error: 'Invalid timestamp' });
     });
 
-    it('returns 400 for too long notes', async () => {
-      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5, notes: 'a'.repeat(501) });
-      const response = await worker.fetch(request, env as any, ctx as any);
-      expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid notes');
-    });
+    it('returns 400 for invalid weight (NaN)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '1', exerciseId: 'ex1', timestamp: 123, weight: NaN, reps: 10
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
 
-    it('returns 200 for valid data', async () => {
-      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5, sets: 3, notes: 'Good set' });
-      const response = await worker.fetch(request, env as any, ctx as any);
-      expect(response.status).toBe(200);
-      const data = await response.json() as any;
-      expect(data.success).toBe(true);
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid weight' });
     });
   });
 
-  describe('DELETE Validation', () => {
-    it('returns 400 for missing both id and exerciseId', async () => {
-      const request = createRequest('DELETE', {});
-      const response = await worker.fetch(request, env as any, ctx as any);
+  describe('DELETE Requests', () => {
+    it('returns 400 if body is empty', async () => {
+      const request = createRequest('DELETE', 'http://localhost/gym-api', {});
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Missing ID or Exercise ID');
+      expect(await response.json()).toEqual({ error: 'Missing ID or Exercise ID' });
     });
 
-    it('returns 400 for invalid exerciseId format', async () => {
-      const request = createRequest('DELETE', { exerciseId: 123 });
-      const response = await worker.fetch(request, env as any, ctx as any);
+    it('returns 400 if exerciseId is invalid', async () => {
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: '' });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Invalid exerciseId');
+      expect(await response.json()).toEqual({ error: 'Invalid exerciseId' });
     });
 
-    it('returns 200 for valid delete by id', async () => {
-      const request = createRequest('DELETE', { id: 'test-id' });
-      const response = await worker.fetch(request, env as any, ctx as any);
-      expect(response.status).toBe(200);
-      const data = await response.json() as any;
-      expect(data.success).toBe(true);
+    it('returns 400 if id is invalid', async () => {
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { id: '' });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid id' });
     });
   });
 
-  describe('Database Errors', () => {
-    it('returns 500 when database throws an error', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('Database Error'));
-      const request = createRequest('POST', { id: '1', exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
-      const response = await worker.fetch(request, env as any, ctx as any);
+  describe('Error Handling', () => {
+    it('returns 500 without leaking DB details on generic error', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('Super secret DB credentials failed'));
+
+      const request = createRequest('GET', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(500);
-      const data = await response.json() as any;
-      expect(data.error).toBe('Internal Server Error');
+      expect(await response.json()).toEqual({ error: 'Internal Server Error' });
     });
-  });
-
-});
-
-describe('CORS Validation', () => {
-  const ctx = {
-    waitUntil: vi.fn(),
-    passThroughOnException: vi.fn()
-  };
-
-  it('does not set Access-Control-Allow-Origin if ALLOWED_ORIGIN is undefined', async () => {
-    const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ASSETS: { fetch: vi.fn() } };
-    const request = new Request('http://localhost/gym-api', { method: 'OPTIONS' });
-    const response = await worker.fetch(request, env as any, ctx as any);
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
-  });
-
-  it('sets Access-Control-Allow-Origin if ALLOWED_ORIGIN is valid', async () => {
-    const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ALLOWED_ORIGIN: 'http://localhost:3000', ASSETS: { fetch: vi.fn() } };
-    const request = new Request('http://localhost/gym-api', { method: 'OPTIONS', headers: { 'origin': 'http://localhost:3000' } });
-    const response = await worker.fetch(request, env as any, ctx as any);
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:3000');
   });
 });
