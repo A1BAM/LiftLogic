@@ -16,17 +16,17 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
   const { id, exerciseId } = body || {};
 
   if (exerciseId !== undefined) {
-    if (typeof exerciseId === 'string' && exerciseId.length > 0 && exerciseId.length <= 50) {
-      return await deleteLogsByExercise(pool, exerciseId, headers);
+    if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
     }
-    return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
+    return await deleteLogsByExercise(pool, exerciseId, headers);
   }
 
   if (id !== undefined) {
-    if (typeof id === 'string' && id.length > 0 && id.length <= 50) {
-      return await deleteLogById(pool, id, headers);
+    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
     }
-    return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
+    return await deleteLogById(pool, id, headers);
   }
 
   return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
@@ -43,23 +43,38 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // Only handle /gym-api routes
+    // Default security headers for all responses
+    const securityHeaders: Record<string, string> = {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    };
+
+    // Handle static assets
     if (!url.pathname.startsWith('/gym-api')) {
-      return env.ASSETS.fetch(request);
+      const response = await env.ASSETS.fetch(request);
+      const newHeaders = new Headers(response.headers);
+      Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+      // Asset specific CSP: allows tailwind CDN and esm.sh for React/Lucide
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
     }
 
     const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
+      ...securityHeaders,
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Vary': 'Origin',
       'Content-Type': 'application/json',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'no-referrer',
-      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
       'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
@@ -94,7 +109,7 @@ export default {
 
     if (!connectionString) {
       logger.error("Missing DATABASE_URL");
-      return new Response(JSON.stringify({ error: "Database configuration missing" }), { status: 500, headers });
+      return new Response("Database configuration missing", { status: 500, headers });
     }
 
     const pool = new Pool({ connectionString });
@@ -151,16 +166,16 @@ export default {
         if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
           return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
         }
-        if (typeof timestamp !== 'number' || timestamp <= 0) {
+        if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
           return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
         }
-        if (typeof weight !== 'number' || weight < 0) {
+        if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
           return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
         }
-        if (typeof reps !== 'number' || reps < 0) {
+        if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
           return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
         }
-        if (sets !== undefined && (typeof sets !== 'number' || sets < 0)) {
+        if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
           return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
         }
         if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
