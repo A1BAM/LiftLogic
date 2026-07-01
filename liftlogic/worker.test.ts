@@ -56,7 +56,7 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Missing or invalid required fields');
+      expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for too long id', async () => {
@@ -64,7 +64,7 @@ describe('Worker API Validation', () => {
         const response = await worker.fetch(request, env as any, ctx as any);
         expect(response.status).toBe(400);
         const data = await response.json() as any;
-        expect(data.error).toBe('Missing or invalid required fields');
+        expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for negative weight', async () => {
@@ -72,7 +72,7 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid field values');
+      expect(data.error).toBe('Invalid weight');
     });
 
     it('returns 400 for invalid timestamp', async () => {
@@ -80,7 +80,7 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid field values');
+      expect(data.error).toBe('Invalid timestamp');
     });
 
     it('returns 400 for too long notes', async () => {
@@ -88,7 +88,7 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid field values');
+      expect(data.error).toBe('Invalid notes');
     });
 
     it('returns 200 for valid data', async () => {
@@ -106,7 +106,7 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Missing or invalid ID or Exercise ID');
+      expect(data.error).toBe('Missing ID or Exercise ID');
     });
 
     it('returns 400 for invalid exerciseId format', async () => {
@@ -114,7 +114,47 @@ describe('Worker API Validation', () => {
       const response = await worker.fetch(request, env as any, ctx as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Missing or invalid ID or Exercise ID');
+      expect(data.error).toBe('Invalid exerciseId');
+    });
+
+    it('returns 400 for invalid id format', async () => {
+      const request = createRequest('DELETE', { id: 123 });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Invalid id');
+    });
+
+    it('returns 400 for empty id string', async () => {
+      const request = createRequest('DELETE', { id: '' });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Invalid id');
+    });
+
+    it('returns 400 for too long id string', async () => {
+      const request = createRequest('DELETE', { id: 'a'.repeat(51) });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Invalid id');
+    });
+
+    it('returns 400 for empty exerciseId string', async () => {
+      const request = createRequest('DELETE', { exerciseId: '' });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Invalid exerciseId');
+    });
+
+    it('returns 400 for too long exerciseId string', async () => {
+      const request = createRequest('DELETE', { exerciseId: 'a'.repeat(51) });
+      const response = await worker.fetch(request, env as any, ctx as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Invalid exerciseId');
     });
 
     it('returns 200 for valid delete by id', async () => {
