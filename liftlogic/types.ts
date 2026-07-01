@@ -36,3 +36,8 @@ export interface ProgressionRecommendation {
   reps: number;
   reason: string;
 }
+export interface UserProfile {
+  id: string;
+  heightCm: number;
+  weightLbs: number;
+}
