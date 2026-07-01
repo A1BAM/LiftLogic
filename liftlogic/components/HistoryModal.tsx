@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { X, Trash2, Edit2, Layers } from 'lucide-react';
 
