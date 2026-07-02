@@ -8,6 +8,8 @@ import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { RestTimer } from './components/RestTimer';
+import { ProfileModal } from './components/ProfileModal';
+import { User } from 'lucide-react';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
@@ -18,7 +20,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
 
   // UI State
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'profile' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
@@ -38,7 +40,9 @@ const App: React.FC = () => {
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
-    getLastSessionLogs
+    getLastSessionLogs,
+    userProfile,
+    saveProfile
   } = useWorkoutData(isAuthenticated);
 
   // Check Auth on Mount
@@ -284,8 +288,15 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 animate-in fade-in relative">
         
+
         {/* Logout Button */}
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex gap-2">
+           <button
+             onClick={() => setActiveModal('profile')}
+             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+           >
+             <User size={16} /> Profile
+           </button>
            <button 
              onClick={handleLogout} 
              className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
@@ -293,6 +304,7 @@ const App: React.FC = () => {
              <LogOut size={16} /> Logout
            </button>
         </div>
+
 
         <div className="text-center mb-12">
           <div className="bg-blue-600 p-4 rounded-2xl inline-block mb-4 shadow-xl shadow-blue-900/20">
@@ -376,6 +388,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => setWorkoutDay(null)}
               className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Back to Dashboard"
             >
               <ChevronLeft size={28} />
             </button>
@@ -386,11 +399,21 @@ const App: React.FC = () => {
               <p className="text-xs text-blue-400 font-medium">LiftLogic</p>
             </div>
           </div>
+
           <div className="flex gap-2">
+            <button
+              onClick={() => setActiveModal('profile')}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              title="Edit Profile"
+            >
+              <User size={24} />
+            </button>
             <button 
               onClick={() => setActiveModal('globalHistory')}
+
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
@@ -398,6 +421,7 @@ const App: React.FC = () => {
               onClick={handleLogout}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>
@@ -414,6 +438,7 @@ const App: React.FC = () => {
                 key={exercise.id}
                 exercise={exercise}
                 exerciseLogs={getLogsForExercise(exercise.id)}
+                userProfile={userProfile}
                 onLogClick={() => openLogModal(exercise)}
                 onHistoryClick={() => openHistoryModal(exercise)}
                 onArchive={() => handleArchiveExercise(exercise)}
@@ -465,6 +490,7 @@ const App: React.FC = () => {
         />
       )}
 
+
       {activeModal === 'addExercise' && workoutDay && (
         <AddExerciseModal 
           dayType={workoutDay}
@@ -472,6 +498,15 @@ const App: React.FC = () => {
           onSave={handleSaveNewExercise}
         />
       )}
+
+      {activeModal === 'profile' && (
+        <ProfileModal
+          currentProfile={userProfile}
+          onClose={() => setActiveModal(null)}
+          onSave={saveProfile}
+        />
+      )}
+
 
       {workoutDay && (
         <RestTimer
