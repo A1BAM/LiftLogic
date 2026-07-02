@@ -6,7 +6,6 @@ const { mockQuery } = vi.hoisted(() => {
 });
 
 // Mock Neon Database Pool
-export const mockQuery = vi.fn().mockResolvedValue({ rows: [] });
 vi.mock('@neondatabase/serverless', () => {
   return {
     Pool: class {

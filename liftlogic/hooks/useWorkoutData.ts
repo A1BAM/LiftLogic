@@ -29,19 +29,34 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setIsLoading(true);
       const allData = await workoutService.fetchWorkouts() as WorkoutLog[];
 
-      const fetchedLogs = allData.filter((item) => item.exerciseId !== DEFINITION_ID);
-      const fetchedDefinitions = allData.filter((item) => item.exerciseId === DEFINITION_ID);
+      const fetchedLogs: WorkoutLog[] = [];
+      const cloudExercises: ExerciseDef[] = [];
+      const cloudIds = new Set<string>();
 
-      const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: WorkoutLog) => {
-        try {
-          return JSON.parse(def.notes);
-        } catch (e) { return null; }
-      }).filter(Boolean);
+      // Optimization: Single-pass processing of fetched data
+      for (const item of allData) {
+        if (item.exerciseId === DEFINITION_ID) {
+          try {
+            const ex = JSON.parse(item.notes || "");
+            if (ex && ex.id) {
+              cloudExercises.push(ex);
+              cloudIds.add(ex.id);
+            }
+          } catch (e) {
+            // Ignore malformed definitions
+          }
+        } else {
+          fetchedLogs.push(item);
+        }
+      }
 
       const localExercises = workoutService.getLocalExercises();
-
-      const cloudIds = new Set(cloudExercises.map(e => e.id));
-      const missingFromCloud = localExercises.filter(e => !cloudIds.has(e.id));
+      const missingFromCloud: ExerciseDef[] = [];
+      for (const ex of localExercises) {
+        if (!cloudIds.has(ex.id)) {
+          missingFromCloud.push(ex);
+        }
+      }
 
       if (missingFromCloud.length > 0) {
         logger.info("Syncing up exercises to cloud:", missingFromCloud.length);
