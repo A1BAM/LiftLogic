@@ -39,6 +39,22 @@ export const workoutService = {
     return res.json();
   },
 
+
+  async fetchProfile() {
+    const res = await apiFetch(`${API_URL}/profile`);
+    if (!res.ok) throw new Error('Failed to fetch profile');
+    return res.json();
+  },
+
+  async saveProfile(payload: { heightCm: number, weightLbs: number }) {
+    const res = await apiFetch(`${API_URL}/profile`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to save profile');
+    return res.json();
+  },
+
   getLocalExercises(): ExerciseDef[] {
     const stored = localStorage.getItem('liftlogic_custom_exercises');
     if (!stored) return [];
