@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WorkoutLog, ExerciseDef } from '../types';
+import { WorkoutLog, ExerciseDef, UserProfile } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
@@ -10,6 +10,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
     const payload = {
@@ -32,7 +33,17 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const fetchedLogs = allData.filter((item) => item.exerciseId !== DEFINITION_ID);
       const fetchedDefinitions = allData.filter((item) => item.exerciseId === DEFINITION_ID);
 
+
+      // Fetch profile
+      try {
+        const profile = await workoutService.fetchProfile();
+        setUserProfile(profile as any);
+      } catch (err) {
+        logger.error("Failed to fetch profile:", err);
+      }
+
       const cloudExercises: ExerciseDef[] = fetchedDefinitions.map((def: WorkoutLog) => {
+
         try {
           return JSON.parse(def.notes);
         } catch (e) { return null; }
@@ -227,7 +238,19 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     return results;
   }, [getLogsForExercise]);
 
+
+  const saveProfile = async (profile: { heightCm: number, weightLbs: number }) => {
+    try {
+      await workoutService.saveProfile(profile);
+      setUserProfile({ id: 'global_user', ...profile });
+    } catch (err) {
+      logger.error("Failed to save profile", err);
+      throw err;
+    }
+  };
+
   return {
+
     logs,
     syncedExercises,
     isLoading,
@@ -241,6 +264,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
-    getLastSessionLogs
+
+    getLastSessionLogs,
+    userProfile,
+    saveProfile
   };
 };
