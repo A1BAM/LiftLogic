@@ -66,7 +66,7 @@ export default {
       });
     }
 
-    const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
+    const allowedOrigins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map(o => o.trim()) : [];
     const requestOrigin = request.headers.get('origin');
 
     const headers: { [key: string]: string } = {
@@ -78,12 +78,14 @@ export default {
       'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
     };
 
-    if (allowedOrigins.includes('*')) {
-      headers['Access-Control-Allow-Origin'] = '*';
-    } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-      headers['Access-Control-Allow-Origin'] = requestOrigin;
-    } else {
-      headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
+    if (allowedOrigins.length > 0) {
+      if (allowedOrigins.includes('*')) {
+        headers['Access-Control-Allow-Origin'] = '*';
+      } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+        headers['Access-Control-Allow-Origin'] = requestOrigin;
+      } else {
+        headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
+      }
     }
 
     // Security Check: Verify Bearer Token
@@ -122,6 +124,51 @@ export default {
         } catch (e) {
           return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
         }
+      }
+
+
+      // GET Profile
+      if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
+        try {
+          const { rows } = await pool.query('SELECT * FROM user_profile LIMIT 1');
+          if (rows.length === 0) {
+            return new Response(JSON.stringify(null), { status: 200, headers });
+          }
+          return new Response(JSON.stringify({
+            id: rows[0].id,
+            heightCm: Number(rows[0].height_cm),
+            weightLbs: Number(rows[0].weight_lbs)
+          }), { status: 200, headers });
+        } catch (err: any) {
+          if (connectionString.includes('dummy')) {
+            return new Response(JSON.stringify(null), { status: 200, headers });
+          }
+          throw err;
+        }
+      }
+
+      // POST Profile
+      if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
+        const { heightCm, weightLbs } = body || {};
+
+        if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0) {
+          return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
+        }
+        if (typeof weightLbs !== 'number' || isNaN(weightLbs) || weightLbs <= 0) {
+          return new Response(JSON.stringify({ error: "Invalid weightLbs" }), { status: 400, headers });
+        }
+
+        const id = "global_user"; // Single user setup
+        const query = `
+          INSERT INTO user_profile (id, height_cm, weight_lbs)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (id) DO UPDATE SET
+            height_cm = EXCLUDED.height_cm,
+            weight_lbs = EXCLUDED.weight_lbs;
+        `;
+
+        await pool.query(query, [id, heightCm, weightLbs]);
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
       }
 
       // GET: Fetch all logs

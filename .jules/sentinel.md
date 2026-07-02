@@ -12,3 +12,7 @@
 **Vulnerability:** The API was vulnerable to DoS and potential data corruption because it did not validate the types or ranges of incoming fields, and it lacked error handling for malformed JSON payloads.
 **Learning:** Cloudflare Workers' `request.json()` throws on invalid JSON, which can lead to unhandled exceptions if not wrapped in try-catch. Centralizing body parsing and implementing a strict validation layer ensures the API fails gracefully with 400 Bad Request and protects downstream database integrity.
 **Prevention:** Always wrap JSON parsing in try-catch and enforce strict schema validation (types, lengths, ranges) before processing any write operations.
+## 2025-02-21 - Fix overly permissive default CORS policy in worker
+**Vulnerability:** The worker's default CORS implementation fell back to `*` if `ALLOWED_ORIGIN` was not configured in the environment, creating a Cross-Origin Resource Sharing misconfiguration. Any website could interact with the API if deployed without the variable.
+**Learning:** Default fallbacks for security policies must be restrictive ("fail-closed") rather than permissive. While `|| '*'` is convenient for local testing, it's dangerous as a default for cloud deployments.
+**Prevention:** Always default security configurations to the most restrictive state (e.g., an empty array or `null`). Only allow access if explicitly requested via configuration.

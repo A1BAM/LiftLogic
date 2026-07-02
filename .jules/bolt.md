@@ -15,3 +15,7 @@
 ## 2026-06-18 - Global Sorted State for Log History
 **Learning:** Maintaining the primary `logs` state in descending chronological order globally (via `unshift` or prepending) eliminates redundant $O(N \log N)$ sorting and $O(N)$ filtering across multiple UI components (HistoryModal, GlobalHistoryModal).
 **Action:** Establish a "source of truth" sort order in the primary data hook to allow $O(1)$ or early-exit $O(K)$ retrieval in child components.
+
+## 2026-06-19 - Single-Pass Data Synchronization
+**Learning:** Refactoring chained array traversals (`filter`, `map`) into a single-pass `for...of` loop during complex data synchronization reduces CPU overhead and avoids the creation of multiple intermediate arrays, leading to better performance and reduced GC pressure on large datasets.
+**Action:** Always prefer a single-pass loop for processing large, mixed-type data streams to minimize iterations and memory allocations.
