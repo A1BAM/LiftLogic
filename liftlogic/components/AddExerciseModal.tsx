@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DayType, ExerciseDef } from '../types';
 import { X, Save, Dumbbell } from 'lucide-react';
 
@@ -13,6 +13,14 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
   onClose, 
   onSave 
 }) => {
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('');
   const [defaultWeight, setDefaultWeight] = useState(20);
@@ -38,8 +46,16 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -62,6 +78,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               id="exercise-name"
               type="text" 
               required
+              autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Incline Bench Press"
@@ -92,6 +109,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 min="0"
                 value={defaultWeight}
                 onChange={e => setDefaultWeight(Number(e.target.value))}
+                onFocus={e => e.target.select()}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
               />
             </div>
@@ -104,6 +122,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 min="1"
                 value={targetReps}
                 onChange={e => setTargetReps(Number(e.target.value))}
+                onFocus={e => e.target.select()}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
               />
             </div>

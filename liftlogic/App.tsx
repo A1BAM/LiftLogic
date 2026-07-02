@@ -388,6 +388,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => setWorkoutDay(null)}
               className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              aria-label="Back to Dashboard"
             >
               <ChevronLeft size={28} />
             </button>
@@ -412,6 +413,7 @@ const App: React.FC = () => {
 
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="View Workout Journal"
+              aria-label="View Workout Journal"
             >
               <ClipboardList size={24} />
             </button>
@@ -419,6 +421,7 @@ const App: React.FC = () => {
               onClick={handleLogout}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="Logout"
+              aria-label="Logout"
             >
               <LogOut size={24} />
             </button>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { X, Calendar, Dumbbell, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
@@ -20,6 +20,14 @@ export function GlobalHistoryModal({
   onImport,
   customExercises
 }: GlobalHistoryModalProps) {
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   const [copied, setCopied] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importText, setImportText] = useState('');
@@ -133,8 +141,16 @@ export function GlobalHistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
