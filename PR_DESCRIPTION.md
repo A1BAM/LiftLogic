@@ -1,0 +1,1 @@
+The task was to clear an unused import 'DayType' in liftlogic/App.tsx. However, upon inspection, 'DayType' is actively used in 'App.tsx' for the 'workoutDay' state. The user has decided to close the issue without making any changes to preserve type safety.
