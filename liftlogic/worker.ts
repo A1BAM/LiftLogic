@@ -57,7 +57,7 @@ export default {
       const newHeaders = new Headers(response.headers);
       Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
       // Asset specific CSP: allows tailwind CDN and esm.sh for React/Lucide
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'sha256-33CEPSXJm9APfrBGk9mG/r1NOXLRuqCbYLodgApfMq0=' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
 
       return new Response(response.body, {
         status: response.status,
