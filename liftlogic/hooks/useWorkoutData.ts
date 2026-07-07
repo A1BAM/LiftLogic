@@ -146,7 +146,6 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await workoutService.saveItems(importedLogs);
     } catch (err: any) {
-      logger.error("Failed to import logs in bulk", err);
       throw new Error(`Import failed: ${err.message}`);
     }
   };

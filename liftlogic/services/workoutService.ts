@@ -21,6 +21,15 @@ export const workoutService = {
     return res.json();
   },
 
+  async saveItems(payload: any[]) {
+    const res = await apiFetch(`${API_URL}/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to save items in bulk');
+    return res.json();
+  },
+
   async saveItem(payload: any) {
     const res = await apiFetch(API_URL, {
       method: 'POST',
