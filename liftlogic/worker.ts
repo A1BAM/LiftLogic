@@ -202,6 +202,73 @@ export default {
         }
       }
 
+
+      // POST: Bulk Create
+      if (request.method === 'POST' && url.pathname.endsWith('/bulk')) {
+        if (!Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Invalid payload: must be an array" }), { status: 400, headers });
+        }
+
+        if (body.length === 0) {
+           return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
+        }
+
+        // Validate items
+        for (const item of body) {
+          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+            return new Response(JSON.stringify({ error: "Invalid id in array" }), { status: 400, headers });
+          }
+          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+            return new Response(JSON.stringify({ error: "Invalid exerciseId in array" }), { status: 400, headers });
+          }
+          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+            return new Response(JSON.stringify({ error: "Invalid timestamp in array" }), { status: 400, headers });
+          }
+          if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
+            return new Response(JSON.stringify({ error: "Invalid weight in array" }), { status: 400, headers });
+          }
+          if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
+            return new Response(JSON.stringify({ error: "Invalid reps in array" }), { status: 400, headers });
+          }
+          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
+            return new Response(JSON.stringify({ error: "Invalid sets in array" }), { status: 400, headers });
+          }
+          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+            return new Response(JSON.stringify({ error: "Invalid notes in array" }), { status: 400, headers });
+          }
+        }
+
+        // Chunking and bulk insert
+        const CHUNK_SIZE = 1000;
+        for (let i = 0; i < body.length; i += CHUNK_SIZE) {
+          const chunk = body.slice(i, i + CHUNK_SIZE);
+          const values: any[] = [];
+          const placeholders: string[] = [];
+
+          chunk.forEach((item, index) => {
+            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+            const offset = index * 7;
+            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
+            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
+          });
+
+          const query = `
+            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+            VALUES ${placeholders.join(', ')}
+            ON CONFLICT (id) DO UPDATE SET
+              weight = EXCLUDED.weight,
+              reps = EXCLUDED.reps,
+              sets = EXCLUDED.sets,
+              notes = EXCLUDED.notes;
+          `;
+
+          await pool.query(query, values);
+        }
+
+        return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
+      }
+
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
         const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};

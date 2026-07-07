@@ -137,13 +137,10 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
     });
 
-    const results = await Promise.allSettled(
-      importedLogs.map(log => workoutService.saveItem(log))
-    );
-
-    const errorCount = results.filter(r => r.status === 'rejected').length;
-    if (errorCount > 0) {
-      throw new Error(`Import finished with ${errorCount} errors.`);
+    try {
+      await workoutService.saveItems(importedLogs);
+    } catch (err: any) {
+      throw new Error(`Import failed: ${err.message}`);
     }
   };
 
