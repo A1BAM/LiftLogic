@@ -19,3 +19,6 @@
 ## 2026-06-19 - Single-Pass Data Synchronization
 **Learning:** Refactoring chained array traversals (`filter`, `map`) into a single-pass `for...of` loop during complex data synchronization reduces CPU overhead and avoids the creation of multiple intermediate arrays, leading to better performance and reduced GC pressure on large datasets.
 **Action:** Always prefer a single-pass loop for processing large, mixed-type data streams to minimize iterations and memory allocations.
+## 2025-03-01 - Bulk API Insertion Optimization
+**Learning:** Browser connection limits (max ~6 concurrent requests per domain) turn Promise.all/Promise.allSettled into N+1 bottlenecks. By replacing a loop of single POSTs with a single bulk POST containing an array of payloads, I bypassed the connection pool queue completely.
+**Action:** When saving large lists (like importing logs or saving definitions), create a bulk API endpoint instead of looping. Also ensure Postgres parameterized query generation uses `$1` notation correctly (e.g., `$\${index + 1}`) instead of injecting literal numbers.

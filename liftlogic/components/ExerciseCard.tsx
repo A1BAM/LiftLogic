@@ -59,6 +59,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     return totalSets >= targetSets;
   }, [todaySession, exercise]);
 
+  const referenceMaxWeight = useMemo(() => {
+    return referenceSession ? Math.max(...referenceSession.logs.map(l => l.weight)) : 0;
+  }, [referenceSession]);
+
 // 3. Calculate Recommendation based on Reference Session
   const recommendation: ProgressionRecommendation = useMemo(() => {
     if (!referenceSession) {
@@ -71,7 +75,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
     const logs = referenceSession.logs;
     const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    const usedWeight = Math.max(...logs.map(l => l.weight));
+    const usedWeight = referenceMaxWeight;
     const minReps = Math.min(...logs.map(l => l.reps));
     
     // Rule 1: Volume
@@ -132,9 +136,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
       };
     }
-  }, [referenceSession, exercise, userProfile]);
+  }, [referenceSession, exercise, userProfile, referenceMaxWeight]);
 
-  const isWeightIncrease = referenceSession ? recommendation.weight > Math.max(...referenceSession.logs.map(l => l.weight)) : false;
+  const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
 
   const previousText = useMemo(() => {
     const session = todaySession || referenceSession;
