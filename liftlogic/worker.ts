@@ -202,6 +202,67 @@ export default {
         }
       }
 
+      // POST: Bulk Create or Update
+      if (request.method === 'POST' && url.pathname.endsWith('/bulk')) {
+        if (!Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Expected an array of logs" }), { status: 400, headers });
+        }
+
+        // Return success early if empty array
+        if (body.length === 0) {
+           return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
+        }
+
+        // Validate all logs before inserting
+        for (const log of body) {
+          const { id, exerciseId, timestamp, weight, reps, sets, notes } = log;
+          if (typeof id !== 'string' || id.length === 0 || id.length > 50) return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
+          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
+          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
+          if (typeof weight !== 'number' || isNaN(weight) || weight < 0) return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
+          if (typeof reps !== 'number' || isNaN(reps) || reps < 0) return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
+          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
+          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
+        }
+
+        // Batch inserts in chunks to avoid parameter limits (PostgreSQL has a max of 65535 parameters)
+        // 7 parameters per row = max 9362 rows per chunk. Let's use 1000 for safety.
+        const CHUNK_SIZE = 1000;
+        for (let i = 0; i < body.length; i += CHUNK_SIZE) {
+          const chunk = body.slice(i, i + CHUNK_SIZE);
+          const values: any[] = [];
+          const placeholders: string[] = [];
+
+          chunk.forEach((log, index) => {
+            const offset = index * 7;
+            placeholders.push(`($\${offset + 1}, $\${offset + 2}, $\${offset + 3}, $\${offset + 4}, $\${offset + 5}, $\${offset + 6}, $\${offset + 7})`);
+            values.push(
+              log.id,
+              log.exerciseId,
+              log.timestamp,
+              log.weight,
+              log.reps,
+              log.sets || 1,
+              log.notes || null
+            );
+          });
+
+          const query = `
+            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+            VALUES ${placeholders.join(', ')}
+            ON CONFLICT (id) DO UPDATE SET
+              weight = EXCLUDED.weight,
+              reps = EXCLUDED.reps,
+              sets = EXCLUDED.sets,
+              notes = EXCLUDED.notes;
+          `;
+
+          await pool.query(query, values);
+        }
+
+        return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
+      }
+
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
         const items = Array.isArray(body) ? body : [body || {}];

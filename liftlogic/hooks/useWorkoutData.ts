@@ -144,10 +144,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     });
 
     try {
-      if (importedLogs.length > 0) {
-        await workoutService.saveItems(importedLogs);
-      }
+      await workoutService.saveItems(importedLogs);
     } catch (err: any) {
+      logger.error("Failed to import logs in bulk", err);
       throw new Error(`Import failed: ${err.message}`);
     }
   };
