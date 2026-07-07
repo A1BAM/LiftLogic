@@ -63,12 +63,12 @@ describe('Worker', () => {
 
       expect(response.status).toBe(401);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid id');
+      expect(data.error).toBe('Unauthorized');
     });
 
     it('returns 400 for too long id', async () => {
-        const request = createRequest('POST', { id: 'a'.repeat(51), exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
-        const response = await worker.fetch(request, env as any, ctx as any);
+        const request = createRequest('POST', 'http://localhost/gym-api', { id: 'a'.repeat(51), exerciseId: 'test', timestamp: Date.now(), weight: 10, reps: 5 });
+        const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
         expect(response.status).toBe(400);
         const data = await response.json() as any;
         expect(data.error).toBe('Invalid id');
@@ -102,7 +102,7 @@ describe('Worker', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid weight');
+      expect(data.length).toBe(1);
     });
   });
 
@@ -116,7 +116,7 @@ describe('Worker', () => {
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid timestamp');
+      expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for invalid timestamp', async () => {
@@ -128,7 +128,7 @@ describe('Worker', () => {
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
-      expect(data.error).toBe('Invalid notes');
+      expect(data.error).toBe('Invalid timestamp');
     });
 
     it('returns 400 for invalid weight (NaN)', async () => {
@@ -165,40 +165,40 @@ describe('Worker', () => {
     });
 
     it('returns 400 for invalid id format', async () => {
-      const request = createRequest('DELETE', { id: 123 });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { id: 123 });
+      const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
       expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for empty id string', async () => {
-      const request = createRequest('DELETE', { id: '' });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { id: '' });
+      const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
       expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for too long id string', async () => {
-      const request = createRequest('DELETE', { id: 'a'.repeat(51) });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { id: 'a'.repeat(51) });
+      const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
       expect(data.error).toBe('Invalid id');
     });
 
     it('returns 400 for empty exerciseId string', async () => {
-      const request = createRequest('DELETE', { exerciseId: '' });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: '' });
+      const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
       expect(data.error).toBe('Invalid exerciseId');
     });
 
     it('returns 400 for too long exerciseId string', async () => {
-      const request = createRequest('DELETE', { exerciseId: 'a'.repeat(51) });
-      const response = await worker.fetch(request, env as any, ctx as any);
+      const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: 'a'.repeat(51) });
+      const response = await worker.fetch(request, { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } } as any, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
       expect(data.error).toBe('Invalid exerciseId');

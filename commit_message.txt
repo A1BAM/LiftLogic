@@ -1,5 +1,0 @@
-🛡️ Sentinel: [HIGH] Fix Insecure Content-Security-Policy
-
-🎯 What: Removed the dangerous 'unsafe-inline' directive from the script-src policy in the Content-Security-Policy header returned by the worker for static assets.
-⚠️ Risk: 'unsafe-inline' effectively bypasses CSP protections against Cross-Site Scripting (XSS). If an attacker finds a way to inject a <script> tag into the page, the browser would execute it.
-🛡️ Solution: Replaced 'unsafe-inline' with the specific SHA-256 hash of the inline importmap script required by the application. This ensures legitimate application code continues to function while preventing the execution of arbitrary injected scripts.
