@@ -30,6 +30,15 @@ export const workoutService = {
     return res.json();
   },
 
+  async saveItems(payloads: any[]) {
+    const res = await apiFetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payloads)
+    });
+    if (!res.ok) throw new Error('Failed to save items');
+    return res.json();
+  },
+
   async deleteItem(payload: any) {
     const res = await apiFetch(API_URL, {
       method: 'DELETE',

@@ -204,42 +204,64 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
-        const { id, exerciseId, timestamp, weight, reps, sets, notes } = body || {};
+        const items = Array.isArray(body) ? body : [body || {}];
 
-        // Validation
-        if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-          return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
-        }
-        if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-          return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
-        }
-        if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-          return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
-        }
-        if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
-          return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
-        }
-        if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
-          return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
-        }
-        if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
-          return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
-        }
-        if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-          return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
+        if (items.length === 0) {
+          return new Response(JSON.stringify({ success: true }), { status: 200, headers });
         }
 
-        const query = `
-          INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (id) DO UPDATE SET
-            weight = EXCLUDED.weight,
-            reps = EXCLUDED.reps,
-            sets = EXCLUDED.sets,
-            notes = EXCLUDED.notes;
-        `;
+        // Validate all items before inserting
+        for (const item of items) {
+          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+            return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
+          }
+          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+            return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
+          }
+          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+            return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
+          }
+          if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
+            return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
+          }
+          if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
+            return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
+          }
+          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
+            return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
+          }
+          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+            return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
+          }
+        }
 
-        await pool.query(query, [id, exerciseId, timestamp, weight, reps, sets || 1, notes || null]);
+        // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
+        const CHUNK_SIZE = 1000;
+        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+          const chunk = items.slice(i, i + CHUNK_SIZE);
+          const values = [];
+          const placeholders = [];
+
+          for (let j = 0; j < chunk.length; j++) {
+            const { id, exerciseId, timestamp, weight, reps, sets, notes } = chunk[j];
+            const offset = j * 7;
+            placeholders.push(`(\${offset + 1}, \${offset + 2}, \${offset + 3}, \${offset + 4}, \${offset + 5}, \${offset + 6}, \${offset + 7})`);
+            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
+          }
+
+          const query = `
+            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+            VALUES ${placeholders.join(', ')}
+            ON CONFLICT (id) DO UPDATE SET
+              weight = EXCLUDED.weight,
+              reps = EXCLUDED.reps,
+              sets = EXCLUDED.sets,
+              notes = EXCLUDED.notes;
+          `;
+
+          await pool.query(query, values);
+        }
 
         return new Response(JSON.stringify({ success: true }), { status: 200, headers });
       }
