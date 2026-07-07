@@ -112,7 +112,6 @@ describe('Worker', () => {
         id: '', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10
       });
       const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
-
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -124,7 +123,6 @@ describe('Worker', () => {
         id: '1', exerciseId: 'ex1', timestamp: -10, weight: 100, reps: 10
       });
       const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
-
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
