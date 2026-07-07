@@ -12,8 +12,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
-    const payload = {
+  const saveDefinitionsToCloud = async (exercises: ExerciseDef[]) => {
+    const payloads = exercises.map(exercise => ({
       id: `def_${exercise.id}`,
       exerciseId: DEFINITION_ID,
       timestamp: Date.now(),
@@ -21,8 +21,14 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       reps: 0,
       sets: 0,
       notes: JSON.stringify(exercise)
-    };
-    await workoutService.saveItem(payload);
+    }));
+    if (payloads.length > 0) {
+      await workoutService.saveItems(payloads);
+    }
+  };
+
+  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
+    await saveDefinitionsToCloud([exercise]);
   };
 
   const fetchDataAndSync = useCallback(async () => {
@@ -61,7 +67,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
       if (missingFromCloud.length > 0) {
         logger.info("Syncing up exercises to cloud:", missingFromCloud.length);
-        await Promise.all(missingFromCloud.map(exercise => saveDefinitionToCloud(exercise)));
+        await saveDefinitionsToCloud(missingFromCloud);
       }
 
       const mergedExercises = [...cloudExercises, ...missingFromCloud];
