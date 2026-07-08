@@ -253,6 +253,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setUserProfile({ id: 'global_user', ...profile });
     } catch (err) {
       logger.error("Failed to save profile", err);
+      console.error(err);
       throw err;
     }
   };

@@ -152,6 +152,10 @@ export default {
       if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
         const { heightCm, weightLbs, age } = body || {};
 
+        if (typeof age !== 'undefined' && age !== null && (typeof age !== 'number' || isNaN(age) || age < 10 || age > 120)) {
+          return new Response(JSON.stringify({ error: "Invalid age" }), { status: 400, headers });
+        }
+
         try {
           await pool.query('ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS age integer');
         } catch(e) {

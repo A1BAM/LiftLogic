@@ -24,7 +24,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
       await onSave({
         heightCm: Number(heightCm),
         weightLbs: Number(weightLbs),
-        age: age ? Number(age) : undefined
+        age: age && age !== '' ? Number(age) : undefined
       });
       onClose();
     } catch (err) {
