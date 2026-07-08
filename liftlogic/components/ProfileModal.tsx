@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { X, Save, User } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface ProfileModalProps {
   currentProfile: UserProfile | null;
@@ -25,7 +26,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
       });
       onClose();
     } catch (err) {
-      console.error(err);
+      logger.error(err instanceof Error ? err.message : String(err), err);
       alert('Failed to save profile');
     } finally {
       setIsSaving(false);
