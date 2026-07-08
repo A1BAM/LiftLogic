@@ -1,14 +1,19 @@
+const isProduction =
+  (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') ||
+  // @ts-expect-error import.meta.env might not be defined in all environments
+  (typeof import.meta !== 'undefined' && import.meta.env?.PROD);
+
 export const logger = {
   info: (message: string, ...args: unknown[]) => {
-    console.log(`[INFO] ${message}`, ...args);
+    if (!isProduction) console.log(`[INFO] ${message}`, ...args);
   },
   warn: (message: string, ...args: unknown[]) => {
-    console.warn(`[WARN] ${message}`, ...args);
+    if (!isProduction) console.warn(`[WARN] ${message}`, ...args);
   },
   error: (message: string, ...args: unknown[]) => {
-    console.error(`[ERROR] ${message}`, ...args);
+    if (!isProduction) console.error(`[ERROR] ${message}`, ...args);
   },
   debug: (message: string, ...args: unknown[]) => {
-    console.debug(`[DEBUG] ${message}`, ...args);
+    if (!isProduction) console.debug(`[DEBUG] ${message}`, ...args);
   },
 };

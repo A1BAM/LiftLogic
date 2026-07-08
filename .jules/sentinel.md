@@ -1,18 +1,4 @@
-## 2025-04-10 - [API Authentication and Error Sanitization]
-**Vulnerability:** The API was completely unauthenticated, allowing anyone with the URL to read, write, and delete workout data. Additionally, error messages leaked database internal details.
-**Learning:** Hardcoded hashes in the frontend do not provide server-side security. Authentication must be enforced at the API layer.
-**Prevention:** Use server-side secrets for authentication and ensure catch blocks do not return raw error objects or messages to the client.
-
-## 2025-05-20 - [Timing Attack in Token Verification]
-**Vulnerability:** The Bearer token verification used the strict inequality operator (`!==`), which is susceptible to timing attacks. An attacker could potentially deduce the `TARGET_HASH` by measuring the response time of requests with different tokens.
-**Learning:** String comparison in security-critical paths (like authentication) must be constant-time to prevent information leakage through execution time.
-**Prevention:** Always use a constant-time comparison function for secrets and tokens.
-
-## 2026-05-21 - [Robust Input Validation and Secure JSON Parsing]
-**Vulnerability:** The API was vulnerable to DoS and potential data corruption because it did not validate the types or ranges of incoming fields, and it lacked error handling for malformed JSON payloads.
-**Learning:** Cloudflare Workers' `request.json()` throws on invalid JSON, which can lead to unhandled exceptions if not wrapped in try-catch. Centralizing body parsing and implementing a strict validation layer ensures the API fails gracefully with 400 Bad Request and protects downstream database integrity.
-**Prevention:** Always wrap JSON parsing in try-catch and enforce strict schema validation (types, lengths, ranges) before processing any write operations.
-## 2025-02-21 - Fix overly permissive default CORS policy in worker
-**Vulnerability:** The worker's default CORS implementation fell back to `*` if `ALLOWED_ORIGIN` was not configured in the environment, creating a Cross-Origin Resource Sharing misconfiguration. Any website could interact with the API if deployed without the variable.
-**Learning:** Default fallbacks for security policies must be restrictive ("fail-closed") rather than permissive. While `|| '*'` is convenient for local testing, it's dangerous as a default for cloud deployments.
-**Prevention:** Always default security configurations to the most restrictive state (e.g., an empty array or `null`). Only allow access if explicitly requested via configuration.
+## 2026-07-08 - Information Disclosure via Console Logging
+**Vulnerability:** The logger utility (`utils/logger.ts`) directly outputted messages and parameters to the console using `console.log`, `console.warn`, etc. In a production environment, this could leak sensitive information, such as API keys, PII, or internal system details, into browser console logs or system logs.
+**Learning:** Directly wrapping console functions without checking the environment fails to restrict potentially sensitive debug and error information to non-production environments.
+**Prevention:** Always implement an environment check (e.g., `process.env.NODE_ENV === 'production'`) to conditionally disable verbose logging or replace it with a secure logging service in production environments.
