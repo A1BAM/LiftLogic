@@ -137,7 +137,8 @@ export default {
           return new Response(JSON.stringify({
             id: rows[0].id,
             heightCm: Number(rows[0].height_cm),
-            weightLbs: Number(rows[0].weight_lbs)
+            weightLbs: Number(rows[0].weight_lbs),
+            age: rows[0].age ? Number(rows[0].age) : undefined
           }), { status: 200, headers });
         } catch (err: any) {
           if (connectionString.includes('dummy')) {
@@ -149,7 +150,13 @@ export default {
 
       // POST Profile
       if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
-        const { heightCm, weightLbs } = body || {};
+        const { heightCm, weightLbs, age } = body || {};
+
+        try {
+          await pool.query('ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS age integer');
+        } catch(e) {
+          logger.warn("Could not add age column", e);
+        }
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
@@ -160,14 +167,15 @@ export default {
 
         const id = "global_user"; // Single user setup
         const query = `
-          INSERT INTO user_profile (id, height_cm, weight_lbs)
-          VALUES ($1, $2, $3)
+          INSERT INTO user_profile (id, height_cm, weight_lbs, age)
+          VALUES ($1, $2, $3, $4)
           ON CONFLICT (id) DO UPDATE SET
             height_cm = EXCLUDED.height_cm,
-            weight_lbs = EXCLUDED.weight_lbs;
+            weight_lbs = EXCLUDED.weight_lbs,
+            age = EXCLUDED.age;
         `;
 
-        await pool.query(query, [id, heightCm, weightLbs]);
+        await pool.query(query, [id, heightCm, weightLbs, age || null]);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers });
       }
 

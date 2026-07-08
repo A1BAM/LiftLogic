@@ -40,4 +40,5 @@ export interface UserProfile {
   id: string;
   heightCm: number;
   weightLbs: number;
+  age?: number;
 }
