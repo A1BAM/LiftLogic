@@ -9,8 +9,9 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { RestTimer } from './components/RestTimer';
 import { ProfileModal } from './components/ProfileModal';
+import { ProjectionsModal } from './components/ProjectionsModal';
 import { User } from 'lucide-react';
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive } from 'lucide-react';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
 import { logger } from './utils/logger';
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
 
   // UI State
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'profile' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'profile' | 'projections' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
@@ -349,12 +350,21 @@ const App: React.FC = () => {
             <ClipboardList size={16} /> View Journal
           </button>
           
+
           <button 
             onClick={() => setActiveModal('archived')}
             className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
           >
             <Archive size={16} /> Archived Exercises
           </button>
+
+          <button
+            onClick={() => setActiveModal('projections')}
+            className="flex items-center gap-2 text-blue-500 hover:text-blue-400 transition-colors text-sm font-medium"
+          >
+            <TrendingUp size={16} /> Potential
+          </button>
+
         </div>
 
          {activeModal === 'globalHistory' && (
@@ -409,8 +419,18 @@ const App: React.FC = () => {
             >
               <User size={24} />
             </button>
+
+            <button
+              onClick={() => setActiveModal('projections')}
+              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
+              title="View Potential"
+              aria-label="View Potential"
+            >
+              <TrendingUp size={24} />
+            </button>
             <button 
               onClick={() => setActiveModal('globalHistory')}
+
 
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               title="View Workout Journal"
@@ -500,6 +520,7 @@ const App: React.FC = () => {
         />
       )}
 
+
       {activeModal === 'profile' && (
         <ProfileModal
           currentProfile={userProfile}
@@ -507,6 +528,17 @@ const App: React.FC = () => {
           onSave={saveProfile}
         />
       )}
+
+      {activeModal === 'projections' && (
+        <ProjectionsModal
+          logs={logs}
+          exercises={syncedExercises}
+          userProfile={userProfile}
+          onClose={() => setActiveModal(null)}
+          onOpenProfile={() => setActiveModal('profile')}
+        />
+      )}
+
 
 
       {workoutDay && (

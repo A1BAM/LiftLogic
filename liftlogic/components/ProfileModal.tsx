@@ -6,12 +6,13 @@ import { logger } from '../utils/logger';
 interface ProfileModalProps {
   currentProfile: UserProfile | null;
   onClose: () => void;
-  onSave: (profile: { heightCm: number; weightLbs: number }) => Promise<void>;
+  onSave: (profile: { heightCm: number; weightLbs: number; age?: number }) => Promise<void>;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onClose, onSave }) => {
   const [heightCm, setHeightCm] = useState(currentProfile?.heightCm?.toString() || '');
   const [weightLbs, setWeightLbs] = useState(currentProfile?.weightLbs?.toString() || '');
+  const [age, setAge] = useState(currentProfile?.age?.toString() || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +23,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
     try {
       await onSave({
         heightCm: Number(heightCm),
-        weightLbs: Number(weightLbs)
+        weightLbs: Number(weightLbs),
+        age: age ? Number(age) : undefined
       });
       onClose();
     } catch (err) {
@@ -85,6 +87,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
             />
           </div>
 
+
+          <div>
+            <label htmlFor="age" className="block text-slate-400 text-xs font-bold uppercase mb-2">Age (years)</label>
+            <input
+              id="age"
+              type="number"
+              min="10"
+              max="120"
+              value={age}
+              onChange={e => setAge(e.target.value)}
+              placeholder="e.g. 30"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
+            />
+          </div>
           <button
             type="submit"
             disabled={isSaving}

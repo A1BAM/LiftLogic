@@ -58,7 +58,7 @@ export const workoutService = {
     return res.json();
   },
 
-  async saveProfile(payload: { heightCm: number, weightLbs: number }) {
+  async saveProfile(payload: { heightCm: number, weightLbs: number, age?: number }) {
     const res = await apiFetch(`${API_URL}/profile`, {
       method: 'POST',
       body: JSON.stringify(payload)

@@ -247,7 +247,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   }, [getLogsForExercise]);
 
 
-  const saveProfile = async (profile: { heightCm: number, weightLbs: number }) => {
+  const saveProfile = async (profile: { heightCm: number, weightLbs: number, age?: number }) => {
     try {
       await workoutService.saveProfile(profile);
       setUserProfile({ id: 'global_user', ...profile });
