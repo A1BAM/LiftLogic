@@ -22,3 +22,6 @@
 ## 2025-03-01 - Bulk API Insertion Optimization
 **Learning:** Browser connection limits (max ~6 concurrent requests per domain) turn Promise.all/Promise.allSettled into N+1 bottlenecks. By replacing a loop of single POSTs with a single bulk POST containing an array of payloads, I bypassed the connection pool queue completely.
 **Action:** When saving large lists (like importing logs or saving definitions), create a bulk API endpoint instead of looping. Also ensure Postgres parameterized query generation uses `$1` notation correctly (e.g., `$\${index + 1}`) instead of injecting literal numbers.
+## 2024-05-30 - Replace Sequential Await with Promise.all
+**Learning:** Awaiting an async function sequentially within a loop causes unnecessary serialization of independent operations, multiplying latency. For operations like API calls or DB queries where order doesn't dictate execution, `Promise.all` allows them to process concurrently.
+**Action:** Use `Promise.all` instead of a sequential `for...of` or `for` loop with `await` whenever handling multiple independent asynchronous operations over an array.
