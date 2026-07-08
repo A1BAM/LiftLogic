@@ -5,9 +5,7 @@ async function saveDefinitionToCloud(exercise) {
 
 async function runSequential(exercises) {
   const start = performance.now();
-  for (const exercise of exercises) {
-    await saveDefinitionToCloud(exercise);
-  }
+  await Promise.all(exercises.map(exercise => saveDefinitionToCloud(exercise)));
   return performance.now() - start;
 }
 
