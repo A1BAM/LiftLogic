@@ -22,7 +22,7 @@ describe('Worker', () => {
       method,
       headers: new Headers({
         'Content-Type': 'application/json',
-        ...(targetHash ? { 'Authorization': `Bearer ${targetHash}` } : {})
+        ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
       }),
       body: body ? JSON.stringify(body) : undefined
     });
@@ -35,7 +35,7 @@ describe('Worker', () => {
   describe('CORS and Security Headers', () => {
     it('handles OPTIONS preflight request', async () => {
       const request = createRequest('OPTIONS', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'dummy', ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -48,7 +48,7 @@ describe('Worker', () => {
       const request = new Request('http://localhost/gym-api', {
         headers: new Headers({ 'Origin': 'https://liftlogic.app' })
       });
-      const env = { DATABASE_URL: 'dummy', ALLOWED_ORIGIN: 'https://liftlogic.app,http://localhost:3000' as any, ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ALLOWED_ORIGIN: 'https://liftlogic.app,http://localhost:3000' as any, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://liftlogic.app');
@@ -56,8 +56,17 @@ describe('Worker', () => {
   });
 
   describe('Authentication', () => {
-    it('returns 401 if TARGET_HASH is set and auth header is missing', async () => {
+
+    it('returns 500 Server Configuration Error if TARGET_HASH is not set', async () => {
       const request = createRequest('GET', 'http://localhost/gym-api');
+      const env = { DATABASE_URL: 'dummy', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'Server Configuration Error' });
+    });
+
+    it('returns 401 if TARGET_HASH is set and auth header is missing', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, null as any);
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'mysecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
@@ -73,7 +82,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Connection failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -89,7 +98,7 @@ describe('Worker', () => {
       mockQuery.mockResolvedValueOnce({ rows: mockRows });
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -100,7 +109,7 @@ describe('Worker', () => {
   describe('POST Bulk Requests (Validation)', () => {
     it('returns 400 for non-array payload', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', { id: '1' });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -109,7 +118,7 @@ describe('Worker', () => {
 
     it('returns 400 for invalid item in array', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', [{ id: '' }]);
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -123,7 +132,7 @@ describe('Worker', () => {
         { id: '2', exerciseId: 'ex2', timestamp: 124, weight: 150, reps: 5 }
       ];
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       const data = await response.json() as any;
@@ -135,7 +144,7 @@ describe('Worker', () => {
     it('returns 400 if bulk payload exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -150,7 +159,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -161,7 +170,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: -10, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -172,7 +181,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: NaN, reps: 10
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -183,7 +192,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 2001, reps: 10
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weight' });
@@ -193,7 +202,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 1001
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid reps' });
@@ -203,7 +212,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 101
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid sets' });
@@ -212,7 +221,7 @@ describe('Worker', () => {
     it('returns 400 if items array exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api', items);
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -225,7 +234,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 301, weightLbs: 150
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid heightCm' });
@@ -235,7 +244,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 1001
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weightLbs' });
@@ -245,7 +254,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: -1
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -255,7 +264,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: 151
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -265,7 +274,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: '30'
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -275,7 +284,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: 30
       });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ success: true });
@@ -285,7 +294,7 @@ describe('Worker', () => {
   describe('DELETE Requests', () => {
     it('returns 400 if body is empty', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', {});
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -295,7 +304,7 @@ describe('Worker', () => {
 
     it('returns 400 if exerciseId is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: '' });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -305,7 +314,7 @@ describe('Worker', () => {
 
     it('returns 400 if id is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { id: '' });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -318,7 +327,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Super secret DB credentials failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(500);
@@ -326,12 +335,8 @@ describe('Worker', () => {
     });
 
     it('returns 400 for invalid JSON payload', async () => {
-      const request = new Request('http://localhost/gym-api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{ invalid json: '
-      });
-      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const request = new Request('http://localhost/gym-api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer testsecret' }, body: '{ invalid json: ' });
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid JSON' });
