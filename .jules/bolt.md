@@ -25,3 +25,7 @@
 ## 2024-05-30 - Replace Sequential Await with Promise.all
 **Learning:** Awaiting an async function sequentially within a loop causes unnecessary serialization of independent operations, multiplying latency. For operations like API calls or DB queries where order doesn't dictate execution, `Promise.all` allows them to process concurrently.
 **Action:** Use `Promise.all` instead of a sequential `for...of` or `for` loop with `await` whenever handling multiple independent asynchronous operations over an array.
+
+## 2026-07-09 - Optimized ProjectionsModal Log Grouping
+**Learning:** In components that calculate stats for multiple entities (e.g., exercises) from a large shared dataset (e.g., all logs), using nested `.filter()` calls results in $O(E \times L)$ complexity. Replacing this with a single-pass $O(L)$ grouping into a `Map` reduces complexity to $O(L + E)$.
+**Action:** Always pre-group flat datasets into a `Map` or `Record` when iterating over a list of categories to perform per-category calculations, ensuring linear performance as history grows.
