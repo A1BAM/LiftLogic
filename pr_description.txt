@@ -1,8 +1,0 @@
-💡 **What:** Replaced the N+1 API call loop during log import with a single `POST /gym-api/bulk` bulk insert endpoint. Modified the PostgreSQL queries to chunk data into parameterized multi-value inserts to safely bypass parameter limits.
-
-🎯 **Why:** Previously, importing large numbers of workout logs or syncing missed exercise definitions would stall due to browser concurrency limits on HTTP connections. Using `Promise.allSettled` to make hundreds of individual API requests is highly inefficient and risks network timeouts. A bulk insert ensures atomicity and maximizes throughput.
-
-📊 **Measured Improvement:** A local benchmark simulating importing 200 logs with a 50ms simulated network delay showed a massive improvement.
-- **Baseline (N+1 Calls):** 1,715.75 ms
-- **Optimized (Bulk API):** 60.37 ms
-- **Result:** ~28.4x faster. Bypassing the browser's max concurrent connection pool resulted in instant saves.
