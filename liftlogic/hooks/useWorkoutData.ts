@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WorkoutLog, ExerciseDef, UserProfile } from '../types';
+import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
@@ -10,8 +10,6 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
   const saveDefinitionsToCloud = async (exercises: ExerciseDef[]) => {
     const payloads = exercises.map(exercise => ({
       id: `def_${exercise.id}`,
@@ -245,18 +243,6 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     return results;
   }, [getLogsForExercise]);
-
-
-  const saveProfile = async (profile: { heightCm: number, weightLbs: number, age?: number }) => {
-    try {
-      await workoutService.saveProfile(profile);
-      setUserProfile({ id: 'global_user', ...profile });
-    } catch (err) {
-      logger.error("Failed to save profile", err);
-      throw err;
-    }
-  };
-
   return {
 
     logs,
@@ -274,7 +260,5 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     getTodaysLogs,
 
     getLastSessionLogs,
-    userProfile,
-    saveProfile
   };
 };

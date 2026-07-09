@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
-import { ExerciseDef, WorkoutLog, ProgressionRecommendation, UserProfile } from '../types';
+import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
-  userProfile: UserProfile | null;
   onLogClick: () => void;
   onHistoryClick: () => void;
   onArchive?: () => void;
@@ -13,8 +12,7 @@ interface ExerciseCardProps {
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
   exercise, 
-  exerciseLogs, 
-  userProfile,
+  exerciseLogs,
   onLogClick, 
   onHistoryClick,
   onArchive
@@ -93,36 +91,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     let nextReps = Math.max(6, exercise.targetReps - 4);
     let reason = `Overload: All sets hit ${exercise.targetReps}+ reps!`;
 
-    // Advanced progression: check against realistic maximum potential if profile exists
-    if (minReps >= exercise.targetReps && userProfile) {
-      // Lean bodybuilder formula (Martin Berkhan)
-      const maxLeanMassKg = userProfile.heightCm - 100;
-      const maxLeanMassLbs = maxLeanMassKg * 2.20462;
-
-      // Rough multipliers for intermediate/advanced natural limits
-      let multiplier = 1.0;
-      const mGroup = exercise.muscleGroup.toLowerCase();
-      if (mGroup.includes('chest') || exercise.name.toLowerCase().includes('bench')) {
-        multiplier = 1.5; // Bench ~1.5x BW
-      } else if (mGroup.includes('legs') || exercise.name.toLowerCase().includes('squat')) {
-        multiplier = 2.0; // Squat ~2x BW
-      } else if (mGroup.includes('back') || exercise.name.toLowerCase().includes('deadlift')) {
-        multiplier = 2.5; // Deadlift ~2.5x BW
-      } else if (mGroup.includes('shoulder') || exercise.name.toLowerCase().includes('press')) {
-        multiplier = 1.0; // Overhead Press ~1x BW
-      } else {
-        multiplier = 0.5; // Isolation exercises
-      }
-
-      const theoreticalMax = maxLeanMassLbs * multiplier;
-
-      // If the lifter is very close to or exceeding their theoretical max, reduce the increment by half
-      if (usedWeight >= theoreticalMax * 0.85) {
-         nextWeight = usedWeight + (exercise.increment / 2);
-         reason = `Nearing peak! Micro-loading (+ ${exercise.increment / 2} lbs) recommended.`;
-      }
-    }
-
     if (minReps >= exercise.targetReps) {
       return {
         weight: nextWeight,
@@ -136,7 +104,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
       };
     }
-  }, [referenceSession, exercise, userProfile, referenceMaxWeight]);
+  }, [referenceSession, exercise, referenceMaxWeight]);
 
   const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
 
