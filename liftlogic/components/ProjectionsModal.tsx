@@ -35,8 +35,17 @@ export function ProjectionsModal({
 
     const activeExercises = exercises.filter(ex => !ex.isArchived);
 
+    // Optimization: Group logs by exerciseId in a single pass O(L) instead of nested filtering O(E * L)
+    const logsByEx = new Map<string, WorkoutLog[]>();
+    for (const log of logs) {
+      if (!logsByEx.has(log.exerciseId)) {
+        logsByEx.set(log.exerciseId, []);
+      }
+      logsByEx.get(log.exerciseId)!.push(log);
+    }
+
     return activeExercises.map(ex => {
-      const exLogs = logs.filter(l => l.exerciseId === ex.id);
+      const exLogs = logsByEx.get(ex.id) || [];
       if (exLogs.length === 0) return null;
 
       const projs = getProjections(ex, exLogs, userProfile);
