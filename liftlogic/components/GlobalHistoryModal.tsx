@@ -13,6 +13,73 @@ interface GlobalHistoryModalProps {
   customExercises: ExerciseDef[];
 }
 
+export function calculateGlobalHistoryStats(
+  logs: WorkoutLog[],
+  currentDayType: string | null,
+  allExercisesMap: Record<string, ExerciseDef>
+) {
+  const groups: Record<string, WorkoutLog[]> = {};
+  const dateCache = new Map<number, string>();
+  const todayStr = new Date().toDateString();
+  const uniqueDays = new Set<number>();
+  const todayExercises = new Set<string>();
+
+  let totalVolume = 0;
+  let todayVolume = 0;
+
+  let currentDayStart = -1;
+  let currentDayId = -1;
+  let currentDateKey = '';
+  let isToday = false;
+
+  for (const log of logs) {
+    const vol = log.weight * log.reps * (log.sets || 1);
+    totalVolume += vol;
+
+    if (log.timestamp < currentDayStart || currentDayStart === -1) {
+      const d = new Date(log.timestamp);
+      currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+      currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+      let dateKey = dateCache.get(currentDayId);
+      if (!dateKey) {
+        dateKey = d.toLocaleDateString(undefined, {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        dateCache.set(currentDayId, dateKey);
+      }
+      currentDateKey = dateKey;
+      isToday = (d.toDateString() === todayStr);
+    }
+
+    uniqueDays.add(currentDayId);
+
+    if (!groups[currentDateKey]) groups[currentDateKey] = [];
+    groups[currentDateKey].push(log);
+
+    if (currentDayType && isToday) {
+      const exercise = allExercisesMap[log.exerciseId];
+      if (exercise?.dayType === currentDayType) {
+        todayVolume += vol;
+        todayExercises.add(log.exerciseId);
+      }
+    }
+  }
+
+  return {
+    stats: {
+      totalWorkouts: logs.length,
+      totalVolume,
+      totalDays: uniqueDays.size
+    },
+    todaySummary: currentDayType ? {
+      volume: todayVolume,
+      exercisesCount: todayExercises.size
+    } : null,
+    groupedLogs: groups
+  };
+}
+
 export function GlobalHistoryModal({
   onClose, 
   logs,
@@ -43,70 +110,7 @@ export function GlobalHistoryModal({
 
   const { stats, todaySummary, groupedLogs } = useMemo(() => {
     // logs are already maintained in descending chronological order (newest first)
-    const groups: Record<string, WorkoutLog[]> = {};
-    const dateCache = new Map<number, string>();
-    const todayStr = new Date().toDateString();
-    const uniqueDays = new Set<number>();
-    const todayExercises = new Set<string>();
-    
-    let totalVolume = 0;
-    let todayVolume = 0;
-
-    let currentDayStart = -1;
-    let currentDayId = -1;
-    let currentDateKey = '';
-    let isToday = false;
-
-    for (const log of logs) {
-      const vol = log.weight * log.reps * (log.sets || 1);
-      totalVolume += vol;
-
-      // Since sortedLogs is ordered newest-to-oldest, we can cache the Date
-      // instantiation for all logs that fall on the same day.
-      if (log.timestamp < currentDayStart || currentDayStart === -1) {
-        const d = new Date(log.timestamp);
-        currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-        currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-        let dateKey = dateCache.get(currentDayId);
-        if (!dateKey) {
-          dateKey = d.toLocaleDateString(undefined, {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-          });
-          dateCache.set(currentDayId, dateKey);
-        }
-        currentDateKey = dateKey;
-        isToday = (d.toDateString() === todayStr);
-      }
-
-      uniqueDays.add(currentDayId);
-
-      // Grouping
-      if (!groups[currentDateKey]) groups[currentDateKey] = [];
-      groups[currentDateKey].push(log);
-
-      // Today summary
-      if (currentDayType && isToday) {
-        const exercise = allExercisesMap[log.exerciseId];
-        if (exercise?.dayType === currentDayType) {
-          todayVolume += vol;
-          todayExercises.add(log.exerciseId);
-        }
-      }
-    }
-
-    return {
-      stats: {
-        totalWorkouts: logs.length,
-        totalVolume,
-        totalDays: uniqueDays.size
-      },
-      todaySummary: currentDayType ? {
-        volume: todayVolume,
-        exercisesCount: todayExercises.size
-      } : null,
-      groupedLogs: groups
-    };
+    return calculateGlobalHistoryStats(logs, currentDayType, allExercisesMap);
   }, [logs, currentDayType, allExercisesMap]);
 
   const handleExport = async () => {
