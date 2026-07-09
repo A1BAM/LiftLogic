@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { X, Save, User } from 'lucide-react';
 import { logger } from '../utils/logger';
@@ -35,11 +35,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
     }
   };
 
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 w-full max-w-sm rounded-2xl border border-slate-700 shadow-2xl flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 w-full max-w-sm rounded-2xl border border-slate-700 shadow-2xl flex flex-col"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-title"
+      >
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 id="profile-title" className="text-xl font-bold text-white flex items-center gap-2">
             <User size={20} className="text-blue-500" />
             Your Profile
           </h2>
@@ -63,10 +80,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
               id="height"
               type="number"
               required
+              autoFocus
+              inputMode="numeric"
               min="100"
               max="250"
               value={heightCm}
               onChange={e => setHeightCm(e.target.value)}
+              onFocus={e => e.target.select()}
               placeholder="e.g. 180"
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
             />
@@ -78,10 +98,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
               id="weight"
               type="number"
               required
+              inputMode="decimal"
               min="50"
               max="500"
               value={weightLbs}
               onChange={e => setWeightLbs(e.target.value)}
+              onFocus={e => e.target.select()}
               placeholder="e.g. 175"
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
             />
@@ -93,10 +115,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ currentProfile, onCl
             <input
               id="age"
               type="number"
+              inputMode="numeric"
               min="10"
               max="120"
               value={age}
               onChange={e => setAge(e.target.value)}
+              onFocus={e => e.target.select()}
               placeholder="e.g. 30"
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
             />
