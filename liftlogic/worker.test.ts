@@ -324,5 +324,17 @@ describe('Worker', () => {
       expect(response.status).toBe(500);
       expect(await response.json()).toEqual({ error: 'Internal Server Error' });
     });
+
+    it('returns 400 for invalid JSON payload', async () => {
+      const request = new Request('http://localhost/gym-api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{ invalid json: '
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid JSON' });
+    });
   });
 });
