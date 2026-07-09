@@ -131,6 +131,16 @@ describe('Worker', () => {
       expect(data.count).toBe(2);
       expect(mockQuery).toHaveBeenCalled();
     });
+
+    it('returns 400 if bulk payload exceeds 10,000 items', async () => {
+      const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
+      const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Payload too large: max 10,000 items');
+    });
   });
 
 
@@ -167,6 +177,108 @@ describe('Worker', () => {
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weight' });
+    });
+
+    it('returns 400 for weight > 2000', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '1', exerciseId: 'ex1', timestamp: 123, weight: 2001, reps: 10
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid weight' });
+    });
+
+    it('returns 400 for reps > 1000', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 1001
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid reps' });
+    });
+
+    it('returns 400 for sets > 100', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api', {
+        id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 101
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid sets' });
+    });
+
+    it('returns 400 if items array exceeds 10,000 items', async () => {
+      const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
+      const request = createRequest('POST', 'http://localhost/gym-api', items);
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json() as any;
+      expect(data.error).toBe('Payload too large: max 10,000 items');
+    });
+  });
+
+  describe('Profile Requests', () => {
+    it('returns 400 for invalid heightCm (> 300)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 301, weightLbs: 150
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid heightCm' });
+    });
+
+    it('returns 400 for invalid weightLbs (> 1000)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 180, weightLbs: 1001
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid weightLbs' });
+    });
+
+    it('returns 400 for invalid age (< 0)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 180, weightLbs: 150, age: -1
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid age' });
+    });
+
+    it('returns 400 for invalid age (> 150)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 180, weightLbs: 150, age: 151
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid age' });
+    });
+
+    it('returns 400 for invalid age (string)', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 180, weightLbs: 150, age: '30'
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid age' });
+    });
+
+    it('successfully saves profile with valid age', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
+        heightCm: 180, weightLbs: 150, age: 30
+      });
+      const env = { DATABASE_URL: 'real', ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ success: true });
     });
   });
 

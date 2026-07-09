@@ -130,7 +130,7 @@ export default {
       // GET Profile
       if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
         try {
-          const { rows } = await pool.query('SELECT * FROM user_profile LIMIT 1');
+          const { rows } = await pool.query('SELECT id, height_cm, weight_lbs, age FROM user_profile LIMIT 1');
           if (rows.length === 0) {
             return new Response(JSON.stringify(null), { status: 200, headers });
           }
@@ -158,11 +158,14 @@ export default {
           logger.warn("Could not add age column", e);
         }
 
-        if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0) {
+        if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
         }
-        if (typeof weightLbs !== 'number' || isNaN(weightLbs) || weightLbs <= 0) {
+        if (typeof weightLbs !== 'number' || isNaN(weightLbs) || weightLbs <= 0 || weightLbs > 1000) {
           return new Response(JSON.stringify({ error: "Invalid weightLbs" }), { status: 400, headers });
+        }
+        if (age !== undefined && age !== null && (typeof age !== 'number' || isNaN(age) || age < 0 || age > 150)) {
+          return new Response(JSON.stringify({ error: "Invalid age" }), { status: 400, headers });
         }
 
         const id = "global_user"; // Single user setup
@@ -182,7 +185,7 @@ export default {
       // GET: Fetch all logs
       if (request.method === 'GET') {
         try {
-          const { rows } = await pool.query('SELECT * FROM workouts ORDER BY timestamp DESC');
+          const { rows } = await pool.query('SELECT id, exercise_id, timestamp, weight, reps, sets, notes FROM workouts ORDER BY timestamp DESC');
 
           const logs = rows.map((row: any) => ({
             id: row.id,
@@ -217,6 +220,10 @@ export default {
           return new Response(JSON.stringify({ error: "Invalid payload: must be an array" }), { status: 400, headers });
         }
 
+        if (body.length > 10000) {
+          return new Response(JSON.stringify({ error: "Payload too large: max 10,000 items" }), { status: 400, headers });
+        }
+
         if (body.length === 0) {
            return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
         }
@@ -233,13 +240,13 @@ export default {
           if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
             return new Response(JSON.stringify({ error: "Invalid timestamp in array" }), { status: 400, headers });
           }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
+          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
             return new Response(JSON.stringify({ error: "Invalid weight in array" }), { status: 400, headers });
           }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
+          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
             return new Response(JSON.stringify({ error: "Invalid reps in array" }), { status: 400, headers });
           }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
+          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
             return new Response(JSON.stringify({ error: "Invalid sets in array" }), { status: 400, headers });
           }
           if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
@@ -281,6 +288,10 @@ export default {
       if (request.method === 'POST') {
         const items = Array.isArray(body) ? body : [body || {}];
 
+        if (items.length > 10000) {
+          return new Response(JSON.stringify({ error: "Payload too large: max 10,000 items" }), { status: 400, headers });
+        }
+
         if (items.length === 0) {
           return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
         }
@@ -297,13 +308,13 @@ export default {
           if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
             return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
           }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0) {
+          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
             return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
           }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0) {
+          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
             return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
           }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0)) {
+          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
             return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
           }
           if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
