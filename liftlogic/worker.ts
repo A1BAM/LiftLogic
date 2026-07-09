@@ -90,15 +90,21 @@ export default {
 
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
-    if (env.TARGET_HASH && request.method !== 'OPTIONS') {
+    if (request.method !== 'OPTIONS') {
+      if (!env.TARGET_HASH) {
+        logger.error("TARGET_HASH not set. Refusing to serve requests without authentication.");
+        return new Response(JSON.stringify({ error: "Server Configuration Error" }), {
+          status: 500,
+          headers: headers
+        });
+      }
+
       if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
         });
       }
-    } else if (!env.TARGET_HASH) {
-      logger.warn("TARGET_HASH not set. API is running without authentication.");
     }
 
     // Handle CORS preflight
