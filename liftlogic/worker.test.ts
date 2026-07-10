@@ -32,7 +32,57 @@ describe('Worker', () => {
     vi.clearAllMocks();
   });
 
+
+  describe('Authentication Endpoints', () => {
+    it('handles successful login', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=testsecret');
+      expect(response.headers.get('Set-Cookie')).toContain('HttpOnly');
+    });
+
+    it('handles failed login', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'wrong' }, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(401);
+    });
+
+
+
+    it('handles logout', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/logout', undefined, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=;');
+      expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+    });
+
+
+
+    it('authenticates using cookie', async () => {
+      const request = new Request('http://localhost/gym-api', {
+        method: 'GET',
+        headers: new Headers({
+          'Content-Type': 'application/json',
+          'Cookie': 'liftlogic_auth_token=testsecret'
+        })
+      });
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(200); // Because it authenticates and hits the 'dummy' db fallback
+    });
+  });
+
   describe('CORS and Security Headers', () => {
+
     it('handles OPTIONS preflight request', async () => {
       const request = createRequest('OPTIONS', 'http://localhost/gym-api');
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };

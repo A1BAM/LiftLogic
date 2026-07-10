@@ -46,14 +46,11 @@ const App: React.FC = () => {
   // Check Auth on Mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem("liftlogic_auth_token");
-      if (token) {
-        try {
-          await workoutService.fetchWorkouts();
-          setIsAuthenticated(true);
-        } catch (err) {
-          localStorage.removeItem("liftlogic_auth_token");
-        }
+      try {
+        await workoutService.fetchWorkouts();
+        setIsAuthenticated(true);
+      } catch (err) {
+        // Not authenticated
       }
     };
     checkAuth();
@@ -67,18 +64,13 @@ const App: React.FC = () => {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
       
-      // Temporarily store the hash to attempt an authenticated request
-      localStorage.setItem("liftlogic_auth_token", hashHex);
-
       try {
-        // Attempt to fetch workouts as a verification of the password/hash
+        await workoutService.login(hashHex);
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
       } catch (err: any) {
-        // If the request fails, clear the token
-        localStorage.removeItem("liftlogic_auth_token");
-        if (err.status === 401) {
+        if (err.status === 401 || err.message === '401' || String(err).includes('401')) {
           alert("Wrong Password");
         } else {
           alert("Connection Error. Please check your network or server status.");
@@ -91,9 +83,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await workoutService.logout();
+    } catch (err) {
+      logger.error("Logout error", err);
+    }
     setIsAuthenticated(false);
-    localStorage.removeItem("liftlogic_auth_token");
     setWorkoutDay(null);
   };
 

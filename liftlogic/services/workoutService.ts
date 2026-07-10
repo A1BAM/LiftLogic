@@ -3,18 +3,38 @@ import { ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
 
 const apiFetch = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('liftlogic_auth_token');
   const headers = {
     ...options.headers,
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 
-  const res = await fetch(url, { ...options, headers });
+  // 'include' sends cookies even for cross-origin requests
+  const res = await fetch(url, { ...options, headers, credentials: 'include' });
   return res;
 };
 
 export const workoutService = {
+  async login(hashHex: string) {
+    const res = await apiFetch(`${API_URL}/login`, {
+      method: 'POST',
+      body: JSON.stringify({ hash: hashHex })
+    });
+    if (!res.ok) {
+      const err = new Error('Login failed');
+      (err as any).status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
+
+  async logout() {
+    const res = await apiFetch(`${API_URL}/logout`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Logout failed');
+    return res.json();
+  },
+
   async fetchWorkouts() {
     const res = await apiFetch(API_URL);
     if (!res.ok) {
