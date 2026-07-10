@@ -82,7 +82,10 @@ describe('workoutService API Interactions', () => {
       const mockData = [{ id: '1', exerciseId: 'DUMBBELL_CURL', weight: 20 }];
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockData
+        json: async () => mockData,
+        headers: {
+          get: () => 'application/json'
+        }
       });
 
       const result = await workoutService.fetchWorkouts();
@@ -95,10 +98,23 @@ describe('workoutService API Interactions', () => {
       expect(result).toEqual(mockData);
     });
 
-    it('should throw "Failed to fetch data" when response is not ok', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false });
+    it('should throw when response is HTML', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: {
+          get: () => 'text/html'
+        }
+      });
 
-      await expect(workoutService.fetchWorkouts()).rejects.toThrow('Failed to fetch data');
+      await expect(workoutService.fetchWorkouts()).rejects.toThrow('API returned HTML. Missing proxy or backend down.');
+    });
+
+    it('should throw "Failed to fetch data" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const promise = workoutService.fetchWorkouts();
+      await expect(promise).rejects.toThrow('Failed to fetch data');
+      await promise.catch(e => expect(e.status).toBe(500));
     });
   });
 

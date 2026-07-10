@@ -17,7 +17,16 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
 export const workoutService = {
   async fetchWorkouts() {
     const res = await apiFetch(API_URL);
-    if (!res.ok) throw new Error('Failed to fetch data');
+    if (!res.ok) {
+      const err = new Error('Failed to fetch data');
+      (err as any).status = res.status;
+      throw err;
+    }
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("text/html")) {
+      // Missing proxy / Vite server returning index.html
+      throw new Error("API returned HTML. Missing proxy or backend down.");
+    }
     return res.json();
   },
 
