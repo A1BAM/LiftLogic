@@ -73,6 +73,7 @@ export default {
       ...securityHeaders,
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Credentials': 'true',
       'Vary': 'Origin',
       'Content-Type': 'application/json',
       'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
@@ -88,9 +89,17 @@ export default {
       }
     }
 
-    // Security Check: Verify Bearer Token
-    const authHeader = request.headers.get('Authorization');
-    if (request.method !== 'OPTIONS') {
+// Security Check: Verify Bearer Token or Cookie
+    let authHeader = request.headers.get('Authorization');
+    const cookieHeader = request.headers.get('Cookie');
+    if (!authHeader && cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)liftlogic_auth_token=([^;]*)/);
+      if (match && match[1]) {
+        authHeader = `Bearer ${match[1]}`;
+      }
+    }
+
+if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pathname.endsWith('/logout')) {
       if (!env.TARGET_HASH) {
         logger.error("TARGET_HASH not set. Refusing to serve requests without authentication.");
         return new Response(JSON.stringify({ error: "Server Configuration Error" }), {
@@ -125,11 +134,35 @@ export default {
     try {
       let body: any = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
-        try {
-          body = await request.json();
-        } catch (e) {
-          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+        const contentType = request.headers.get('Content-Type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+              body = await request.json();
+            } catch (e) {
+              return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
+            }
         }
+      }
+
+      // Handle Login
+      if (request.method === 'POST' && url.pathname.endsWith('/login')) {
+        const { hash } = body || {};
+        if (!hash || !env.TARGET_HASH || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${env.TARGET_HASH}`)) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
+        }
+
+        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000`;
+        const resHeaders = new Headers(headers);
+        resHeaders.set('Set-Cookie', cookie);
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
+      }
+
+      // Handle Logout
+      if (request.method === 'POST' && url.pathname.endsWith('/logout')) {
+        const cookie = `liftlogic_auth_token=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
+        const resHeaders = new Headers(headers);
+        resHeaders.set('Set-Cookie', cookie);
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
 
