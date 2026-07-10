@@ -36,6 +36,7 @@ export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
+  PASSWORD?: string;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -91,15 +92,23 @@ export default {
     // Security Check: Verify Bearer Token
     const authHeader = request.headers.get('Authorization');
     if (request.method !== 'OPTIONS') {
-      if (!env.TARGET_HASH) {
-        logger.error("TARGET_HASH not set. Refusing to serve requests without authentication.");
+      let expectedHash = env.TARGET_HASH;
+      if (!expectedHash && env.PASSWORD) {
+        const msgBuffer = new TextEncoder().encode(env.PASSWORD);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        expectedHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      if (!expectedHash) {
+        logger.error("PASSWORD (or TARGET_HASH) not set. Refusing to serve requests without authentication.");
         return new Response(JSON.stringify({ error: "Server Configuration Error" }), {
           status: 500,
           headers: headers
         });
       }
 
-      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
+      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${expectedHash}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers

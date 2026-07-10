@@ -57,7 +57,7 @@ describe('Worker', () => {
 
   describe('Authentication', () => {
 
-    it('returns 500 Server Configuration Error if TARGET_HASH is not set', async () => {
+    it('returns 500 Server Configuration Error if neither TARGET_HASH nor PASSWORD is set', async () => {
       const request = createRequest('GET', 'http://localhost/gym-api');
       const env = { DATABASE_URL: 'dummy', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
