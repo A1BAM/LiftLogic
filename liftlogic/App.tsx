@@ -78,7 +78,7 @@ const App: React.FC = () => {
       } catch (err: any) {
         // If the request fails, clear the token
         localStorage.removeItem("liftlogic_auth_token");
-        if (err.status === 401) {
+        if (err.status === 401 || err.message === '401' || String(err).includes('401')) {
           alert("Wrong Password");
         } else {
           alert("Connection Error. Please check your network or server status.");
