@@ -75,10 +75,14 @@ const App: React.FC = () => {
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
-      } catch (err) {
-        // If the request fails (e.g., 401 Unauthorized), the password was wrong
+      } catch (err: any) {
+        // If the request fails, clear the token
         localStorage.removeItem("liftlogic_auth_token");
-        alert("Wrong Password");
+        if (err.status === 401) {
+          alert("Wrong Password");
+        } else {
+          alert("Connection Error. Please check your network or server status.");
+        }
         setPasswordInput("");
       }
     } catch (err) {
