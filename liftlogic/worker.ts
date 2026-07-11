@@ -135,7 +135,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       let body: any = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
         const contentType = request.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json')) {
+        if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
             try {
               body = await request.json();
             } catch (e) {
@@ -165,6 +165,10 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
+      if (request.method === 'POST' && (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login'))) {
+          // Handled above, shouldn't hit this.
+          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
+      }
 
       // GET Profile
       if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
@@ -295,6 +299,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Chunking and bulk insert
         const CHUNK_SIZE = 1000;
+        const promises: Promise<any>[] = [];
         for (let i = 0; i < body.length; i += CHUNK_SIZE) {
           const chunk = body.slice(i, i + CHUNK_SIZE);
           const values: any[] = [];
@@ -317,14 +322,20 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
               notes = EXCLUDED.notes;
           `;
 
-          await pool.query(query, values);
+          promises.push(pool.query(query, values));
         }
+
+        await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST') {
+        if (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login') || url.pathname.endsWith('/profile')) {
+          // Stop execution
+          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
+        }
         const items = Array.isArray(body) ? body : [body || {}];
 
         if (items.length > 10000) {
@@ -363,6 +374,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
         const CHUNK_SIZE = 1000;
+        const promises: Promise<any>[] = [];
         for (let i = 0; i < items.length; i += CHUNK_SIZE) {
           const chunk = items.slice(i, i + CHUNK_SIZE);
           const values: any[] = [];
@@ -385,8 +397,10 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
               notes = EXCLUDED.notes;
           `;
 
-          await pool.query(query, values);
+          promises.push(pool.query(query, values));
         }
+
+        await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
       }
