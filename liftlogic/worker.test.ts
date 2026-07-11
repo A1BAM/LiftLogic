@@ -18,12 +18,15 @@ vi.mock('@neondatabase/serverless', () => {
 
 describe('Worker', () => {
   const createRequest = (method: string, url: string, body?: any, targetHash?: string) => {
+    const headers = new Headers({
+      ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
+    });
+    if (body) {
+      headers.set('Content-Type', 'application/json');
+    }
     return new Request(url, {
       method,
-      headers: new Headers({
-        'Content-Type': 'application/json',
-        ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
-      }),
+      headers,
       body: body ? JSON.stringify(body) : undefined
     });
   };

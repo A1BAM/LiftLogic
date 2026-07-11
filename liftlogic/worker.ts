@@ -295,6 +295,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Chunking and bulk insert
         const CHUNK_SIZE = 1000;
+        const promises = [];
         for (let i = 0; i < body.length; i += CHUNK_SIZE) {
           const chunk = body.slice(i, i + CHUNK_SIZE);
           const values: any[] = [];
@@ -317,8 +318,9 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
               notes = EXCLUDED.notes;
           `;
 
-          await pool.query(query, values);
+          promises.push(pool.query(query, values));
         }
+        await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
@@ -363,6 +365,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
         const CHUNK_SIZE = 1000;
+        const promises = [];
         for (let i = 0; i < items.length; i += CHUNK_SIZE) {
           const chunk = items.slice(i, i + CHUNK_SIZE);
           const values: any[] = [];
@@ -385,8 +388,9 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
               notes = EXCLUDED.notes;
           `;
 
-          await pool.query(query, values);
+          promises.push(pool.query(query, values));
         }
+        await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
       }
