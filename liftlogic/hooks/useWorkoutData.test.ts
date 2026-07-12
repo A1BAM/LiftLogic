@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
+import { renderHook, waitFor } from '@testing-library/react';
+import { useWorkoutData } from './useWorkoutData';
+import { workoutService } from '../services/workoutService';
+import { DEFINITION_ID } from '../constants';
+
 
 // Mocking the optimized logic from useWorkoutData.ts for verification
 const getLogsByExerciseMap = (logs: WorkoutLog[]) => {
@@ -90,5 +95,35 @@ describe('useWorkoutData filtering logic', () => {
     const map = getLogsByExerciseMap(todayOnlyLogs);
     const result = getLastSessionLogs(map, exerciseId);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('useWorkoutData fetching logic', () => {
+  it('ignores malformed JSON definitions gracefully', async () => {
+    // Mock workoutService to return a mix of valid data and a malformed definition
+    vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([
+      {
+        id: 'bad-def',
+        exerciseId: DEFINITION_ID,
+        timestamp: 123,
+        weight: 0,
+        reps: 0,
+        sets: 0,
+        notes: 'this is not valid json'
+      }
+    ]);
+
+    // Mock getLocalExercises to prevent unrelated syncing behavior
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.syncedExercises).toEqual([]);
+    expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
   });
 });
