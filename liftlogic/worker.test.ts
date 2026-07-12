@@ -58,7 +58,7 @@ describe('Worker', () => {
 
 
     it('handles logout', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/logout', undefined, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/logout', {}, null as any);
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
