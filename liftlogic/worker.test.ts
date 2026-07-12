@@ -18,12 +18,15 @@ vi.mock('@neondatabase/serverless', () => {
 
 describe('Worker', () => {
   const createRequest = (method: string, url: string, body?: any, targetHash?: string) => {
+    const headers = new Headers({
+      ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
+    });
+    if (body) {
+      headers.set('Content-Type', 'application/json');
+    }
     return new Request(url, {
       method,
-      headers: new Headers({
-        'Content-Type': 'application/json',
-        ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
-      }),
+      headers,
       body: body ? JSON.stringify(body) : undefined
     });
   };
@@ -55,7 +58,7 @@ describe('Worker', () => {
 
 
     it('handles logout', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/logout', undefined, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/logout', {}, null as any);
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);

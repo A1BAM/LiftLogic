@@ -324,6 +324,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
           promises.push(pool.query(query, values));
         }
+        await Promise.all(promises);
 
         await Promise.all(promises);
 
@@ -399,6 +400,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
           promises.push(pool.query(query, values));
         }
+        await Promise.all(promises);
 
         await Promise.all(promises);
 
