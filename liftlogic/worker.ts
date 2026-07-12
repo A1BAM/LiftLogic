@@ -32,10 +32,23 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
   return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
 }
 
+
+async function getTargetHash(env: Env): Promise<string | null> {
+  if (env.TARGET_HASH) return env.TARGET_HASH;
+  if (env.PASSWORD) {
+    const msgBuffer = new TextEncoder().encode(env.PASSWORD);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return null;
+}
+
 export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
+  PASSWORD?: string;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -100,15 +113,16 @@ export default {
     }
 
 if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pathname.endsWith('/logout')) {
-      if (!env.TARGET_HASH) {
-        logger.error("TARGET_HASH not set. Refusing to serve requests without authentication.");
+      const targetHash = await getTargetHash(env);
+      if (!targetHash) {
+        logger.error("TARGET_HASH or PASSWORD not set. Refusing to serve requests without authentication.");
         return new Response(JSON.stringify({ error: "Server Configuration Error" }), {
           status: 500,
           headers: headers
         });
       }
 
-      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${env.TARGET_HASH}`)) {
+      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -147,7 +161,8 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       // Handle Login
       if (request.method === 'POST' && url.pathname.endsWith('/login')) {
         const { hash } = body || {};
-        if (!hash || !env.TARGET_HASH || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${env.TARGET_HASH}`)) {
+        const targetHash = await getTargetHash(env);
+        if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
