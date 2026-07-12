@@ -110,12 +110,29 @@ describe('Worker', () => {
 
   describe('Authentication', () => {
 
-    it('returns 500 Server Configuration Error if TARGET_HASH is not set', async () => {
+    it('returns 500 Server Configuration Error if TARGET_HASH and PASSWORD are not set', async () => {
       const request = createRequest('GET', 'http://localhost/gym-api');
       const env = { DATABASE_URL: 'dummy', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(500);
       expect(await response.json()).toEqual({ error: 'Server Configuration Error' });
+    });
+
+
+    it('authenticates using dynamically hashed PASSWORD if TARGET_HASH is not set', async () => {
+      // Create a test password and hash it locally
+      const password = 'mytestpassword';
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Create request with the hash in Authorization header
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, hashHex);
+      const env = { DATABASE_URL: 'dummy', PASSWORD: password, ASSETS: { fetch: vi.fn() } as any };
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(200);
     });
 
     it('returns 401 if TARGET_HASH is set and auth header is missing', async () => {
