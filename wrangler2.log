@@ -1,0 +1,9 @@
+
+ ⛅️ wrangler 4.110.0
+────────────────────
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787
+[wrangler:warn] Local cf.image transforms are a low-fidelity mock; only resize, rotate and format conversion are applied. Deploy to preview the full transformation.
+[wrangler:info] GET / 200 OK (360ms)
+⎔ Reloading local server...
+⎔ Local server updated and ready

@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "build": "cd liftlogic && npm install && npm run build"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260714.1"
   }
 }
