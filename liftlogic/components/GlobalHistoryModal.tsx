@@ -13,13 +13,15 @@ interface GlobalHistoryModalProps {
   customExercises: ExerciseDef[];
 }
 
+
+const globalDateCache = new Map<number, string>();
+
 export function calculateGlobalHistoryStats(
   logs: WorkoutLog[],
   currentDayType: string | null,
   allExercisesMap: Record<string, ExerciseDef>
 ) {
   const groups: Record<string, WorkoutLog[]> = {};
-  const dateCache = new Map<number, string>();
   const todayStr = new Date().toDateString();
   const uniqueDays = new Set<number>();
   const todayExercises = new Set<string>();
@@ -41,12 +43,12 @@ export function calculateGlobalHistoryStats(
       currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
       currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-      let dateKey = dateCache.get(currentDayId);
+      let dateKey = globalDateCache.get(currentDayId);
       if (!dateKey) {
         dateKey = d.toLocaleDateString(undefined, {
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
-        dateCache.set(currentDayId, dateKey);
+        globalDateCache.set(currentDayId, dateKey);
       }
       currentDateKey = dateKey;
       isToday = (d.toDateString() === todayStr);
