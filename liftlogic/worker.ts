@@ -62,6 +62,7 @@ export default {
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
     };
 
     // Handle static assets
@@ -70,7 +71,7 @@ export default {
       const newHeaders = new Headers(response.headers);
       Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
       // Asset specific CSP: allows tailwind CDN and esm.sh for React/Lucide
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'sha256-33CEPSXJm9APfrBGk9mG/r1NOXLRuqCbYLodgApfMq0=' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'sha256-33CEPSXJm9APfrBGk9mG/r1NOXLRuqCbYLodgApfMq0=' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none'; base-uri 'self'; object-src 'none';");
 
       return new Response(response.body, {
         status: response.status,
@@ -112,7 +113,9 @@ export default {
       }
     }
 
-if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pathname.endsWith('/logout')) {
+    const isAuthEndpoint = (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/logout') && request.method === 'POST';
+
+    if (request.method !== 'OPTIONS' && !isAuthEndpoint) {
       const targetHash = await getTargetHash(env);
       if (!targetHash) {
         logger.error("TARGET_HASH or PASSWORD not set. Refusing to serve requests without authentication.");
@@ -159,34 +162,29 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // Handle Login
-      if (request.method === 'POST' && url.pathname.endsWith('/login')) {
+      if (request.method === 'POST' && url.pathname === '/gym-api/login') {
         const { hash } = body || {};
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
-        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000`;
+        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
       // Handle Logout
-      if (request.method === 'POST' && url.pathname.endsWith('/logout')) {
-        const cookie = `liftlogic_auth_token=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
+      if (request.method === 'POST' && url.pathname === '/gym-api/logout') {
+        const cookie = `liftlogic_auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
-      if (request.method === 'POST' && (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login'))) {
-          // Handled above, shouldn't hit this.
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-      }
-
       // GET Profile
-      if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
+      if (request.method === 'GET' && url.pathname === '/gym-api/profile') {
         try {
           const { rows } = await pool.query('SELECT id, height_cm, weight_lbs, age FROM user_profile LIMIT 1');
           if (rows.length === 0) {
@@ -207,7 +205,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // POST Profile
-      if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
+      if (request.method === 'POST' && url.pathname === '/gym-api/profile') {
         const { heightCm, weightLbs, age } = body || {};
 
         try {
@@ -273,7 +271,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
 
       // POST: Bulk Create
-      if (request.method === 'POST' && url.pathname.endsWith('/bulk')) {
+      if (request.method === 'POST' && url.pathname === '/gym-api/bulk') {
         if (!Array.isArray(body)) {
           return new Response(JSON.stringify({ error: "Invalid payload: must be an array" }), { status: 400, headers });
         }
@@ -341,17 +339,11 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
         await Promise.all(promises);
 
-        await Promise.all(promises);
-
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
 
       // POST: Create or Update (Upsert)
-      if (request.method === 'POST') {
-        if (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login') || url.pathname.endsWith('/profile')) {
-          // Stop execution
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-        }
+      if (request.method === 'POST' && url.pathname === '/gym-api') {
         const items = Array.isArray(body) ? body : [body || {}];
 
         if (items.length > 10000) {
@@ -417,13 +409,11 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
         await Promise.all(promises);
 
-        await Promise.all(promises);
-
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
       }
 
       // DELETE: Remove a log OR all logs for an exercise
-      if (request.method === 'DELETE') {
+      if (request.method === 'DELETE' && url.pathname === '/gym-api') {
         return await handleDeleteRequest(body, pool, headers);
       }
 

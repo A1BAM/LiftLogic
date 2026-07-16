@@ -43,8 +43,18 @@ describe('Worker', () => {
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
-      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=testsecret');
-      expect(response.headers.get('Set-Cookie')).toContain('HttpOnly');
+      const setCookie = response.headers.get('Set-Cookie');
+      expect(setCookie).toContain('liftlogic_auth_token=testsecret');
+      expect(setCookie).toContain('HttpOnly');
+      expect(setCookie).toContain('Secure');
+    });
+
+    it('rejects GET request to login endpoint', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api/login', undefined, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(401);
     });
 
     it('handles failed login', async () => {
@@ -63,8 +73,10 @@ describe('Worker', () => {
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
-      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=;');
-      expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+      const setCookie = response.headers.get('Set-Cookie');
+      expect(setCookie).toContain('liftlogic_auth_token=;');
+      expect(setCookie).toContain('Max-Age=0');
+      expect(setCookie).toContain('Secure');
     });
 
 
