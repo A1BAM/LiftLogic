@@ -21,37 +21,31 @@ describe('generateId', () => {
   });
 
   describe('fallback implementation', () => {
-    it('should fall back to alternative implementation when crypto is undefined', () => {
+    it('should throw an error when crypto is undefined', () => {
       vi.stubGlobal('crypto', undefined);
+
+      expect(() => generateId()).toThrow('Secure random number generation is not supported in this environment.');
+    });
+
+    it('should fall back to getRandomValues when randomUUID is missing', () => {
+      const mockValues = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+      vi.stubGlobal('crypto', {
+        getRandomValues: vi.fn().mockImplementation((arr) => {
+          arr.set(mockValues);
+          return arr;
+        }),
+      });
 
       const id = generateId();
       expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(0);
-      expect(id).not.toBe('mocked-uuid-1234');
+      expect(id).toBe('0102030405060708090a0b0c0d0e0f10');
+      expect(crypto.getRandomValues).toHaveBeenCalled();
     });
 
-    it('should fall back when crypto exists but randomUUID is missing', () => {
-      vi.stubGlobal('crypto', {}); // No randomUUID
+    it('should throw an error when crypto exists but secure methods are missing', () => {
+      vi.stubGlobal('crypto', {}); // No randomUUID or getRandomValues
 
-      const id = generateId();
-      expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(0);
-    });
-
-    it('should generate a deterministic ID from Date and Math in fallback mode', () => {
-      vi.stubGlobal('crypto', undefined);
-
-      const mockTime = 1234567890;
-      const mockRandom = 0.123456789;
-
-      vi.spyOn(Date, 'now').mockReturnValue(mockTime);
-      vi.spyOn(Math, 'random').mockReturnValue(mockRandom);
-
-      const id = generateId();
-
-      // Date.now().toString(36) + Math.random().toString(36).substring(2)
-      const expectedId = mockTime.toString(36) + mockRandom.toString(36).substring(2);
-      expect(id).toBe(expectedId);
+      expect(() => generateId()).toThrow('Secure random number generation is not supported in this environment.');
     });
   });
 
