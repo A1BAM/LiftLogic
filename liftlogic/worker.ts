@@ -95,6 +95,7 @@ export default {
     if (allowedOrigins.length > 0) {
       if (allowedOrigins.includes('*')) {
         headers['Access-Control-Allow-Origin'] = '*';
+        delete headers['Access-Control-Allow-Credentials'];
       } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
         headers['Access-Control-Allow-Origin'] = requestOrigin;
       } else {
