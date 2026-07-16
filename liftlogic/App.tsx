@@ -7,6 +7,7 @@ import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
+import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
 import { User } from 'lucide-react';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp } from 'lucide-react';
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
 
   // UI State
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
@@ -173,6 +174,18 @@ const App: React.FC = () => {
       } catch (e) {
         logger.error("Failed to sync archive status", e);
       }
+  };
+
+  const handleSwitchExercise = async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
+    navigator.vibrate?.(10);
+    try {
+      await saveExercise({ ...currentExercise, isArchived: true });
+      await saveExercise({ ...replacementExercise, isArchived: false });
+      navigator.vibrate?.(50);
+      setActiveModal(null);
+    } catch (e) {
+      logger.error("Failed to sync switch status", e);
+    }
   };
 
   const handleRestoreExercise = async (exercise: ExerciseDef) => {
@@ -360,7 +373,19 @@ const App: React.FC = () => {
           />
         )}
 
-        {activeModal === 'archived' && (
+        {activeModal === 'switch' && selectedExercise && (
+        <SwitchExerciseModal
+          currentExercise={selectedExercise}
+          availableExercises={archivedExercises}
+          onClose={() => {
+            setActiveModal(null);
+            setSelectedExercise(null);
+          }}
+          onSelect={(replacementExercise) => handleSwitchExercise(selectedExercise, replacementExercise)}
+        />
+      )}
+
+      {activeModal === 'archived' && (
           <ArchivedExercisesModal 
             exercises={archivedExercises}
             onClose={() => setActiveModal(null)}
@@ -429,6 +454,10 @@ const App: React.FC = () => {
                 onLogClick={() => openLogModal(exercise)}
                 onHistoryClick={() => openHistoryModal(exercise)}
                 onArchive={() => handleArchiveExercise(exercise)}
+                onSwitch={() => {
+                  setSelectedExercise(exercise);
+                  setActiveModal('switch');
+                }}
               />
             );
           })}
