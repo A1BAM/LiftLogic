@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
-import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers } from 'lucide-react';
+import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
@@ -8,6 +8,7 @@ interface ExerciseCardProps {
   onLogClick: () => void;
   onHistoryClick: () => void;
   onArchive?: () => void;
+  onSwitch?: () => void;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
@@ -15,7 +16,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exerciseLogs,
   onLogClick, 
   onHistoryClick,
-  onArchive
+  onArchive,
+  onSwitch
 }) => {
   
   // 1. Organize logs into sessions (grouped by date)
@@ -215,6 +217,20 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             aria-label="Archive Exercise"
           >
             <Archive size={20} />
+          </button>
+        )}
+
+        {onSwitch && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSwitch();
+            }}
+            className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors"
+            title="Switch Exercise"
+            aria-label="Switch Exercise"
+          >
+            <ArrowRightLeft size={20} />
           </button>
         )}
 
