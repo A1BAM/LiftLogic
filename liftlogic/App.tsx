@@ -18,6 +18,8 @@ const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | null>(null);
@@ -58,6 +60,8 @@ const App: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+    setIsLoggingIn(true);
     try {
       const msgBuffer = new TextEncoder().encode(passwordInput);
       const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
@@ -71,15 +75,17 @@ const App: React.FC = () => {
         setPasswordInput("");
       } catch (err: any) {
         if (err.status === 401 || err.message === '401' || String(err).includes('401')) {
-          alert("Wrong Password");
+          setLoginError("Wrong Password");
         } else {
-          alert("Connection Error. Please check your network or server status.");
+          setLoginError("Connection Error. Please check your network or server status.");
         }
         setPasswordInput("");
       }
     } catch (err) {
       logger.error("Crypto error:", err);
-      alert("Secure context required for login.");
+      setLoginError("Secure context required for login.");
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -240,18 +246,30 @@ const App: React.FC = () => {
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${loginError ? 'border-red-500' : 'border-slate-600'} rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600 transition-colors`}
                 placeholder="Enter password to unlock"
                 autoFocus
                 required
+                disabled={isLoggingIn}
               />
+              {loginError && (
+                <p className="text-red-500 text-xs mt-2 ml-1 flex items-center gap-1">
+                  <AlertCircle size={12} /> {loginError}
+                </p>
+              )}
             </div>
             
             <button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
+              disabled={isLoggingIn}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
             >
-              Unlock App
+              {isLoggingIn ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Unlocking...
+                </>
+              ) : "Unlock App"}
             </button>
           </form>
         </div>
