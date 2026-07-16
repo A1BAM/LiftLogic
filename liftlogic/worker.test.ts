@@ -95,6 +95,7 @@ describe('Worker', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, DELETE, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
     });
 
     it('reflects origin if in ALLOWED_ORIGIN whitelist', async () => {
@@ -105,6 +106,7 @@ describe('Worker', () => {
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://liftlogic.app');
+      expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
     });
   });
 
