@@ -341,8 +341,6 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
         await Promise.all(promises);
 
-        await Promise.all(promises);
-
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
 
@@ -415,8 +413,6 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
           promises.push(pool.query(query, values));
         }
-        await Promise.all(promises);
-
         await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });

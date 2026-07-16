@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -10,7 +10,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const saveDefinitionsToCloud = async (exercises: ExerciseDef[]) => {
+
+  const saveDefinitionsToCloud = useCallback(async (exercises: ExerciseDef[]) => {
     const payloads = exercises.map(exercise => ({
       id: `def_${exercise.id}`,
       exerciseId: DEFINITION_ID,
@@ -23,11 +24,11 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     if (payloads.length > 0) {
       await workoutService.saveItems(payloads);
     }
-  };
+  }, []);
 
-  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
+  const saveDefinitionToCloud = useCallback(async (exercise: ExerciseDef) => {
     await saveDefinitionsToCloud([exercise]);
-  };
+  }, [saveDefinitionsToCloud]);
 
   const fetchDataAndSync = useCallback(async () => {
     try {
@@ -82,7 +83,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [saveDefinitionsToCloud]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -90,7 +91,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, [isAuthenticated, fetchDataAndSync]);
 
-  const addLog = async (exerciseId: string, weight: number, reps: number) => {
+  const addLog = useCallback(async (exerciseId: string, weight: number, reps: number) => {
     const logToSave: WorkoutLog = {
       id: generateId(),
       exerciseId,
@@ -110,9 +111,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const removeLog = async (logId: string) => {
+  const removeLog = useCallback(async (logId: string) => {
     setLogs(prev => prev.filter(l => l.id !== logId));
     try {
       await workoutService.deleteItem({ id: logId });
@@ -121,9 +122,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const updateLog = async (log: WorkoutLog) => {
+  const updateLog = useCallback(async (log: WorkoutLog) => {
     setLogs(prev => prev.map(l => l.id === log.id ? log : l));
     try {
       await workoutService.saveItem(log);
@@ -132,9 +133,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const importLogs = async (importedLogs: WorkoutLog[]) => {
+  const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
@@ -146,55 +147,83 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     } catch (err: any) {
       throw new Error(`Import failed: ${err.message}`);
     }
-  };
+  }, []);
 
-  const saveExercise = async (exercise: ExerciseDef) => {
-    const existingIndex = syncedExercises.findIndex(ex => ex.id === exercise.id);
-    let updatedSynced;
-    if (existingIndex >= 0) {
-      updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? exercise : ex);
-    } else {
-      updatedSynced = [...syncedExercises, exercise];
-    }
-
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+  const saveExercise = useCallback(async (exercise: ExerciseDef) => {
+    setSyncedExercises(prev => {
+      const existingIndex = prev.findIndex(ex => ex.id === exercise.id);
+      let updatedSynced;
+      if (existingIndex >= 0) {
+        updatedSynced = prev.map(ex => ex.id === exercise.id ? exercise : ex);
+      } else {
+        updatedSynced = [...prev, exercise];
+      }
+      return updatedSynced;
+    });
 
     try {
+      // Perform side effects outside of the state updater
+      const localEx = workoutService.getLocalExercises();
+      const existingIdx = localEx.findIndex(ex => ex.id === exercise.id);
+      let updatedLocal;
+      if (existingIdx >= 0) {
+        updatedLocal = localEx.map(ex => ex.id === exercise.id ? exercise : ex);
+      } else {
+        updatedLocal = [...localEx, exercise];
+      }
+      workoutService.setLocalExercises(updatedLocal);
+
       await saveDefinitionToCloud(exercise);
     } catch (err) {
       logger.error("Failed to sync exercise to cloud", err);
       throw err;
     }
-  };
+  }, [saveDefinitionToCloud]);
 
-  const deleteExercisePermanently = async (exerciseId: string) => {
-    const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+  const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
+    setSyncedExercises(prev => prev.filter(e => e.id !== exerciseId));
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
     try {
+      // Side effect outside of updater
+      const localEx = workoutService.getLocalExercises();
+      workoutService.setLocalExercises(localEx.filter(e => e.id !== exerciseId));
+
       await workoutService.deleteItem({ exerciseId });
       await workoutService.deleteItem({ id: `def_${exerciseId}` });
     } catch (err) {
       logger.error("Failed to delete exercise from cloud", err);
       throw err;
     }
-  };
+  }, []);
+
+  // Cache to maintain referential stability for log arrays per exercise
+  const logsByExerciseCache = useRef<Map<string, WorkoutLog[]>>(new Map());
 
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {
-    const map = new Map<string, WorkoutLog[]>();
-    // logs is already maintained in descending chronological order (newest first)
-    // enabling early-exit optimizations in consumers like getTodaysLogs.
+    const newMap = new Map<string, WorkoutLog[]>();
+    // Group logs by exerciseId
     for (const log of logs) {
-      if (!map.has(log.exerciseId)) {
-        map.set(log.exerciseId, []);
+      if (!newMap.has(log.exerciseId)) {
+        newMap.set(log.exerciseId, []);
       }
-      map.get(log.exerciseId)!.push(log);
+      newMap.get(log.exerciseId)!.push(log);
     }
-    return map;
+
+    // Stabilize references: if the logs for an exercise haven't changed, reuse the old array
+    const stabilizedMap = new Map<string, WorkoutLog[]>();
+    newMap.forEach((newLogs, exerciseId) => {
+      const prevLogs = logsByExerciseCache.current.get(exerciseId);
+      if (prevLogs && prevLogs.length === newLogs.length && prevLogs.every((v, i) => v === newLogs[i])) {
+        stabilizedMap.set(exerciseId, prevLogs);
+      } else {
+        stabilizedMap.set(exerciseId, newLogs);
+      }
+    });
+
+    logsByExerciseCache.current = stabilizedMap;
+    return stabilizedMap;
   }, [logs]);
 
   const getLogsForExercise = useCallback((id: string) => {
@@ -243,8 +272,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     return results;
   }, [getLogsForExercise]);
-  return {
 
+  return {
     logs,
     syncedExercises,
     isLoading,
@@ -258,7 +287,6 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
-
     getLastSessionLogs,
   };
 };

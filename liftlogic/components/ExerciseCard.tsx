@@ -5,12 +5,12 @@ import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat,
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
-  onLogClick: () => void;
-  onHistoryClick: () => void;
-  onArchive?: () => void;
+  onLogClick: (exercise: ExerciseDef) => void;
+  onHistoryClick: (exercise: ExerciseDef) => void;
+  onArchive?: (exercise: ExerciseDef) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
+export const ExerciseCard = React.memo<ExerciseCardProps>(({
   exercise, 
   exerciseLogs,
   onLogClick, 
@@ -18,116 +18,110 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onArchive
 }) => {
   
-  // 1. Organize logs into sessions (grouped by date)
-  // Optimization: Since exerciseLogs are already sorted descending (newest first),
-  // we can group them in a single O(n) pass without subsequent sorting.
-  // We use boundary grouping to avoid instantiating a new Date object for every log.
-  const sessions = useMemo(() => {
+  // Consolidate all exercise-related statistics and recommendations into a single O(N) pass
+  // This reduces re-renders and redundant calculations when adding new sets.
+  const stats = useMemo(() => {
+    const todayDateStr = new Date().toDateString();
+
+    // 1. Organize logs into sessions (grouped by date)
     const sessionsArr: { date: string; logs: WorkoutLog[] }[] = [];
     let currentDayStart = -1;
     let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
 
     for (const log of exerciseLogs) {
-      // If the timestamp crosses the boundary to a previous day, or if it's the first log
       if (log.timestamp < currentDayStart || !currentSession) {
         const d = new Date(log.timestamp);
         currentSession = { date: d.toDateString(), logs: [] };
         sessionsArr.push(currentSession);
 
-        // Calculate the start of this day (midnight local time)
         const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         currentDayStart = startOfDay.getTime();
       }
       currentSession.logs.push(log);
     }
-    return sessionsArr;
-  }, [exerciseLogs]);
 
-  // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  // Optimization: Use direct index access on sorted sessions instead of .find()
-  const todayDateStr = useMemo(() => new Date().toDateString(), []);
-  const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
-  const referenceSession = todaySession ? sessions[1] : sessions[0];
+    const todaySession = sessionsArr.length > 0 && sessionsArr[0].date === todayDateStr ? sessionsArr[0] : undefined;
+    const referenceSession = todaySession ? sessionsArr[1] : sessionsArr[0];
 
-  const isCompletedToday = useMemo(() => {
-    if (!todaySession) return false;
-    // Set Logic: All days now default to 3 sets
+    // 2. Identify Completion Status (Standard 3 sets)
     const targetSets = 3;
-    const totalSets = todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    return totalSets >= targetSets;
-  }, [todaySession, exercise]);
+    const totalSetsToday = todaySession ? todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0) : 0;
+    const isCompletedToday = totalSetsToday >= targetSets;
 
-  const referenceMaxWeight = useMemo(() => {
-    return referenceSession ? Math.max(...referenceSession.logs.map(l => l.weight)) : 0;
-  }, [referenceSession]);
+    // 3. Reference Metrics
+    const referenceMaxWeight = referenceSession ? Math.max(...referenceSession.logs.map(l => l.weight)) : 0;
 
-// 3. Calculate Recommendation based on Reference Session
-  const recommendation: ProgressionRecommendation = useMemo(() => {
+    // 4. Calculate Recommendation
+    let recommendation: ProgressionRecommendation;
     if (!referenceSession) {
-      return {
+      recommendation = {
         weight: exercise.defaultWeight,
         reps: exercise.targetReps,
         reason: "Start light to build form."
       };
-    }
-
-    const logs = referenceSession.logs;
-    const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    const usedWeight = referenceMaxWeight;
-    const minReps = Math.min(...logs.map(l => l.reps));
-    
-    // Rule 1: Volume
-    const targetSets = 3;
-    if (totalSets < targetSets) {
-       return {
-         weight: usedWeight,
-         reps: exercise.targetReps,
-         reason: `Build Volume: Complete ${targetSets} sets.`
-       };
-    }
-
-    // Rule 2: Overload
-    let nextWeight = usedWeight + exercise.increment;
-    let nextReps = Math.max(6, exercise.targetReps - 4);
-    let reason = `Overload: All sets hit ${exercise.targetReps}+ reps!`;
-
-    if (minReps >= exercise.targetReps) {
-      return {
-        weight: nextWeight,
-        reps: nextReps,
-        reason: reason
-      };
     } else {
-      return {
-        weight: usedWeight,
-        reps: exercise.targetReps,
-        reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
-      };
+      const logs = referenceSession.logs;
+      const totalSetsRef = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+      const usedWeight = referenceMaxWeight;
+      const minReps = Math.min(...logs.map(l => l.reps));
+
+      if (totalSetsRef < targetSets) {
+        recommendation = {
+          weight: usedWeight,
+          reps: exercise.targetReps,
+          reason: `Build Volume: Complete ${targetSets} sets.`
+        };
+      } else if (minReps >= exercise.targetReps) {
+        recommendation = {
+          weight: usedWeight + exercise.increment,
+          reps: Math.max(6, exercise.targetReps - 4),
+          reason: `Overload: All sets hit ${exercise.targetReps}+ reps!`
+        };
+      } else {
+        recommendation = {
+          weight: usedWeight,
+          reps: exercise.targetReps,
+          reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
+        };
+      }
     }
-  }, [referenceSession, exercise, referenceMaxWeight]);
 
-  const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
+    const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
 
-  const previousText = useMemo(() => {
-    const session = todaySession || referenceSession;
-    if (!session) return "No logs yet";
-
-    const weights = Array.from(new Set(session.logs.map(l => l.weight)));
-    if (weights.length === 1) {
-      const w = weights[0];
-      const repList = session.logs.map(l => l.reps).join(', ');
-      return (
-        <span>
-          <span className="font-bold text-lg">{w}</span>
-          <span className="text-xs text-slate-500 ml-0.5">lbs</span>
-          <span className="mx-2 text-slate-600">•</span>
-          <span className="text-slate-300">{repList}</span>
-        </span>
-      );
+    // 5. Formatting display text
+    let previousText: React.ReactNode;
+    const sessionForText = todaySession || referenceSession;
+    if (!sessionForText) {
+      previousText = "No logs yet";
     } else {
-      return <span className="text-slate-400 italic">Mixed Weights</span>;
+      const weights = Array.from(new Set(sessionForText.logs.map(l => l.weight)));
+      if (weights.length === 1) {
+        const w = weights[0];
+        const repList = sessionForText.logs.map(l => l.reps).join(', ');
+        previousText = (
+          <span>
+            <span className="font-bold text-lg">{w}</span>
+            <span className="text-xs text-slate-500 ml-0.5">lbs</span>
+            <span className="mx-2 text-slate-600">•</span>
+            <span className="text-slate-300">{repList}</span>
+          </span>
+        );
+      } else {
+        previousText = <span className="text-slate-400 italic">Mixed Weights</span>;
+      }
     }
-  }, [todaySession, referenceSession]);
+
+    return {
+      todaySession,
+      referenceSession,
+      isCompletedToday,
+      recommendation,
+      isWeightIncrease,
+      previousText
+    };
+  }, [exerciseLogs, exercise]);
+
+  const { todaySession, referenceSession, isCompletedToday, recommendation, isWeightIncrease, previousText } = stats;
 
   return (
     <div 
@@ -208,7 +202,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
+              if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive(exercise);
             }}
             className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
             title="Archive Exercise"
@@ -219,7 +213,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
 
         <button 
-          onClick={onHistoryClick}
+          onClick={() => onHistoryClick(exercise)}
           className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
           aria-label="View History"
         >
@@ -227,7 +221,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </button>
 
         <button
-          onClick={onLogClick}
+          onClick={() => onLogClick(exercise)}
           className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
             isCompletedToday
               ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
@@ -240,4 +234,4 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
     </div>
   );
-};
+});
