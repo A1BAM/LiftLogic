@@ -373,7 +373,10 @@ const App: React.FC = () => {
           />
         )}
 
-        {activeModal === 'switch' && selectedExercise && (
+
+
+
+      {activeModal === 'switch' && selectedExercise && (
         <SwitchExerciseModal
           currentExercise={selectedExercise}
           availableExercises={archivedExercises}
@@ -506,6 +509,17 @@ const App: React.FC = () => {
         />
       )}
 
+      {activeModal === 'switch' && selectedExercise && (
+        <SwitchExerciseModal
+          currentExercise={selectedExercise}
+          availableExercises={archivedExercises}
+          onClose={() => {
+            setActiveModal(null);
+            setSelectedExercise(null);
+          }}
+          onSelect={(replacementExercise) => handleSwitchExercise(selectedExercise, replacementExercise)}
+        />
+      )}
 
       {activeModal === 'addExercise' && workoutDay && (
         <AddExerciseModal 
@@ -514,8 +528,6 @@ const App: React.FC = () => {
           onSave={handleSaveNewExercise}
         />
       )}
-
-
 
       {workoutDay && (
         <RestTimer
