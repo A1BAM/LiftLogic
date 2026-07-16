@@ -417,6 +417,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
         await Promise.all(promises);
 
+
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
       }
 
