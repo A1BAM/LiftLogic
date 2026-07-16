@@ -210,12 +210,6 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
         const { heightCm, weightLbs, age } = body || {};
 
-        try {
-          await pool.query('ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS age integer');
-        } catch(e) {
-          logger.warn("Could not add age column", e);
-        }
-
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
         }
