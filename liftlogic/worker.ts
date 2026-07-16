@@ -167,7 +167,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
-        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000`;
+        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
@@ -175,7 +175,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
       // Handle Logout
       if (request.method === 'POST' && url.pathname.endsWith('/logout')) {
-        const cookie = `liftlogic_auth_token=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
+        const cookie = `liftlogic_auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
@@ -342,7 +342,6 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
         await Promise.all(promises);
 
-        await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
@@ -416,8 +415,6 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
           promises.push(pool.query(query, values));
         }
-        await Promise.all(promises);
-
         await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });

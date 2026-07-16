@@ -1,3 +1,1 @@
-## 2025-02-20 - Concurrent DB queries for bulk inserts
-**Learning:** Sequential database queries within chunked batch operations introduce N+1 network latency delays on the backend, dramatically inflating overall execution time compared to local iteration.
-**Action:** Always collect Promises from operations inside a chunk loop into an array, and `await Promise.all()` at the end of the loop to parallelize network round trips, drastically improving speed.
+## 2024-05-18 - [Removed Redundant Promise.all]\n**Learning:** [Redundant `await Promise.all(promises);` calls can slow down bulk inserts by unnecessarily adding an extra microtask.]\n**Action:** [Check for redundant await calls during refactoring and remove them.]
