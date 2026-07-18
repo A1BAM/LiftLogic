@@ -33,13 +33,21 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
 }
 
 
+let cachedTargetHash: string | null = null;
+let cachedPasswordForHash: string | null = null;
+
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
+    if (cachedTargetHash !== null && cachedPasswordForHash === env.PASSWORD) {
+      return cachedTargetHash;
+    }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    cachedTargetHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    cachedPasswordForHash = env.PASSWORD;
+    return cachedTargetHash;
   }
   return null;
 }
