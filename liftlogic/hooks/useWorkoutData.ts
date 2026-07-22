@@ -5,6 +5,41 @@ import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 
+const parseFetchedData = (allData: WorkoutLog[]) => {
+  const fetchedLogs: WorkoutLog[] = [];
+  const cloudExercises: ExerciseDef[] = [];
+  const cloudIds = new Set<string>();
+
+  // Optimization: Single-pass processing of fetched data
+  for (const item of allData) {
+    if (item.exerciseId === DEFINITION_ID) {
+      try {
+        const ex = JSON.parse(item.notes || "");
+        if (ex && ex.id) {
+          cloudExercises.push(ex);
+          cloudIds.add(ex.id);
+        }
+      } catch (e) {
+        // Ignore malformed definitions
+      }
+    } else {
+      fetchedLogs.push(item);
+    }
+  }
+
+  return { fetchedLogs, cloudExercises, cloudIds };
+};
+
+const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<string>) => {
+  const missingFromCloud: ExerciseDef[] = [];
+  for (const ex of localExercises) {
+    if (!cloudIds.has(ex.id)) {
+      missingFromCloud.push(ex);
+    }
+  }
+  return missingFromCloud;
+};
+
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
@@ -34,34 +69,10 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setIsLoading(true);
       const allData = await workoutService.fetchWorkouts() as WorkoutLog[];
 
-      const fetchedLogs: WorkoutLog[] = [];
-      const cloudExercises: ExerciseDef[] = [];
-      const cloudIds = new Set<string>();
-
-      // Optimization: Single-pass processing of fetched data
-      for (const item of allData) {
-        if (item.exerciseId === DEFINITION_ID) {
-          try {
-            const ex = JSON.parse(item.notes || "");
-            if (ex && ex.id) {
-              cloudExercises.push(ex);
-              cloudIds.add(ex.id);
-            }
-          } catch (e) {
-            // Ignore malformed definitions
-          }
-        } else {
-          fetchedLogs.push(item);
-        }
-      }
+      const { fetchedLogs, cloudExercises, cloudIds } = parseFetchedData(allData);
 
       const localExercises = workoutService.getLocalExercises();
-      const missingFromCloud: ExerciseDef[] = [];
-      for (const ex of localExercises) {
-        if (!cloudIds.has(ex.id)) {
-          missingFromCloud.push(ex);
-        }
-      }
+      const missingFromCloud = getMissingLocalExercises(localExercises, cloudIds);
 
       if (missingFromCloud.length > 0) {
         logger.info("Syncing up exercises to cloud:", missingFromCloud.length);
