@@ -1,5 +1,8 @@
-⚡ Bolt: Optimize sequential bulk inserts via Promise.all
+🎯 **What:**
+Fixed a timing leak vulnerability in the `timingSafeEqual` function (`liftlogic/utils/security.ts`) that exited early if the compared strings had different lengths.
 
-💡 **What:** Replaced sequential awaits on database inserts with an array of Promises awaited via \`Promise.all\`.
-🎯 **Why:** To execute DB chunk inserts concurrently instead of sequentially, massively reducing database round-trip times and overall latency for large workloads.
-📊 **Measured Improvement:** Execution time for inserting 5,000 items dropped from ~270ms to ~70ms, yielding an approximate 3.8x speedup.
+⚠️ **Risk:**
+If left unfixed, attackers could infer the exact length of sensitive strings (like target hashes, passwords, or authentication tokens) by measuring response times. A shorter response time meant the length check failed early, allowing them to iterate until they determined the secret's correct length as a precursor to fully extracting it via subsequent timing attacks.
+
+🛡️ **Solution:**
+Removed the early return. The updated function records whether the lengths match in a variable. To ensure execution time is solely dependent on the length of the attacker-controlled string and avoid array out-of-bounds exceptions, it compares the first string against itself if lengths do not match, while retaining the false result. Thus, the loop always executes `a.length` times, nullifying the timing discrepancy.
