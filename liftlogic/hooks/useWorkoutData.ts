@@ -45,7 +45,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const saveDefinitionsToCloud = async (exercises: ExerciseDef[]) => {
+  const saveDefinitionsToCloud = useCallback(async (exercises: ExerciseDef[]) => {
     const payloads = exercises.map(exercise => ({
       id: `def_${exercise.id}`,
       exerciseId: DEFINITION_ID,
@@ -58,11 +58,11 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     if (payloads.length > 0) {
       await workoutService.saveItems(payloads);
     }
-  };
+  }, []);
 
-  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
+  const saveDefinitionToCloud = useCallback(async (exercise: ExerciseDef) => {
     await saveDefinitionsToCloud([exercise]);
-  };
+  }, [saveDefinitionsToCloud]);
 
   const fetchDataAndSync = useCallback(async () => {
     try {
@@ -93,7 +93,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [saveDefinitionsToCloud]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -101,7 +101,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, [isAuthenticated, fetchDataAndSync]);
 
-  const addLog = async (exerciseId: string, weight: number, reps: number) => {
+  const addLog = useCallback(async (exerciseId: string, weight: number, reps: number) => {
     const logToSave: WorkoutLog = {
       id: generateId(),
       exerciseId,
@@ -121,9 +121,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const removeLog = async (logId: string) => {
+  const removeLog = useCallback(async (logId: string) => {
     setLogs(prev => prev.filter(l => l.id !== logId));
     try {
       await workoutService.deleteItem({ id: logId });
@@ -132,9 +132,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const updateLog = async (log: WorkoutLog) => {
+  const updateLog = useCallback(async (log: WorkoutLog) => {
     setLogs(prev => prev.map(l => l.id === log.id ? log : l));
     try {
       await workoutService.saveItem(log);
@@ -143,9 +143,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const importLogs = async (importedLogs: WorkoutLog[]) => {
+  const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
       const logMap = new Map(prevLogs.map(l => [l.id, l]));
       importedLogs.forEach(l => logMap.set(l.id, l));
@@ -157,19 +157,20 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     } catch (err: any) {
       throw new Error(`Import failed: ${err.message}`);
     }
-  };
+  }, []);
 
-  const saveExercise = async (exercise: ExerciseDef) => {
-    const existingIndex = syncedExercises.findIndex(ex => ex.id === exercise.id);
-    let updatedSynced;
-    if (existingIndex >= 0) {
-      updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? exercise : ex);
-    } else {
-      updatedSynced = [...syncedExercises, exercise];
-    }
-
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+  const saveExercise = useCallback(async (exercise: ExerciseDef) => {
+    setSyncedExercises(prevSynced => {
+      const existingIndex = prevSynced.findIndex(ex => ex.id === exercise.id);
+      let updatedSynced;
+      if (existingIndex >= 0) {
+        updatedSynced = prevSynced.map(ex => ex.id === exercise.id ? exercise : ex);
+      } else {
+        updatedSynced = [...prevSynced, exercise];
+      }
+      workoutService.setLocalExercises(updatedSynced);
+      return updatedSynced;
+    });
 
     try {
       await saveDefinitionToCloud(exercise);
@@ -177,12 +178,14 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       logger.error("Failed to sync exercise to cloud", err);
       throw err;
     }
-  };
+  }, [saveDefinitionToCloud]);
 
-  const deleteExercisePermanently = async (exerciseId: string) => {
-    const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+  const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
+    setSyncedExercises(prevSynced => {
+      const updatedSynced = prevSynced.filter(e => e.id !== exerciseId);
+      workoutService.setLocalExercises(updatedSynced);
+      return updatedSynced;
+    });
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
     try {
@@ -192,7 +195,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       logger.error("Failed to delete exercise from cloud", err);
       throw err;
     }
-  };
+  }, []);
 
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {

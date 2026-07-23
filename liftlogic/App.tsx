@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -94,17 +94,17 @@ const App: React.FC = () => {
   };
 
   // UI Handlers
-  const openLogModal = (exercise: ExerciseDef) => {
+  const handleLogClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('log');
-  };
+  }, []);
 
-  const openHistoryModal = (exercise: ExerciseDef) => {
+  const handleHistoryClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('history');
-  };
+  }, []);
 
-  const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
+  const handleAddSet = useCallback(async (data: { weight: number; reps: number; sets: number }) => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
@@ -114,68 +114,68 @@ const App: React.FC = () => {
     } catch (err) {
       alert("Failed to save to cloud.");
     }
-  };
+  }, [selectedExercise, addLog]);
 
-  const handleDeleteLog = async (logId: string) => {
+  const handleDeleteLog = useCallback(async (logId: string) => {
     try {
       await removeLog(logId);
     } catch (err) {
       alert("Failed to delete from cloud.");
     }
-  };
+  }, [removeLog]);
   
-  const handleEditLog = async (log: WorkoutLog) => {
-      setActiveModal(null);
-      try {
-        await updateLog(log);
-      } catch (err) {
-          // Handled in hook
-      }
-  };
+  const handleEditLog = useCallback(async (log: WorkoutLog) => {
+    setActiveModal(null);
+    try {
+      await updateLog(log);
+    } catch (err) {
+      // Handled in hook
+    }
+  }, [updateLog]);
 
-  const handleEditInit = (log: WorkoutLog) => {
+  const handleEditInit = useCallback((log: WorkoutLog) => {
     const newWeight = prompt("Enter new weight:", log.weight.toString());
     const newReps = prompt("Enter new reps:", log.reps.toString());
     if (newWeight && newReps) {
-        handleEditLog({
-            ...log,
-            weight: Number(newWeight),
-            reps: Number(newReps)
-        });
+      handleEditLog({
+        ...log,
+        weight: Number(newWeight),
+        reps: Number(newReps)
+      });
     }
-  };
+  }, [handleEditLog]);
 
-  const handleImportLogs = async (importedLogs: WorkoutLog[]) => {
+  const handleImportLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     try {
       await importLogs(importedLogs);
       alert("Import successful!");
     } catch (err: any) {
       alert(err.message);
     }
-  };
+  }, [importLogs]);
 
-  const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
+  const handleSaveNewExercise = useCallback(async (newExercise: ExerciseDef) => {
     setActiveModal(null);
     try {
       await saveExercise(newExercise);
     } catch (e) {
       alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
     }
-  };
+  }, [saveExercise]);
 
-  const handleArchiveExercise = async (exercise: ExerciseDef) => {
+  const handleArchiveClick = useCallback(async (exercise: ExerciseDef) => {
+    navigator.vibrate?.(10);
+    const updatedExercise = { ...exercise, isArchived: true };
+    try {
       navigator.vibrate?.(10);
-      const updatedExercise = { ...exercise, isArchived: true };
-      try {
-        navigator.vibrate?.(10);
-        await saveExercise(updatedExercise);
-        navigator.vibrate?.(50);
-      } catch (e) {
-        logger.error("Failed to sync archive status", e);
-      }
-  };
+      await saveExercise(updatedExercise);
+      navigator.vibrate?.(50);
+    } catch (e) {
+      logger.error("Failed to sync archive status", e);
+    }
+  }, [saveExercise]);
 
-  const handleSwitchExercise = async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
+  const handleSwitchExercise = useCallback(async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
     navigator.vibrate?.(10);
     try {
       await saveExercise({ ...currentExercise, isArchived: true });
@@ -185,9 +185,9 @@ const App: React.FC = () => {
     } catch (e) {
       logger.error("Failed to sync switch status", e);
     }
-  };
+  }, [saveExercise]);
 
-  const handleRestoreExercise = async (exercise: ExerciseDef) => {
+  const handleRestoreExercise = useCallback(async (exercise: ExerciseDef) => {
     navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: false };
     try {
@@ -197,9 +197,9 @@ const App: React.FC = () => {
     } catch (e) {
       logger.error("Failed to sync restore status", e);
     }
-};
+  }, [saveExercise]);
 
-  const handleDeleteExercisePermanently = async (exerciseId: string) => {
+  const handleDeleteExercisePermanently = useCallback(async (exerciseId: string) => {
     if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
       if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
          try {
@@ -209,7 +209,12 @@ const App: React.FC = () => {
          }
       }
     }
-  };
+  }, [deleteExercisePermanently]);
+
+  const handleSwitchInit = useCallback((exercise: ExerciseDef) => {
+    setSelectedExercise(exercise);
+    setActiveModal('switch');
+  }, []);
 
   // Combine Default and Synced Exercises (Synced overrides Default)
   const allExercises = useMemo(() => {
@@ -450,13 +455,10 @@ const App: React.FC = () => {
                 key={exercise.id}
                 exercise={exercise}
                 exerciseLogs={getLogsForExercise(exercise.id)}
-                onLogClick={() => openLogModal(exercise)}
-                onHistoryClick={() => openHistoryModal(exercise)}
-                onArchive={() => handleArchiveExercise(exercise)}
-                onSwitch={() => {
-                  setSelectedExercise(exercise);
-                  setActiveModal('switch');
-                }}
+                onLogClick={handleLogClick}
+                onHistoryClick={handleHistoryClick}
+                onArchive={handleArchiveClick}
+                onSwitch={handleSwitchInit}
               />
             );
           })}
