@@ -37,6 +37,18 @@ describe('Worker', () => {
 
 
   describe('Authentication Endpoints', () => {
+    it('blocks GET requests on login/logout paths without auth', async () => {
+      const loginRequest = createRequest('GET', 'http://localhost/gym-api/login', undefined, null as any);
+      const logoutRequest = createRequest('GET', 'http://localhost/gym-api/logout', undefined, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const loginRes = await worker.fetch(loginRequest, env, {} as any);
+      expect(loginRes.status).toBe(401);
+
+      const logoutRes = await worker.fetch(logoutRequest, env, {} as any);
+      expect(logoutRes.status).toBe(401);
+    });
+
     it('handles successful login', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
