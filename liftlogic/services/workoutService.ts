@@ -13,6 +13,9 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
   return res;
 };
 
+let cachedExercisesStr: string | null = null;
+let cachedExercisesObj: ExerciseDef[] | null = null;
+
 export const workoutService = {
   async login(hashHex: string) {
     const res = await apiFetch(`${API_URL}/login`, {
@@ -99,8 +102,14 @@ export const workoutService = {
   getLocalExercises(): ExerciseDef[] {
     const stored = localStorage.getItem('liftlogic_custom_exercises');
     if (!stored) return [];
+    if (stored === cachedExercisesStr && cachedExercisesObj) {
+      return cachedExercisesObj;
+    }
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      cachedExercisesStr = stored;
+      cachedExercisesObj = parsed;
+      return parsed;
     } catch (e) {
       logger.error('Error parsing local exercises', e);
       return [];
@@ -108,6 +117,9 @@ export const workoutService = {
   },
 
   setLocalExercises(exercises: ExerciseDef[]) {
-    localStorage.setItem('liftlogic_custom_exercises', JSON.stringify(exercises));
+    const str = JSON.stringify(exercises);
+    localStorage.setItem('liftlogic_custom_exercises', str);
+    cachedExercisesStr = str;
+    cachedExercisesObj = exercises;
   }
 };
