@@ -67,7 +67,7 @@ let cachedPasswordForHash: string | null = null;
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash === env.PASSWORD) {
+    if (cachedTargetHash !== null && cachedPasswordForHash !== null && timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
       return cachedTargetHash;
     }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
