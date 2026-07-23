@@ -1,11 +1,8 @@
-🎯 **What**
-Extracted identical array chunking and database bulk insert logic found in both the `POST /bulk` and `POST /` (upsert) handlers in `worker.ts` into a unified `executeBulkInsert` asynchronous helper function.
+🎯 **What:**
+Fixed a timing leak vulnerability in the `timingSafeEqual` function (`liftlogic/utils/security.ts`) that exited early if the compared strings had different lengths.
 
-💡 **Why**
-To adhere to the DRY (Don't Repeat Yourself) principle and reduce the cyclomatic complexity within the main request handlers. Consolidating the logic eliminates the risk of future schema drift (where one endpoint gets updated while the other is missed) and drastically improves the readability of the routing blocks.
+⚠️ **Risk:**
+If left unfixed, attackers could infer the exact length of sensitive strings (like target hashes, passwords, or authentication tokens) by measuring response times. A shorter response time meant the length check failed early, allowing them to iterate until they determined the secret's correct length as a precursor to fully extracting it via subsequent timing attacks.
 
-✅ **Verification**
-Verified the refactor via automated test suites: ran `pnpm exec tsc --noEmit` and `pnpm test` which validated correct types and zero regressions in `worker.test.ts`. Verified the generated query logic and flow inside the new helper remain exactly as before.
-
-✨ **Result**
-Code duplication is eliminated and the total file footprint is reduced. The Cloudflare worker endpoint blocks are now focused purely on validation and routing, delegating the heavy database operations to a specialized, testable helper function.
+🛡️ **Solution:**
+Removed the early return. The updated function records whether the lengths match in a variable. To ensure execution time is solely dependent on the length of the attacker-controlled string and avoid array out-of-bounds exceptions, it compares the first string against itself if lengths do not match, while retaining the false result. Thus, the loop always executes `a.length` times, nullifying the timing discrepancy.
