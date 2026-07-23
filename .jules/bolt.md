@@ -1,3 +1,3 @@
-## 2024-06-25 - Cache password hash in getTargetHash to avoid repeated computation
-**Learning:** Cloudflare Workers preserve module-level state across requests in the same isolate. Computing a cryptographic hash via `crypto.subtle.digest` on every request introduces significant unnecessary overhead.
-**Action:** Use module-scope variables to cache the computed hash and the input string (for validation). This simple memoization drops repeated hash times from milliseconds to microseconds while ensuring correctness if configuration values change.
+## 2024-05-19 - Pre-compute JSX render loop lookups
+**Learning:** O(1) dictionary lookups inside JSX render loops (`.map`) can add significant overhead during React's render phase, especially for large arrays or components that re-render frequently due to other state changes (like typing in an input).
+**Action:** When a mapped array's items need secondary data (like resolving an ID to a full object), pre-compute that relationship within the memoized data preparation step. Build a new array of `{ item, resolvedData }` so the render loop only accesses pre-existing properties, eliminating calculation during React's render phase.

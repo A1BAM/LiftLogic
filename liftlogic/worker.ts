@@ -12,6 +12,34 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
+
+function validateWorkoutItem(item: any, headers: Record<string, string>, inArray = false): Response | null {
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+  const suffix = inArray ? " in array" : "";
+  if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+    return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
+  }
+  if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+    return new Response(JSON.stringify({ error: `Invalid exerciseId${suffix}` }), { status: 400, headers });
+  }
+  if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+    return new Response(JSON.stringify({ error: `Invalid timestamp${suffix}` }), { status: 400, headers });
+  }
+  if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
+    return new Response(JSON.stringify({ error: `Invalid weight${suffix}` }), { status: 400, headers });
+  }
+  if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
+    return new Response(JSON.stringify({ error: `Invalid reps${suffix}` }), { status: 400, headers });
+  }
+  if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
+    return new Response(JSON.stringify({ error: `Invalid sets${suffix}` }), { status: 400, headers });
+  }
+  if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+    return new Response(JSON.stringify({ error: `Invalid notes${suffix}` }), { status: 400, headers });
+  }
+  return null;
+}
+
 async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
   const { id, exerciseId } = body || {};
 
@@ -33,13 +61,44 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
 }
 
 
+
+async function executeBulkInsert(pool: Pool, items: any[]): Promise<void> {
+  const CHUNK_SIZE = 1000;
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    const chunk = items.slice(i, i + CHUNK_SIZE);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    chunk.forEach((item, index) => {
+      const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+      const offset = index * 7;
+      placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
+      values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
+    });
+
+    const query = `
+      INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+      VALUES ${placeholders.join(', ')}
+      ON CONFLICT (id) DO UPDATE SET
+        weight = EXCLUDED.weight,
+        reps = EXCLUDED.reps,
+        sets = EXCLUDED.sets,
+        notes = EXCLUDED.notes;
+    `;
+
+    promises.push(pool.query(query, values));
+  }
+  await Promise.all(promises);
+}
+
 let cachedTargetHash: string | null = null;
 let cachedPasswordForHash: string | null = null;
 
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash === env.PASSWORD) {
+    if (cachedTargetHash !== null && cachedPasswordForHash !== null && timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
       return cachedTargetHash;
     }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
@@ -291,58 +350,11 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Validate items
         for (const item of body) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id in array" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId in array" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp in array" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight in array" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps in array" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets in array" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes in array" }), { status: 400, headers });
-          }
+          const errorResponse = validateWorkoutItem(item, headers, true);
+          if (errorResponse) return errorResponse;
         }
 
-        // Chunking and bulk insert
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < body.length; i += CHUNK_SIZE) {
-          const chunk = body.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, body);
 
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
@@ -366,58 +378,11 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Validate all items before inserting
         for (const item of items) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
-          }
+          const errorResponse = validateWorkoutItem(item, headers);
+          if (errorResponse) return errorResponse;
         }
 
-        // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-          const chunk = items.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, items);
 
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
