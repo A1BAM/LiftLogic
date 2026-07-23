@@ -61,6 +61,37 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
 }
 
 
+
+async function executeBulkInsert(pool: Pool, items: any[]): Promise<void> {
+  const CHUNK_SIZE = 1000;
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    const chunk = items.slice(i, i + CHUNK_SIZE);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    chunk.forEach((item, index) => {
+      const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+      const offset = index * 7;
+      placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
+      values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
+    });
+
+    const query = `
+      INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+      VALUES ${placeholders.join(', ')}
+      ON CONFLICT (id) DO UPDATE SET
+        weight = EXCLUDED.weight,
+        reps = EXCLUDED.reps,
+        sets = EXCLUDED.sets,
+        notes = EXCLUDED.notes;
+    `;
+
+    promises.push(pool.query(query, values));
+  }
+  await Promise.all(promises);
+}
+
 let cachedTargetHash: string | null = null;
 let cachedPasswordForHash: string | null = null;
 
@@ -323,34 +354,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
           if (errorResponse) return errorResponse;
         }
 
-        // Chunking and bulk insert
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < body.length; i += CHUNK_SIZE) {
-          const chunk = body.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, body);
 
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
@@ -378,34 +382,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
           if (errorResponse) return errorResponse;
         }
 
-        // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-          const chunk = items.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, items);
 
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
