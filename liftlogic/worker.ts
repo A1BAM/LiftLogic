@@ -396,7 +396,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
     } catch (error: any) {
-      logger.error('Database Error:', error);
+      logger.error('Database Error:', error instanceof Error ? error.message : String(error));
       // Security: Do not leak error details to the client
       return new Response(JSON.stringify({ error: "Internal Server Error" }), {
         status: 500,
