@@ -16,6 +16,8 @@ interface GlobalHistoryModalProps {
 
 const globalDateCache = new Map<number, string>();
 
+const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
+
 export function calculateGlobalHistoryStats(
   logs: WorkoutLog[],
   currentDayType: string | null,
@@ -29,7 +31,6 @@ export function calculateGlobalHistoryStats(
   let totalVolume = 0;
   let todayVolume = 0;
 
-  let currentDayStart = -1;
   let currentDayId = -1;
   let currentDateKey = '';
   let isToday = false;
@@ -38,20 +39,26 @@ export function calculateGlobalHistoryStats(
     const vol = log.weight * log.reps * (log.sets || 1);
     totalVolume += vol;
 
-    if (log.timestamp < currentDayStart || currentDayStart === -1) {
-      const d = new Date(log.timestamp);
-      currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-      currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    // Shift timestamp by local timezone offset, then divide by ms in a day to get a unique local day ID
+    const dayId = Math.floor((log.timestamp - tzOffsetMs) / 86400000);
+
+    if (dayId !== currentDayId) {
+      currentDayId = dayId;
 
       let dateKey = globalDateCache.get(currentDayId);
       if (!dateKey) {
+        // Only instantiate Date on cache miss
+        const d = new Date(log.timestamp);
         dateKey = d.toLocaleDateString(undefined, {
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
         globalDateCache.set(currentDayId, dateKey);
       }
       currentDateKey = dateKey;
-      isToday = (d.toDateString() === todayStr);
+
+      // We still need to know if this is "today"
+      const logDateStr = new Date(log.timestamp).toDateString();
+      isToday = (logDateStr === todayStr);
     }
 
     uniqueDays.add(currentDayId);
