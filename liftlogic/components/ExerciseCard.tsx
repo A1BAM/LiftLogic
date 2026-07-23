@@ -114,13 +114,25 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     const session = todaySession || referenceSession;
     if (!session) return "No logs yet";
 
-    const weights = Array.from(new Set(session.logs.map(l => l.weight)));
-    if (weights.length === 1) {
-      const w = weights[0];
-      const repList = session.logs.map(l => l.reps).join(', ');
+    if (session.logs.length === 0) return <span className="text-slate-400 italic">No logs yet</span>;
+
+    let firstWeight = session.logs[0].weight;
+    let isSingleWeight = true;
+    let repList = String(session.logs[0].reps);
+
+    for (let i = 1; i < session.logs.length; i++) {
+      const l = session.logs[i];
+      if (l.weight !== firstWeight) {
+        isSingleWeight = false;
+        break;
+      }
+      repList += ', ' + l.reps;
+    }
+
+    if (isSingleWeight) {
       return (
         <span>
-          <span className="font-bold text-lg">{w}</span>
+          <span className="font-bold text-lg">{firstWeight}</span>
           <span className="text-xs text-slate-500 ml-0.5">lbs</span>
           <span className="mx-2 text-slate-600">•</span>
           <span className="text-slate-300">{repList}</span>
