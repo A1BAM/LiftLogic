@@ -180,7 +180,10 @@ export default {
       }
     }
 
-if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pathname.endsWith('/logout')) {
+    const isLoginEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/');
+    const isLogoutEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/');
+
+    if (request.method !== 'OPTIONS' && !isLoginEndpoint && !isLogoutEndpoint) {
       const targetHash = await getTargetHash(env);
       if (!targetHash) {
         logger.error("TARGET_HASH or PASSWORD not set. Refusing to serve requests without authentication.");
@@ -227,7 +230,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // Handle Login
-      if (request.method === 'POST' && url.pathname.endsWith('/login')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
         const { hash } = body || {};
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
@@ -241,20 +244,15 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // Handle Logout
-      if (request.method === 'POST' && url.pathname.endsWith('/logout')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/')) {
         const cookie = `liftlogic_auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
-      if (request.method === 'POST' && (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login'))) {
-          // Handled above, shouldn't hit this.
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-      }
-
       // GET Profile
-      if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
+      if (request.method === 'GET' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
         try {
           const { rows } = await pool.query('SELECT id, height_cm, weight_lbs, age FROM user_profile LIMIT 1');
           if (rows.length === 0) {
@@ -275,7 +273,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // POST Profile
-      if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
         const { heightCm, weightLbs, age } = body || {};
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
@@ -303,7 +301,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // GET: Fetch all logs
-      if (request.method === 'GET') {
+      if (request.method === 'GET' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         try {
           const { rows } = await pool.query('SELECT id, exercise_id, timestamp, weight, reps, sets, notes FROM workouts ORDER BY timestamp DESC');
 
@@ -335,7 +333,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
 
       // POST: Bulk Create
-      if (request.method === 'POST' && url.pathname.endsWith('/bulk')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/bulk' || url.pathname === '/gym-api/bulk/')) {
         if (!Array.isArray(body)) {
           return new Response(JSON.stringify({ error: "Invalid payload: must be an array" }), { status: 400, headers });
         }
@@ -361,11 +359,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // POST: Create or Update (Upsert)
-      if (request.method === 'POST') {
-        if (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login') || url.pathname.endsWith('/profile')) {
-          // Stop execution
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-        }
+      if (request.method === 'POST' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         const items = Array.isArray(body) ? body : [body || {}];
 
         if (items.length > 10000) {
@@ -389,7 +383,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // DELETE: Remove a log OR all logs for an exercise
-      if (request.method === 'DELETE') {
+      if (request.method === 'DELETE' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         return await handleDeleteRequest(body, pool, headers);
       }
 

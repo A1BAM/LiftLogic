@@ -14,3 +14,8 @@
 **Vulnerability:** The password caching logic in the Cloudflare worker (`worker.ts`) used the standard strict equality operator (`===`) to compare the cached password against the current `PASSWORD` environment variable. This could potentially allow an attacker to guess the cached password via a timing attack by measuring the time it takes for the comparison to fail.
 **Learning:** Standard string comparison operators fail early when they encounter a mismatch, which means the time taken depends on the number of matching characters. This can leak information about the secret being compared.
 **Prevention:** Always use constant-time comparison functions (like `timingSafeEqual`) when comparing sensitive values such as passwords, hashes, or tokens, even when comparing them against internal environment variables or cache states.
+
+## 2026-07-20 - Strict Route Matching to Prevent Authentication Bypass
+**Vulnerability:** The API used loose `.endsWith()` matching to skip authentication for login and logout endpoints. This created a security risk where an unauthenticated attacker could access private routes (such as fetching private workout logs) by appending `/login` or `/logout` as trailing URL segments to the endpoint paths.
+**Learning:** Checking request paths using substrings or loose suffix helpers like `.endsWith` allows suffix overlaps and route spoofing. Route matching logic should always explicitly check for both exact path equality and the associated HTTP method.
+**Prevention:** Avoid wildcard or suffix matches (`endsWith`, `includes`) for authentication-exempt route filters. Explicitly validate both the exact path and the HTTP method allowed for each exemption.
