@@ -10,3 +10,7 @@
 **Vulnerability:** Allowed wildcard origin `*` with credentials `Access-Control-Allow-Credentials: true` which is a security violation and can lead to cross-origin data theft.
 **Learning:** Returning `Access-Control-Allow-Origin: *` alongside `Access-Control-Allow-Credentials: true` creates ambiguity and security risks.
 **Prevention:** Always remove `Access-Control-Allow-Credentials: true` if `Access-Control-Allow-Origin` is set to `*`.
+## 2025-02-28 - Prevent Timing Attacks in Password Caching
+**Vulnerability:** The password caching logic in the Cloudflare worker (`worker.ts`) used the standard strict equality operator (`===`) to compare the cached password against the current `PASSWORD` environment variable. This could potentially allow an attacker to guess the cached password via a timing attack by measuring the time it takes for the comparison to fail.
+**Learning:** Standard string comparison operators fail early when they encounter a mismatch, which means the time taken depends on the number of matching characters. This can leak information about the secret being compared.
+**Prevention:** Always use constant-time comparison functions (like `timingSafeEqual`) when comparing sensitive values such as passwords, hashes, or tokens, even when comparing them against internal environment variables or cache states.

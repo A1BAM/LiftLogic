@@ -12,6 +12,34 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
+
+function validateWorkoutItem(item: any, headers: Record<string, string>, inArray = false): Response | null {
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+  const suffix = inArray ? " in array" : "";
+  if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+    return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
+  }
+  if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+    return new Response(JSON.stringify({ error: `Invalid exerciseId${suffix}` }), { status: 400, headers });
+  }
+  if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+    return new Response(JSON.stringify({ error: `Invalid timestamp${suffix}` }), { status: 400, headers });
+  }
+  if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
+    return new Response(JSON.stringify({ error: `Invalid weight${suffix}` }), { status: 400, headers });
+  }
+  if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
+    return new Response(JSON.stringify({ error: `Invalid reps${suffix}` }), { status: 400, headers });
+  }
+  if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
+    return new Response(JSON.stringify({ error: `Invalid sets${suffix}` }), { status: 400, headers });
+  }
+  if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+    return new Response(JSON.stringify({ error: `Invalid notes${suffix}` }), { status: 400, headers });
+  }
+  return null;
+}
+
 async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
   const { id, exerciseId } = body || {};
 
@@ -39,7 +67,7 @@ let cachedPasswordForHash: string | null = null;
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash === env.PASSWORD) {
+    if (cachedTargetHash !== null && cachedPasswordForHash !== null && timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
       return cachedTargetHash;
     }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
@@ -291,28 +319,8 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Validate items
         for (const item of body) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id in array" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId in array" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp in array" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight in array" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps in array" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets in array" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes in array" }), { status: 400, headers });
-          }
+          const errorResponse = validateWorkoutItem(item, headers, true);
+          if (errorResponse) return errorResponse;
         }
 
         // Chunking and bulk insert
@@ -366,28 +374,8 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
         // Validate all items before inserting
         for (const item of items) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
-          }
+          const errorResponse = validateWorkoutItem(item, headers);
+          if (errorResponse) return errorResponse;
         }
 
         // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
