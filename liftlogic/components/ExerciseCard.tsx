@@ -5,13 +5,13 @@ import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat,
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
-  onLogClick: () => void;
-  onHistoryClick: () => void;
-  onArchive?: () => void;
-  onSwitch?: () => void;
+  onLogClick: (exercise: ExerciseDef) => void;
+  onHistoryClick: (exercise: ExerciseDef) => void;
+  onArchive?: (exercise: ExerciseDef) => void;
+  onSwitch?: (exercise: ExerciseDef) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
+export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   exercise, 
   exerciseLogs,
   onLogClick, 
@@ -20,6 +20,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onSwitch
 }) => {
   
+  const handleLogClick = () => onLogClick(exercise);
+  const handleHistoryClick = () => onHistoryClick(exercise);
+  const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
+      onArchive(exercise);
+    }
+  } : undefined;
+  const handleSwitchClick = onSwitch ? (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSwitch(exercise);
+  } : undefined;
+
   // 1. Organize logs into sessions (grouped by date)
   // Optimization: Since exerciseLogs are already sorted descending (newest first),
   // we can group them in a single O(n) pass without subsequent sorting.
@@ -218,12 +231,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
 
       <div className="flex gap-2 mt-4">
-        {onArchive && (
+        {handleArchiveClick && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
-            }}
+            onClick={handleArchiveClick}
             className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
             title="Archive Exercise"
             aria-label="Archive Exercise"
@@ -232,12 +242,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </button>
         )}
 
-        {onSwitch && (
+        {handleSwitchClick && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSwitch();
-            }}
+            onClick={handleSwitchClick}
             className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors"
             title="Switch Exercise"
             aria-label="Switch Exercise"
@@ -247,7 +254,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
 
         <button 
-          onClick={onHistoryClick}
+          onClick={handleHistoryClick}
           className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
           aria-label="View History"
         >
@@ -255,7 +262,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </button>
 
         <button
-          onClick={onLogClick}
+          onClick={handleLogClick}
           className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
             isCompletedToday
               ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
@@ -268,4 +275,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ExerciseCard.displayName = 'ExerciseCard';
