@@ -1,3 +1,3 @@
-## 2025-02-15 - Array Set Redundant Iteration Optimization
-**Learning:** `Array.from(new Set(arr.map(x => x.prop)))` requires three passes over the data (map, Set constructor, Array.from) and creates intermediate arrays. Using a single `for` loop to check for uniformity is significantly faster (~6.5x faster in benchmarks) and prevents unnecessary memory allocations.
-**Action:** When only checking if a collection shares a single value or deriving a simple summary string, replace map-to-Set chains with a single loop pass that tracks state and breaks early when possible.
+## 2024-05-19 - Pre-compute JSX render loop lookups
+**Learning:** O(1) dictionary lookups inside JSX render loops (`.map`) can add significant overhead during React's render phase, especially for large arrays or components that re-render frequently due to other state changes (like typing in an input).
+**Action:** When a mapped array's items need secondary data (like resolving an ID to a full object), pre-compute that relationship within the memoized data preparation step. Build a new array of `{ item, resolvedData }` so the render loop only accesses pre-existing properties, eliminating calculation during React's render phase.

@@ -21,7 +21,7 @@ export function calculateGlobalHistoryStats(
   currentDayType: string | null,
   allExercisesMap: Record<string, ExerciseDef>
 ) {
-  const groups: Record<string, WorkoutLog[]> = {};
+  const groups: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]> = {};
   const todayStr = new Date().toDateString();
   const uniqueDays = new Set<number>();
   const todayExercises = new Set<string>();
@@ -57,10 +57,11 @@ export function calculateGlobalHistoryStats(
     uniqueDays.add(currentDayId);
 
     if (!groups[currentDateKey]) groups[currentDateKey] = [];
-    groups[currentDateKey].push(log);
+
+    const exercise = allExercisesMap[log.exerciseId];
+    groups[currentDateKey].push({ log, exercise });
 
     if (currentDayType && isToday) {
-      const exercise = allExercisesMap[log.exerciseId];
       if (exercise?.dayType === currentDayType) {
         todayVolume += vol;
         todayExercises.add(log.exerciseId);
@@ -277,8 +278,9 @@ export function GlobalHistoryModal({
                       {date}
                     </h3>
                     <div className="space-y-2">
-                      {(dayLogs as WorkoutLog[]).map(log => {
-                        const exercise = allExercisesMap[log.exerciseId];
+                      {dayLogs.map((item: any) => {
+                        const log = item.log;
+                        const exercise = item.exercise;
                         return (
                           <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
                             <div>
