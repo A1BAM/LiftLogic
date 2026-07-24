@@ -126,4 +126,22 @@ describe('useWorkoutData fetching logic', () => {
     expect(result.current.syncedExercises).toEqual([]);
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
   });
+
+  it('throws wrapped error when importLogs API fails', async () => {
+    vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+
+    vi.spyOn(workoutService, 'saveItems').mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const mockLog = { id: 'import1', exerciseId: 'ex1', timestamp: 12345, weight: 100, reps: 5, sets: 1 };
+
+    await expect(result.current.importLogs([mockLog])).rejects.toThrow('Import failed: Network error');
+  });
 });
