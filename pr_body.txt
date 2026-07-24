@@ -1,0 +1,3 @@
+🎯 **What:** Tested the error handling path for `deleteExercisePermanently` in `useWorkoutData.ts`. When `workoutService.deleteItem` fails, it should log the error and rethrow it to the caller.
+📊 **Coverage:** Mocked the backend service call to reject with a network error and verified the state of the logger and error throwing mechanism.
+✨ **Result:** Improved test coverage and reliability for error states in the workout hook.
