@@ -127,3 +127,20 @@ describe('useWorkoutData fetching logic', () => {
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
   });
 });
+
+describe('useWorkoutData updateLog error handling', () => {
+  it('calls fetchDataAndSync and throws error when workoutService.saveItem fails', async () => {
+    const error = new Error('Failed to save');
+    vi.spyOn(workoutService, 'saveItem').mockRejectedValueOnce(error);
+    const fetchSpy = vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useWorkoutData(false));
+
+    const log: WorkoutLog = { id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 1 };
+
+    await expect(result.current.updateLog(log)).rejects.toThrow('Failed to save');
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+});
