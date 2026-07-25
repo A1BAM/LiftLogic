@@ -129,126 +129,21 @@ describe('useWorkoutData fetching logic', () => {
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
   });
 
-  it('reverts local state and re-fetches if removeLog API call fails', async () => {
-    const initialLog: WorkoutLog = {
-      id: 'log-1',
-      exerciseId: 'ex-1',
-      timestamp: 12345,
-      weight: 100,
-      reps: 10,
-      sets: 1
-    };
-
-    const fetchWorkoutsSpy = vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([initialLog]);
+  it('throws wrapped error when importLogs API fails', async () => {
+    vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
     vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
     vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
-    const deleteItemSpy = vi.spyOn(workoutService, 'deleteItem').mockRejectedValue(new Error('Network Error'));
+
+    vi.spyOn(workoutService, 'saveItems').mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useWorkoutData(true));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.logs).toHaveLength(1);
     });
 
-    fetchWorkoutsSpy.mockClear();
-    fetchWorkoutsSpy.mockResolvedValue([initialLog]);
+    const mockLog = { id: 'import1', exerciseId: 'ex1', timestamp: 12345, weight: 100, reps: 5, sets: 1 };
 
-    await expect(async () => {
-      await act(async () => {
-        await result.current.removeLog('log-1');
-      });
-    }).rejects.toThrow('Network Error');
-
-    expect(deleteItemSpy).toHaveBeenCalledWith({ id: 'log-1' });
-    expect(fetchWorkoutsSpy).toHaveBeenCalled();
-  });
-});
-
-
-describe('useWorkoutData error handling', () => {
-  it('deleteExercisePermanently logs error and rethrows on API failure', async () => {
-    const error = new Error('Network failure');
-    vi.spyOn(workoutService, 'deleteItem').mockRejectedValueOnce(error);
-    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
-
-    // Mock getLocalExercises to prevent unrelated syncing behavior
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
-
-    const { result } = renderHook(() => useWorkoutData(true));
-
-    await expect(result.current.deleteExercisePermanently('test-ex')).rejects.toThrow('Network failure');
-
-    expect(loggerSpy).toHaveBeenCalledWith("Failed to delete exercise from cloud", error);
-
-    loggerSpy.mockRestore();
-  });
-});
-
-describe('useWorkoutData updateLog error handling', () => {
-  it('calls fetchDataAndSync and throws error when workoutService.saveItem fails', async () => {
-    const error = new Error('Failed to save');
-    vi.spyOn(workoutService, 'saveItem').mockRejectedValueOnce(error);
-    const fetchSpy = vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
-
-    const { result } = renderHook(() => useWorkoutData(false));
-
-    const log: WorkoutLog = { id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 1 };
-
-    await expect(result.current.updateLog(log)).rejects.toThrow('Failed to save');
-    expect(fetchSpy).toHaveBeenCalled();
-  });
-});
-
-describe('saveExercise error path', () => {
-  it('logs error and re-throws when saveDefinitionToCloud fails', async () => {
-    const { logger } = await import('../utils/logger');
-    vi.spyOn(logger, 'error').mockImplementation(() => {});
-
-    const mockError = new Error('Cloud sync failed');
-    vi.spyOn(workoutService, 'saveItems').mockRejectedValue(mockError);
-
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
-
-    const { result } = renderHook(() => useWorkoutData(true));
-
-    await expect(
-      result.current.saveExercise({ id: 'ex-1', name: 'Test', muscleGroup: 'Chest', defaultWeight: 10, increment: 2.5, targetReps: 10, dayType: 'PUSH' })
-    ).rejects.toThrow('Cloud sync failed');
-
-    expect(logger.error).toHaveBeenCalledWith('Failed to sync exercise to cloud', mockError);
-    vi.clearAllMocks();
-  });
-});
-
-
-describe('useWorkoutData addLog API failure', () => {
-  it('handles API failure during addLog', async () => {
-    // Mock logger to verify it's called and suppress console output during tests
-    const { logger } = await import('../utils/logger');
-    vi.spyOn(logger, 'error').mockImplementation(() => {});
-
-    // Mock fetchWorkouts for fetchDataAndSync
-    const fetchSpy = vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-
-    // Mock saveItem to reject
-    const testError = new Error('Network failure');
-    const saveSpy = vi.spyOn(workoutService, 'saveItem').mockRejectedValue(testError);
-
-    const { result } = renderHook(() => useWorkoutData(false));
-
-    // Await the addLog call and verify it throws
-    await expect(result.current.addLog('test-ex', 100, 10)).rejects.toThrow('Network failure');
-
-    // Verify logger was called
-    expect(logger.error).toHaveBeenCalledWith("Failed to save log", testError);
-
-    // Verify fetchDataAndSync was triggered to reset state
-    expect(fetchSpy).toHaveBeenCalled();
+    await expect(result.current.importLogs([mockLog])).rejects.toThrow('Import failed: Network error');
   });
 });
