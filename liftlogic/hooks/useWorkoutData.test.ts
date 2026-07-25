@@ -202,3 +202,25 @@ describe('useWorkoutData updateLog error handling', () => {
     expect(fetchSpy).toHaveBeenCalled();
   });
 });
+
+describe('saveExercise error path', () => {
+  it('logs error and re-throws when saveDefinitionToCloud fails', async () => {
+    const { logger } = await import('../utils/logger');
+    vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    const mockError = new Error('Cloud sync failed');
+    vi.spyOn(workoutService, 'saveItems').mockRejectedValue(mockError);
+
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await expect(
+      result.current.saveExercise({ id: 'ex-1', name: 'Test', muscleGroup: 'Chest', defaultWeight: 10, increment: 2.5, targetReps: 10, dayType: 'PUSH' })
+    ).rejects.toThrow('Cloud sync failed');
+
+    expect(logger.error).toHaveBeenCalledWith('Failed to sync exercise to cloud', mockError);
+    vi.clearAllMocks();
+  });
+});
