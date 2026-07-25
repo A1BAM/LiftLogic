@@ -3,6 +3,7 @@ import { WorkoutLog } from '../types';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useWorkoutData } from './useWorkoutData';
 import { workoutService } from '../services/workoutService';
+import { logger } from '../utils/logger';
 import { DEFINITION_ID } from '../constants';
 
 
@@ -125,5 +126,26 @@ describe('useWorkoutData fetching logic', () => {
 
     expect(result.current.syncedExercises).toEqual([]);
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
+  });
+});
+
+
+describe('useWorkoutData error handling', () => {
+  it('deleteExercisePermanently logs error and rethrows on API failure', async () => {
+    const error = new Error('Network failure');
+    vi.spyOn(workoutService, 'deleteItem').mockRejectedValueOnce(error);
+    const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    // Mock getLocalExercises to prevent unrelated syncing behavior
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await expect(result.current.deleteExercisePermanently('test-ex')).rejects.toThrow('Network failure');
+
+    expect(loggerSpy).toHaveBeenCalledWith("Failed to delete exercise from cloud", error);
+
+    loggerSpy.mockRestore();
   });
 });
