@@ -224,3 +224,31 @@ describe('saveExercise error path', () => {
     vi.clearAllMocks();
   });
 });
+
+
+describe('useWorkoutData addLog API failure', () => {
+  it('handles API failure during addLog', async () => {
+    // Mock logger to verify it's called and suppress console output during tests
+    const { logger } = await import('../utils/logger');
+    vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    // Mock fetchWorkouts for fetchDataAndSync
+    const fetchSpy = vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
+    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
+
+    // Mock saveItem to reject
+    const testError = new Error('Network failure');
+    const saveSpy = vi.spyOn(workoutService, 'saveItem').mockRejectedValue(testError);
+
+    const { result } = renderHook(() => useWorkoutData(false));
+
+    // Await the addLog call and verify it throws
+    await expect(result.current.addLog('test-ex', 100, 10)).rejects.toThrow('Network failure');
+
+    // Verify logger was called
+    expect(logger.error).toHaveBeenCalledWith("Failed to save log", testError);
+
+    // Verify fetchDataAndSync was triggered to reset state
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+});
