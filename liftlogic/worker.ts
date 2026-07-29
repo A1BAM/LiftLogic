@@ -13,8 +13,13 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
 }
 
 
-function validateWorkoutItem(item: any, headers: Record<string, string>, inArray = false): Response | null {
-  const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+function validateWorkoutItem(item: unknown, headers: Record<string, string>, inArray = false): Response | null {
+  if (typeof item !== 'object' || item === null) {
+    const suffix = inArray ? " in array" : "";
+    return new Response(JSON.stringify({ error: `Invalid payload${suffix}` }), { status: 400, headers });
+  }
+  const itemRecord = item as Record<string, unknown>;
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = itemRecord;
   const suffix = inArray ? " in array" : "";
   if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
     return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
