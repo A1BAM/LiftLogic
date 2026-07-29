@@ -1,3 +1,3 @@
-## 2025-02-12 - Cache startOfToday to avoid redundant Date allocations
-**Learning:** Instantiating `new Date()` inside hooks that are called on every render (or multiple times per render, such as within map functions) introduces unnecessary memory allocation and garbage collection overhead. Using `Date.now()` is significantly faster because it returns a primitive number without allocating an object.
-**Action:** When calculating frequently used time boundaries (like the start and end of the current day) inside React components or custom hooks, cache the boundaries in a `useRef` or module-level variable. Use `Date.now()` to cheaply verify if the cache is still valid (e.g., checking if 60 seconds have passed to account for midnight transitions) before falling back to `new Date()`.
+## 2026-07-29 - Remove Date string conversions for today check
+**Learning:** Instantiating `new Date()` and calling `.toDateString()` inside iteration blocks adds measurable overhead, especially when comparing against "today" in large arrays.
+**Action:** Always prefer pre-computing integer representations (like day boundaries via `Math.floor()`) outside loops and comparing against derived integer values inside loops to prevent redundant object allocations and string processing.
