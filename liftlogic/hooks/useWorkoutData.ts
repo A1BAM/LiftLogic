@@ -169,8 +169,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     try {
       await workoutService.saveItems(importedLogs);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Import failed: ${message}`);
+      throw new Error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, []);
 

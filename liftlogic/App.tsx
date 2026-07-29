@@ -70,9 +70,9 @@ const App: React.FC = () => {
         setIsAuthenticated(true);
         setPasswordInput("");
       } catch (err: unknown) {
-        const errStatus = err && typeof err === 'object' && 'status' in err ? (err as any).status : undefined;
-        const errMessage = err instanceof Error ? err.message : undefined;
-        if (errStatus === 401 || errMessage === '401' || String(err).includes('401')) {
+        const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
+        const message = err instanceof Error ? err.message : undefined;
+        if (status === 401 || message === '401' || String(err).includes('401')) {
           alert("Wrong Password");
         } else {
           alert("Connection Error. Please check your network or server status.");
@@ -152,7 +152,8 @@ const App: React.FC = () => {
       await importLogs(importedLogs);
       alert("Import successful!");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message);
     }
   }, [importLogs]);
 
