@@ -14,6 +14,13 @@ const parseFetchedData = (allData: WorkoutLog[]) => {
   for (const item of allData) {
     if (item.exerciseId === DEFINITION_ID) {
       try {
+        // Performance Optimization: Check if we already parsed this definition.
+        // Definition IDs start with 'def_' in the database ID.
+        const extractedId = item.id.startsWith('def_') ? item.id.slice(4) : null;
+        if (extractedId && cloudIds.has(extractedId)) {
+          continue; // Skip expensive JSON.parse if we already have this definition
+        }
+
         const ex = JSON.parse(item.notes || "");
         if (ex && ex.id) {
           cloudExercises.push(ex);

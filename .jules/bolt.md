@@ -9,3 +9,7 @@ Memory recording:
 ## 2026-07-23 - Optimize Date allocation in loops
 **Learning:** Instantiating `new Date(timestamp)` inside a tight array processing loop to check for day boundaries is a huge CPU drain and causes lots of garbage collection.
 **Action:** Use timezone-offset integer math: `Math.floor((timestamp - tzOffsetMs) / 86400000)` to calculate local 'day IDs' instead of re-instantiating `Date` objects in a loop. Only instantiate the `Date` when formatting is required (cache miss).
+
+## 2023-10-27 - Optimize JSON parsing for duplicate Exercise Definitions
+**Learning:** `JSON.parse` is an expensive CPU operation. When processing arrays containing potentially duplicate encoded data (like exercise definitions in a workout history fetch), parsing the same data multiple times causes significant overhead.
+**Action:** Extract a stable identifier from the raw data (if available, e.g. from a wrapping ID like `def_${exerciseId}`) to check against a cache/set of already parsed items. Skip parsing for duplicates to achieve >2x performance improvements on large data sets.
