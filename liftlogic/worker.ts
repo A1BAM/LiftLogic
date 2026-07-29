@@ -360,7 +360,7 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
-        const items = Array.isArray(body) ? body : [body || {}];
+        const items = Array.isArray(body) ? body : [(body || {}) as Record<string, unknown>];
 
         if (items.length > 10000) {
           return new Response(JSON.stringify({ error: "Payload too large: max 10,000 items" }), { status: 400, headers });
