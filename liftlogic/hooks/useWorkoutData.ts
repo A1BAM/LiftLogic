@@ -87,9 +87,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
       workoutService.setLocalExercises(uniqueExercises);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("Fetch and sync error:", err);
-      setError(err.message || "Could not load workout history.");
+      setError(err instanceof Error ? err.message : "Could not load workout history.");
     } finally {
       setIsLoading(false);
     }
@@ -154,8 +154,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     try {
       await workoutService.saveItems(importedLogs);
-    } catch (err: any) {
-      throw new Error(`Import failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Import failed: ${message}`);
     }
   }, []);
 
