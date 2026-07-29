@@ -14,12 +14,7 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
 
 
 function validateWorkoutItem(item: unknown, headers: Record<string, string>, inArray = false): Response | null {
-  if (typeof item !== 'object' || item === null) {
-    const suffix = inArray ? " in array" : "";
-    return new Response(JSON.stringify({ error: `Invalid payload${suffix}` }), { status: 400, headers });
-  }
-  const itemRecord = item as Record<string, unknown>;
-  const { id, exerciseId, timestamp, weight, reps, sets, notes } = itemRecord;
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>) || {};
   const suffix = inArray ? " in array" : "";
   if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
     return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
@@ -46,7 +41,7 @@ function validateWorkoutItem(item: unknown, headers: Record<string, string>, inA
 }
 
 async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const { id, exerciseId } = (body || {}) as Record<string, unknown>;
+  const { id, exerciseId } = (body as Record<string, unknown>) || {};
 
   if (exerciseId !== undefined) {
     if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
@@ -67,16 +62,16 @@ async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<st
 
 
 
-async function executeBulkInsert(pool: Pool, items: any[]): Promise<void> {
+async function executeBulkInsert(pool: Pool, items: unknown[]): Promise<void> {
   const CHUNK_SIZE = 1000;
-  const promises: Promise<any>[] = [];
+  const promises: Promise<unknown>[] = [];
   for (let i = 0; i < items.length; i += CHUNK_SIZE) {
     const chunk = items.slice(i, i + CHUNK_SIZE);
-    const values: any[] = [];
+    const values: unknown[] = [];
     const placeholders: string[] = [];
 
     chunk.forEach((item, index) => {
-      const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
+      const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>) || {};
       const offset = index * 7;
       placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
       values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
@@ -236,7 +231,7 @@ export default {
 
       // Handle Login
       if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
-        const { hash } = (body || {}) as Record<string, unknown>;
+        const { hash } = (body as Record<string, unknown>) || {};
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
@@ -279,7 +274,7 @@ export default {
 
       // POST Profile
       if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
-        const { heightCm, weightLbs, age } = (body || {}) as Record<string, unknown>;
+        const { heightCm, weightLbs, age } = (body as Record<string, unknown>) || {};
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
@@ -394,7 +389,7 @@ export default {
 
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Database Error:', error instanceof Error ? error.message : String(error));
       // Security: Do not leak error details to the client
       return new Response(JSON.stringify({ error: "Internal Server Error" }), {
