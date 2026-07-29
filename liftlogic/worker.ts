@@ -269,7 +269,7 @@ export default {
             weightLbs: Number(rows[0].weight_lbs),
             age: rows[0].age ? Number(rows[0].age) : undefined
           }), { status: 200, headers });
-        } catch (err: any) {
+        } catch (err: unknown) {
           if (connectionString.includes('dummy')) {
             return new Response(JSON.stringify(null), { status: 200, headers });
           }
@@ -324,7 +324,7 @@ export default {
             status: 200,
             headers
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           // Fallback for dummy database in local development
           if (connectionString.includes('dummy')) {
             return new Response(JSON.stringify([]), {
