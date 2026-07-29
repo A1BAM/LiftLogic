@@ -40,8 +40,8 @@ function validateWorkoutItem(item: any, headers: Record<string, string>, inArray
   return null;
 }
 
-async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const { id, exerciseId } = body || {};
+async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<string, string>): Promise<Response> {
+  const { id, exerciseId } = (body || {}) as Record<string, unknown>;
 
   if (exerciseId !== undefined) {
     if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
@@ -217,7 +217,7 @@ export default {
     const pool = new Pool({ connectionString });
 
     try {
-      let body: any = null;
+      let body: unknown = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
         const contentType = request.headers.get('Content-Type') || '';
         if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
@@ -231,7 +231,7 @@ export default {
 
       // Handle Login
       if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
-        const { hash } = body || {};
+        const { hash } = (body || {}) as Record<string, unknown>;
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
@@ -274,7 +274,7 @@ export default {
 
       // POST Profile
       if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
-        const { heightCm, weightLbs, age } = body || {};
+        const { heightCm, weightLbs, age } = (body || {}) as Record<string, unknown>;
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
@@ -360,7 +360,7 @@ export default {
 
       // POST: Create or Update (Upsert)
       if (request.method === 'POST' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
-        const items = Array.isArray(body) ? body : [body || {}];
+        const items = Array.isArray(body) ? body : [(body || {}) as Record<string, unknown>];
 
         if (items.length > 10000) {
           return new Response(JSON.stringify({ error: "Payload too large: max 10,000 items" }), { status: 400, headers });
