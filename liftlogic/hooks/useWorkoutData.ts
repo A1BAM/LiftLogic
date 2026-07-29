@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -38,6 +38,20 @@ const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<s
     }
   }
   return missingFromCloud;
+};
+
+
+let cachedStartOfDay = 0;
+let cachedEndOfDay = 0;
+
+const getTodayBoundaries = () => {
+  const now = Date.now();
+  if (now < cachedStartOfDay || now >= cachedEndOfDay) {
+    const d = new Date(now);
+    cachedStartOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    cachedEndOfDay = cachedStartOfDay + 24 * 60 * 60 * 1000;
+  }
+  return { startOfDay: cachedStartOfDay, endOfDay: cachedEndOfDay };
 };
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
@@ -215,10 +229,26 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     return logsByExercise.get(id) || [];
   }, [logsByExercise]);
 
+  // Cache day boundaries to avoid redundant Date allocations on every render
+  const todayCache = useRef<{ startOfDay: number, endOfDay: number, timestamp: number } | null>(null);
+
+  const getDayBoundaries = useCallback(() => {
+    const nowTimestamp = Date.now();
+    // Cache valid for 1 minute to handle midnight crossing while avoiding per-render allocations
+    if (!todayCache.current || nowTimestamp - todayCache.current.timestamp > 60000) {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      todayCache.current = {
+        startOfDay,
+        endOfDay: startOfDay + 24 * 60 * 60 * 1000,
+        timestamp: nowTimestamp
+      };
+    }
+    return todayCache.current;
+  }, []);
+
   const getTodaysLogs = useCallback((id: string) => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+    const { startOfDay, endOfDay } = getDayBoundaries();
 
     const exerciseLogs = getLogsForExercise(id);
     const results: WorkoutLog[] = [];
@@ -232,12 +262,11 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     // Return in ascending order (oldest first) as expected by the UI
     return results.reverse();
-  }, [getLogsForExercise]);
+  }, [getLogsForExercise, getDayBoundaries]);
 
   const getLastSessionLogs = useCallback((id: string) => {
     const exerciseLogs = getLogsForExercise(id);
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const { startOfDay: startOfToday } = getDayBoundaries();
 
     // Find the first log before today
     const lastLogIndex = exerciseLogs.findIndex(l => l.timestamp < startOfToday);
@@ -256,7 +285,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
 
     return results;
-  }, [getLogsForExercise]);
+  }, [getLogsForExercise, getDayBoundaries]);
   return {
 
     logs,

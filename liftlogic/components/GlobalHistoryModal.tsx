@@ -24,7 +24,7 @@ export function calculateGlobalHistoryStats(
   allExercisesMap: Record<string, ExerciseDef>
 ) {
   const groups: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]> = {};
-  const todayStr = new Date().toDateString();
+  const todayDayId = Math.floor((Date.now() - tzOffsetMs) / 86400000);
   const uniqueDays = new Set<number>();
   const todayExercises = new Set<string>();
 
@@ -57,8 +57,7 @@ export function calculateGlobalHistoryStats(
       currentDateKey = dateKey;
 
       // We still need to know if this is "today"
-      const logDateStr = new Date(log.timestamp).toDateString();
-      isToday = (logDateStr === todayStr);
+      isToday = (currentDayId === todayDayId);
     }
 
     uniqueDays.add(currentDayId);
