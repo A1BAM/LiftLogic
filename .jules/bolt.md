@@ -1,3 +1,3 @@
-## 2025-02-14 - Optimize Date Instantiations in Render Getters
-**Learning:** Calling `new Date()` multiple times inside a getter that executes repeatedly inside render loops (like mapping over a list of components) incurs measurable CPU and allocation overhead.
-**Action:** Extract Date-based boundary logic (e.g., `startOfDay`, `endOfDay`) to module-level cache variables. Use `Date.now()` (which is significantly faster than object allocation) to check cache validity, recalculating full Date objects only when the time period rolls over.
+## 2025-02-12 - Cache startOfToday to avoid redundant Date allocations
+**Learning:** Instantiating `new Date()` inside hooks that are called on every render (or multiple times per render, such as within map functions) introduces unnecessary memory allocation and garbage collection overhead. Using `Date.now()` is significantly faster because it returns a primitive number without allocating an object.
+**Action:** When calculating frequently used time boundaries (like the start and end of the current day) inside React components or custom hooks, cache the boundaries in a `useRef` or module-level variable. Use `Date.now()` to cheaply verify if the cache is still valid (e.g., checking if 60 seconds have passed to account for midnight transitions) before falling back to `new Date()`.
