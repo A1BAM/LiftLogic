@@ -69,8 +69,10 @@ const App: React.FC = () => {
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
-      } catch (err: any) {
-        if (err.status === 401 || err.message === '401' || String(err).includes('401')) {
+      } catch (err: unknown) {
+        const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
+        const message = err instanceof Error ? err.message : undefined;
+        if (status === 401 || message === '401' || String(err).includes('401')) {
           alert("Wrong Password");
         } else {
           alert("Connection Error. Please check your network or server status.");
@@ -149,8 +151,9 @@ const App: React.FC = () => {
     try {
       await importLogs(importedLogs);
       alert("Import successful!");
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message);
     }
   }, [importLogs]);
 
