@@ -40,6 +40,20 @@ const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<s
   return missingFromCloud;
 };
 
+
+let cachedStartOfDay = 0;
+let cachedEndOfDay = 0;
+
+const getTodayBoundaries = () => {
+  const now = Date.now();
+  if (now < cachedStartOfDay || now >= cachedEndOfDay) {
+    const d = new Date(now);
+    cachedStartOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    cachedEndOfDay = cachedStartOfDay + 24 * 60 * 60 * 1000;
+  }
+  return { startOfDay: cachedStartOfDay, endOfDay: cachedEndOfDay };
+};
+
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
@@ -216,9 +230,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   }, [logsByExercise]);
 
   const getTodaysLogs = useCallback((id: string) => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+    const { startOfDay, endOfDay } = getTodayBoundaries();
 
     const exerciseLogs = getLogsForExercise(id);
     const results: WorkoutLog[] = [];
@@ -236,8 +248,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
   const getLastSessionLogs = useCallback((id: string) => {
     const exerciseLogs = getLogsForExercise(id);
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const { startOfDay: startOfToday } = getTodayBoundaries();
 
     // Find the first log before today
     const lastLogIndex = exerciseLogs.findIndex(l => l.timestamp < startOfToday);
