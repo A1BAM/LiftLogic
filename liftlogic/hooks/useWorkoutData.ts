@@ -281,7 +281,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     const lastLog = exerciseLogs[lastLogIndex];
     const d = new Date(lastLog.timestamp);
-    const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const localOffsetMs = d.getTimezoneOffset() * 60000;
+    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) / 86400000);
+    const startOfLastDay = lastDayId * 86400000 + localOffsetMs;
 
     const results: WorkoutLog[] = [];
     // Early-exit loop on pre-sorted logs starting from the session found

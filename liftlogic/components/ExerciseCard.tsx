@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
 
+const exerciseDateCache = new Map<number, string>();
+
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
@@ -36,7 +38,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   // 1. Organize logs into sessions (grouped by date)
   // Optimization: Since exerciseLogs are already sorted descending (newest first),
   // we can group them in a single O(n) pass without subsequent sorting.
-  // We use boundary grouping to avoid instantiating a new Date object for every log.
+  // We use DST-safe timezone offset math and a cache map to avoid instantiating multiple Date objects for every log.
   const sessions = useMemo(() => {
     const sessionsArr: { date: string; logs: WorkoutLog[] }[] = [];
     let currentDayStart = -1;
@@ -46,12 +48,20 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       // If the timestamp crosses the boundary to a previous day, or if it's the first log
       if (log.timestamp < currentDayStart || !currentSession) {
         const d = new Date(log.timestamp);
-        currentSession = { date: d.toDateString(), logs: [] };
+        const localOffsetMs = d.getTimezoneOffset() * 60000;
+        const dayId = Math.floor((log.timestamp - localOffsetMs) / 86400000);
+
+        let dateStr = exerciseDateCache.get(dayId);
+        if (!dateStr) {
+          dateStr = d.toDateString();
+          exerciseDateCache.set(dayId, dateStr);
+        }
+
+        currentSession = { date: dateStr, logs: [] };
         sessionsArr.push(currentSession);
 
-        // Calculate the start of this day (midnight local time)
-        const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        currentDayStart = startOfDay.getTime();
+        // Calculate the start of this day (midnight local time) in a DST-safe way
+        currentDayStart = dayId * 86400000 + localOffsetMs;
       }
       currentSession.logs.push(log);
     }
