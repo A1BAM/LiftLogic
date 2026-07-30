@@ -19,3 +19,8 @@
 **Vulnerability:** The API used loose `.endsWith()` matching to skip authentication for login and logout endpoints. This created a security risk where an unauthenticated attacker could access private routes (such as fetching private workout logs) by appending `/login` or `/logout` as trailing URL segments to the endpoint paths.
 **Learning:** Checking request paths using substrings or loose suffix helpers like `.endsWith` allows suffix overlaps and route spoofing. Route matching logic should always explicitly check for both exact path equality and the associated HTTP method.
 **Prevention:** Avoid wildcard or suffix matches (`endsWith`, `includes`) for authentication-exempt route filters. Explicitly validate both the exact path and the HTTP method allowed for each exemption.
+
+## 2026-07-21 - Enforce Input String Length Limits to Prevent Timing-safe CPU Exhaustion DoS
+**Vulnerability:** Unconstrained input lengths for variables compared using constant-time string comparison (`timingSafeEqual`) allow an attacker to send extremely long payloads (such as several megabytes), forcing the comparison loop to run excessively and causing CPU-based Denial of Service (DoS) in Cloudflare Workers.
+**Learning:** While `timingSafeEqual` prevents timing attacks by running a full loop regardless of character matches, its complexity scales linearly with the input length `O(N)`. If input lengths are not strictly capped before comparison, attackers can trigger resource exhaustion/DoS.
+**Prevention:** Always implement strict, reasonable input length limits (e.g., maximum 100 characters for SHA-256 hex hashes and 200 characters for Authorization headers) and validate the payload type BEFORE executing any constant-time comparison.

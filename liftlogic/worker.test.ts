@@ -426,4 +426,48 @@ describe('Worker', () => {
       expect(await response.json()).toEqual({ error: 'Invalid JSON' });
     });
   });
+
+  describe('Security and DoS Mitigation', () => {
+    it('rejects overly long Authorization header to prevent CPU exhaustion', async () => {
+      const longSecret = 'a'.repeat(1000);
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, longSecret);
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: 'Unauthorized' });
+    });
+
+    it('rejects overly long login hash payload to prevent CPU exhaustion', async () => {
+      const longHash = 'a'.repeat(1000);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: longHash }, null as any);
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid hash' });
+    });
+
+    it('rejects non-object or array payloads for endpoints expecting an object', async () => {
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      // 1. Login with array instead of object
+      const loginRequest = createRequest('POST', 'http://localhost/gym-api/login', [1, 2, 3], null as any);
+      const loginResponse = await worker.fetch(loginRequest, env, {} as any);
+      expect(loginResponse.status).toBe(400);
+      expect(await loginResponse.json()).toEqual({ error: 'Invalid payload' });
+
+      // 2. Profile with primitive string instead of object
+      const profileRequest = createRequest('POST', 'http://localhost/gym-api/profile', 'not-an-object');
+      const profileResponse = await worker.fetch(profileRequest, env, {} as any);
+      expect(profileResponse.status).toBe(400);
+      expect(await profileResponse.json()).toEqual({ error: 'Invalid payload' });
+
+      // 3. Delete with array instead of object
+      const deleteRequest = createRequest('DELETE', 'http://localhost/gym-api', [1, 2, 3]);
+      const deleteResponse = await worker.fetch(deleteRequest, env, {} as any);
+      expect(deleteResponse.status).toBe(400);
+      expect(await deleteResponse.json()).toEqual({ error: 'Invalid payload' });
+    });
+  });
 });

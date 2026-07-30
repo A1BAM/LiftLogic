@@ -14,8 +14,11 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
 
 
 function validateWorkoutItem(item: unknown, headers: Record<string, string>, inArray = false): Response | null {
-  const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>) || {};
   const suffix = inArray ? " in array" : "";
+  if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+    return new Response(JSON.stringify({ error: `Invalid payload${suffix}` }), { status: 400, headers });
+  }
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>);
   if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
     return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
   }
@@ -41,7 +44,10 @@ function validateWorkoutItem(item: unknown, headers: Record<string, string>, inA
 }
 
 async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const { id, exerciseId } = (body as Record<string, unknown>) || {};
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+  }
+  const { id, exerciseId } = (body as Record<string, unknown>);
 
   if (exerciseId !== undefined) {
     if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
@@ -193,7 +199,7 @@ export default {
         });
       }
 
-      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
+      if (!authHeader || authHeader.length > 200 || !timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -231,7 +237,13 @@ export default {
 
       // Handle Login
       if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
-        const { hash } = (body as Record<string, unknown>) || {};
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+        }
+        const { hash } = (body as Record<string, unknown>);
+        if (typeof hash !== 'string' || hash.length === 0 || hash.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid hash" }), { status: 400, headers });
+        }
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
@@ -274,7 +286,10 @@ export default {
 
       // POST Profile
       if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
-        const { heightCm, weightLbs, age } = (body as Record<string, unknown>) || {};
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+        }
+        const { heightCm, weightLbs, age } = (body as Record<string, unknown>);
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
