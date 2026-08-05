@@ -13,3 +13,7 @@ Memory recording:
 ## 2023-10-27 - Optimize JSON parsing for duplicate Exercise Definitions
 **Learning:** `JSON.parse` is an expensive CPU operation. When processing arrays containing potentially duplicate encoded data (like exercise definitions in a workout history fetch), parsing the same data multiple times causes significant overhead.
 **Action:** Extract a stable identifier from the raw data (if available, e.g. from a wrapping ID like `def_${exerciseId}`) to check against a cache/set of already parsed items. Skip parsing for duplicates to achieve >2x performance improvements on large data sets.
+
+## 2026-07-24 - Optimize Date allocation in loops using DST-Safe Timezone Offset math
+**Learning:** Instantiating multiple `Date` objects inside tight loops or frequent callbacks (like grouping sessions in `ExerciseCard` or calculating `getLastSessionLogs`) is expensive and puts pressure on garbage collection. Using a static global timezone offset (`new Date().getTimezoneOffset()`) for timezone-shifted integer math fails across Daylight Saving Time (DST) boundaries because the offset itself shifts.
+**Action:** Calculate the local timezone offset dynamically for each day/session boundary from its specific `Date` object (`d.getTimezoneOffset()`), avoiding static module-level offsets. Use this log-specific offset to perform integer-based day ID and day-start calculations, avoiding duplicate Date instantiations (such as constructing a midnight date to obtain its timestamp) and caching date strings.
