@@ -38,6 +38,7 @@ const App: React.FC = () => {
     updateLog,
     importLogs,
     saveExercise,
+    saveExercises,
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
@@ -182,14 +183,16 @@ const App: React.FC = () => {
   const handleSwitchExercise = useCallback(async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
     navigator.vibrate?.(10);
     try {
-      await saveExercise({ ...currentExercise, isArchived: true });
-      await saveExercise({ ...replacementExercise, isArchived: false });
+      await saveExercises([
+        { ...currentExercise, isArchived: true },
+        { ...replacementExercise, isArchived: false }
+      ]);
       navigator.vibrate?.(50);
       setActiveModal(null);
     } catch (e) {
       logger.error("Failed to sync switch status", e);
     }
-  }, [saveExercise]);
+  }, [saveExercises]);
 
   const handleRestoreExercise = useCallback(async (exercise: ExerciseDef) => {
     navigator.vibrate?.(10);
