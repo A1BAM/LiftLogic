@@ -118,6 +118,62 @@ describe('workoutService API Interactions', () => {
     });
   });
 
+
+  describe('login', () => {
+    it('should send a POST request with hash and return data on success', async () => {
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.login('test-hash-123');
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ hash: 'test-hash-123' }),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Login failed" with status code when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+
+      const promise = workoutService.login('bad-hash');
+      await expect(promise).rejects.toThrow('Login failed');
+      await promise.catch(e => expect(e.status).toBe(401));
+    });
+  });
+
+  describe('logout', () => {
+    it('should send a POST request to logout endpoint and return data on success', async () => {
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.logout();
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/logout`, expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Logout failed" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.logout()).rejects.toThrow('Logout failed');
+    });
+  });
+
   describe('saveItem', () => {
     it('should send a POST request with the correct body and return data on success', async () => {
       const payload = { exerciseId: 'PUSH_UP', weight: 0 };
