@@ -51,7 +51,12 @@ describe('Worker', () => {
 
     it('handles successful login', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
@@ -61,10 +66,68 @@ describe('Worker', () => {
 
     it('handles failed login', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'wrong' }, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(401);
+    });
+
+    it('rate limits login attempts by connecting client', async () => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const request = new Request('http://localhost/gym-api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CF-Connecting-IP': '203.0.113.10'
+        },
+        body: JSON.stringify({ hash: 'wrong' })
+      });
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit },
+        ASSETS: { fetch: vi.fn() } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(limit).toHaveBeenCalledOnce();
+      const [{ key }] = limit.mock.calls[0];
+      expect(key).toMatch(/^login:[a-f0-9]{64}$/);
+      expect(key).not.toContain('203.0.113.10');
+      expect(response.status).toBe(429);
+      expect(response.headers.get('Retry-After')).toBe('60');
+      expect(await response.json()).toEqual({ error: 'Too many login attempts' });
+    });
+
+    it('fails closed when the login rate-limit binding is missing', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'Server Configuration Error' });
+    });
+
+    it('fails closed when login rate limiting is unavailable', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockRejectedValue(new Error('rate-limit outage')) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'Login temporarily unavailable' });
     });
 
 
@@ -97,6 +160,21 @@ describe('Worker', () => {
   });
 
   describe('CORS and Security Headers', () => {
+
+    it('does not allow the Tailwind CDN to execute in the application origin', async () => {
+      const request = new Request('http://localhost/');
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<!doctype html>')) } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+      const csp = response.headers.get('Content-Security-Policy');
+
+      expect(csp).not.toContain('cdn.tailwindcss.com');
+      expect(csp).not.toContain('https:');
+    });
 
     it('handles OPTIONS preflight request', async () => {
       const request = createRequest('OPTIONS', 'http://localhost/gym-api');

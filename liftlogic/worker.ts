@@ -131,11 +131,21 @@ async function getTargetHash(env: Env): Promise<string | null> {
   return null;
 }
 
+async function getLoginRateLimitKey(request: Request): Promise<string> {
+  const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
+  const digestHex = Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `login:${digestHex}`;
+}
+
 export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
   PASSWORD?: string;
+  LOGIN_RATE_LIMITER?: RateLimit;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -156,8 +166,8 @@ export default {
       const response = await env.ASSETS.fetch(request);
       const newHeaders = new Headers(response.headers);
       Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
-      // Asset specific CSP: allows tailwind CDN and esm.sh for React/Lucide
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'sha256-33CEPSXJm9APfrBGk9mG/r1NOXLRuqCbYLodgApfMq0=' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
+      // Asset specific CSP: application JavaScript and styles are bundled locally.
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none';");
 
       return new Response(response.body, {
         status: response.status,
@@ -256,6 +266,29 @@ export default {
         if (typeof hash !== 'string' || hash.length === 0 || hash.length > 100) {
           return new Response(JSON.stringify({ error: "Invalid hash" }), { status: 400, headers });
         }
+
+        if (!env.LOGIN_RATE_LIMITER) {
+          logger.error("LOGIN_RATE_LIMITER binding not set. Refusing login without rate limiting.");
+          return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500, headers });
+        }
+
+        try {
+          const { success } = await env.LOGIN_RATE_LIMITER.limit({
+            key: await getLoginRateLimitKey(request)
+          });
+          if (!success) {
+            const rateLimitHeaders = new Headers(headers);
+            rateLimitHeaders.set('Retry-After', '60');
+            return new Response(JSON.stringify({ error: "Too many login attempts" }), {
+              status: 429,
+              headers: rateLimitHeaders
+            });
+          }
+        } catch (error) {
+          logger.error("LOGIN_RATE_LIMITER failed. Refusing login while rate limiting is unavailable.", error);
+          return new Response(JSON.stringify({ error: "Login temporarily unavailable" }), { status: 503, headers });
+        }
+
         const targetHash = await getTargetHash(env);
         if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
