@@ -69,33 +69,39 @@ async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<st
 
 
 async function executeBulkInsert(pool: Pool, items: unknown[]): Promise<void> {
-  const CHUNK_SIZE = 1000;
-  const promises: Promise<unknown>[] = [];
-  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-    const chunk = items.slice(i, i + CHUNK_SIZE);
-    const values: unknown[] = [];
-    const placeholders: string[] = [];
+  if (items.length === 0) return;
 
-    chunk.forEach((item, index) => {
-      const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>) || {};
-      const offset = index * 7;
-      placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-      values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-    });
+  const ids: string[] = [];
+  const exerciseIds: string[] = [];
+  const timestamps: number[] = [];
+  const weights: number[] = [];
+  const reps: number[] = [];
+  const sets: number[] = [];
+  const notes: (string | null)[] = [];
 
-    const query = `
-      INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-      VALUES ${placeholders.join(', ')}
-      ON CONFLICT (id) DO UPDATE SET
-        weight = EXCLUDED.weight,
-        reps = EXCLUDED.reps,
-        sets = EXCLUDED.sets,
-        notes = EXCLUDED.notes;
-    `;
-
-    promises.push(pool.query(query, values));
+  for (let i = 0; i < items.length; i++) {
+    const item = (items[i] as Record<string, unknown>) || {};
+    ids.push(item.id as string);
+    exerciseIds.push(item.exerciseId as string);
+    timestamps.push(item.timestamp as number);
+    weights.push(item.weight as number);
+    reps.push(item.reps as number);
+    sets.push((item.sets as number) || 1);
+    notes.push((item.notes as string) || null);
   }
-  await Promise.all(promises);
+
+  const query = `
+    INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+    SELECT * FROM UNNEST ($1::text[], $2::text[], $3::bigint[], $4::numeric[], $5::integer[], $6::integer[], $7::text[])
+    AS t(id, exercise_id, timestamp, weight, reps, sets, notes)
+    ON CONFLICT (id) DO UPDATE SET
+      weight = EXCLUDED.weight,
+      reps = EXCLUDED.reps,
+      sets = EXCLUDED.sets,
+      notes = EXCLUDED.notes;
+  `;
+
+  await pool.query(query, [ids, exerciseIds, timestamps, weights, reps, sets, notes]);
 }
 
 let cachedTargetHash: string | null = null;
@@ -171,8 +177,6 @@ export default {
         delete headers['Access-Control-Allow-Credentials'];
       } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
         headers['Access-Control-Allow-Origin'] = requestOrigin;
-      } else {
-        headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
       }
     }
 
