@@ -18,6 +18,10 @@ const globalDateCache = new Map<number, string>();
 
 const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+
 export function calculateGlobalHistoryStats(
   logs: WorkoutLog[],
   currentDayType: string | null,
@@ -47,11 +51,8 @@ export function calculateGlobalHistoryStats(
 
       let dateKey = globalDateCache.get(currentDayId);
       if (!dateKey) {
-        // Only instantiate Date on cache miss
-        const d = new Date(log.timestamp);
-        dateKey = d.toLocaleDateString(undefined, {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
+        // Use pre-instantiated formatter on cache miss
+        dateKey = dateFormatter.format(log.timestamp);
         globalDateCache.set(currentDayId, dateKey);
       }
       currentDateKey = dateKey;
