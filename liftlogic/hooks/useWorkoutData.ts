@@ -168,9 +168,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
   const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
-      const logMap = new Map(prevLogs.map(l => [l.id, l]));
-      importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+      const importedMap = new Map(importedLogs.map(l => [l.id, l]));
+      const merged = prevLogs.filter(l => !importedMap.has(l.id)).concat(Array.from(importedMap.values()));
+      return merged.sort((a, b) => b.timestamp - a.timestamp);
     });
 
     try {
