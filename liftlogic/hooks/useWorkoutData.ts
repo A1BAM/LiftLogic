@@ -168,9 +168,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
   const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
-      const logMap = new Map(prevLogs.map(l => [l.id, l]));
-      importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+      const importedMap = new Map(importedLogs.map(l => [l.id, l]));
+      const merged = prevLogs.filter(l => !importedMap.has(l.id)).concat(Array.from(importedMap.values()));
+      return merged.sort((a, b) => b.timestamp - a.timestamp);
     });
 
     try {
@@ -180,26 +180,28 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, []);
 
-  const saveExercise = useCallback(async (exercise: ExerciseDef) => {
+  const saveExercises = useCallback(async (exercisesToSave: ExerciseDef[]) => {
+    if (exercisesToSave.length === 0) return;
+
     setSyncedExercises(prevSynced => {
-      const existingIndex = prevSynced.findIndex(ex => ex.id === exercise.id);
-      let updatedSynced;
-      if (existingIndex >= 0) {
-        updatedSynced = prevSynced.map(ex => ex.id === exercise.id ? exercise : ex);
-      } else {
-        updatedSynced = [...prevSynced, exercise];
-      }
+      const updatedMap = new Map(prevSynced.map(ex => [ex.id, ex]));
+      exercisesToSave.forEach(ex => updatedMap.set(ex.id, ex));
+      const updatedSynced = Array.from(updatedMap.values());
       workoutService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
 
     try {
-      await saveDefinitionToCloud(exercise);
+      await saveDefinitionsToCloud(exercisesToSave);
     } catch (err) {
-      logger.error("Failed to sync exercise to cloud", err);
+      logger.error("Failed to sync exercises to cloud", err);
       throw err;
     }
-  }, [saveDefinitionToCloud]);
+  }, [saveDefinitionsToCloud]);
+
+  const saveExercise = useCallback(async (exercise: ExerciseDef) => {
+    await saveExercises([exercise]);
+  }, [saveExercises]);
 
   const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
     setSyncedExercises(prevSynced => {
@@ -307,6 +309,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     updateLog,
     importLogs,
     saveExercise,
+    saveExercises,
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
