@@ -118,6 +118,34 @@ describe('workoutService API Interactions', () => {
     });
   });
 
+  describe('saveItems', () => {
+    it('should send a POST request to /bulk with the correct body and return data on success', async () => {
+      const payload = [{ exerciseId: 'PUSH_UP', weight: 0 }];
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.saveItems(payload);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/bulk`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Failed to save items in bulk" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.saveItems([])).rejects.toThrow('Failed to save items in bulk');
+    });
+  });
+
   describe('saveItem', () => {
     it('should send a POST request with the correct body and return data on success', async () => {
       const payload = { exerciseId: 'PUSH_UP', weight: 0 };
