@@ -148,20 +148,20 @@ describe('workoutService API Interactions', () => {
     });
   });
 
-
-  describe('login', () => {
-    it('should send a POST request with hash and return data on success', async () => {
+  describe('saveItems', () => {
+    it('should send a POST request to /bulk with the correct body and return data on success', async () => {
+      const payload = [{ exerciseId: 'PUSH_UP', weight: 0 }];
       const mockResponse = { success: true };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
 
-      const result = await workoutService.login('test-hash-123');
+      const result = await workoutService.saveItems(payload);
 
-      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/bulk`, expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ hash: 'test-hash-123' }),
+        body: JSON.stringify(payload),
         headers: expect.objectContaining({
           'Content-Type': 'application/json'
         })
@@ -169,38 +169,10 @@ describe('workoutService API Interactions', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('should throw "Login failed" with status code when response is not ok', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
-
-      const promise = workoutService.login('bad-hash');
-      await expect(promise).rejects.toThrow('Login failed');
-      await promise.catch(e => expect(e.status).toBe(401));
-    });
-  });
-
-  describe('logout', () => {
-    it('should send a POST request to logout endpoint and return data on success', async () => {
-      const mockResponse = { success: true };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await workoutService.logout();
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/logout`, expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json'
-        })
-      }));
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('should throw "Logout failed" when response is not ok', async () => {
+    it('should throw "Failed to save items in bulk" when response is not ok', async () => {
       mockFetch.mockResolvedValueOnce({ ok: false });
 
-      await expect(workoutService.logout()).rejects.toThrow('Logout failed');
+      await expect(workoutService.saveItems([])).rejects.toThrow('Failed to save items in bulk');
     });
   });
 
