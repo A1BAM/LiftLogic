@@ -58,4 +58,19 @@ describe('validateWorkoutLogs', () => {
     expect(() => validateWorkoutLogs([])).not.toThrow();
     expect(validateWorkoutLogs([])).toEqual([]);
   });
+
+  it('should throw if data size exceeds 10000', () => {
+    const hugeArray = new Array(10001);
+    expect(() => validateWorkoutLogs(hugeArray)).toThrow("Import failed: Too many logs (max 10,000).");
+  });
+
+  it('should throw if data size exceeds 10000', () => {
+    const hugeArray = new Array(10001);
+    expect(() => validateWorkoutLogs(hugeArray)).toThrow("Import failed: Too many logs (max 10,000).");
+  });
+
+  it('should throw if data size exceeds 10000', () => {
+    const hugeArray = new Array(10001);
+    expect(() => validateWorkoutLogs(hugeArray)).toThrow("Import failed: Too many logs (max 10,000).");
+  });
 });
