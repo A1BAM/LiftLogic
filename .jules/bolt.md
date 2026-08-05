@@ -17,3 +17,7 @@ Memory recording:
 ## 2026-07-24 - Optimize Date allocation in loops using DST-Safe Timezone Offset math
 **Learning:** Instantiating multiple `Date` objects inside tight loops or frequent callbacks (like grouping sessions in `ExerciseCard` or calculating `getLastSessionLogs`) is expensive and puts pressure on garbage collection. Using a static global timezone offset (`new Date().getTimezoneOffset()`) for timezone-shifted integer math fails across Daylight Saving Time (DST) boundaries because the offset itself shifts.
 **Action:** Calculate the local timezone offset dynamically for each day/session boundary from its specific `Date` object (`d.getTimezoneOffset()`), avoiding static module-level offsets. Use this log-specific offset to perform integer-based day ID and day-start calculations, avoiding duplicate Date instantiations (such as constructing a midnight date to obtain its timestamp) and caching date strings.
+
+## 2026-07-24 - Remove N+1 API Calls using Bulk Endpoints
+**Learning:** Sequential `await` calls in a loop (the N+1 query pattern) or mapped `Promise.all` over small independent items can introduce massive latency due to network round-trips (e.g. ~20x slower).
+**Action:** Always batch related data modifications that are dispatched close to each other into a bulk payload and use a singular API request. Extract batched state update methods (e.g., `saveExercises`) so parent components can perform singular operations rather than iterating sequential API operations (e.g., in `handleSwitchExercise`).
