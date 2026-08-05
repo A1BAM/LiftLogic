@@ -77,6 +77,36 @@ describe('workoutService API Interactions', () => {
     mockFetch.mockReset();
   });
 
+  describe('login', () => {
+    it('should send a POST request with the hash and return data on success', async () => {
+      const mockHash = 'deadbeef';
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.login(mockHash);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ hash: mockHash }),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Login failed" with status when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+
+      const promise = workoutService.login('badhash');
+      await expect(promise).rejects.toThrow('Login failed');
+      await promise.catch(e => expect(e.status).toBe(401));
+    });
+  });
+
   describe('fetchWorkouts', () => {
     it('should fetch and return workout data on success', async () => {
       const mockData = [{ id: '1', exerciseId: 'DUMBBELL_CURL', weight: 20 }];
@@ -115,6 +145,34 @@ describe('workoutService API Interactions', () => {
       const promise = workoutService.fetchWorkouts();
       await expect(promise).rejects.toThrow('Failed to fetch data');
       await promise.catch(e => expect(e.status).toBe(500));
+    });
+  });
+
+  describe('saveItems', () => {
+    it('should send a POST request to /bulk with the correct body and return data on success', async () => {
+      const payload = [{ exerciseId: 'PUSH_UP', weight: 0 }];
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.saveItems(payload);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/bulk`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Failed to save items in bulk" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.saveItems([])).rejects.toThrow('Failed to save items in bulk');
     });
   });
 
@@ -173,4 +231,33 @@ describe('workoutService API Interactions', () => {
       await expect(workoutService.deleteItem({})).rejects.toThrow('Failed to delete item');
     });
   });
+
+  describe('saveProfile', () => {
+    it('should send a POST request with the correct body and return data on success', async () => {
+      const payload = { heightCm: 180, weightLbs: 160, age: 30 };
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.saveProfile(payload);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/profile`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Failed to save profile" when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+
+      await expect(workoutService.saveProfile({ heightCm: 180, weightLbs: 160 })).rejects.toThrow('Failed to save profile');
+    });
+  });
+
 });
