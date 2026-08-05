@@ -17,6 +17,6 @@ Memory recording:
 ## 2026-07-24 - Optimize Date allocation in loops using DST-Safe Timezone Offset math
 **Learning:** Instantiating multiple `Date` objects inside tight loops or frequent callbacks (like grouping sessions in `ExerciseCard` or calculating `getLastSessionLogs`) is expensive and puts pressure on garbage collection. Using a static global timezone offset (`new Date().getTimezoneOffset()`) for timezone-shifted integer math fails across Daylight Saving Time (DST) boundaries because the offset itself shifts.
 **Action:** Calculate the local timezone offset dynamically for each day/session boundary from its specific `Date` object (`d.getTimezoneOffset()`), avoiding static module-level offsets. Use this log-specific offset to perform integer-based day ID and day-start calculations, avoiding duplicate Date instantiations (such as constructing a midnight date to obtain its timestamp) and caching date strings.
-## 2024-05-24 - Optimize Date Instantiation in Loops
-**Learning:** Instantiating `new Date()` inside tight loops (like iterating over thousands of workout logs) adds unnecessary object allocation overhead and CPU time.
-**Action:** Hoist the `Date` instantiation outside the loop (e.g., `const d = new Date()`) and mutate its internal time value inside the loop using `d.setTime(timestamp)`. This avoids reallocation and yields measurable speedups (e.g., ~1.48x improvement).
+## 2024-05-20 - Optimize bulk insert using UNNEST
+**Learning:** Executing multiple inserts within a `Promise.all(pool.query(...))` inside a chunking loop can cause N+1 database load and memory bloat from numerous promises.
+**Action:** When handling bulk inserts in PostgreSQL, use `UNNEST` with arrays of columns to pass all data in a single parameter array and perform a single query operation. This reduces both the number of network roundtrips to the database and the number of active promises being tracked by the Node.js runtime.
