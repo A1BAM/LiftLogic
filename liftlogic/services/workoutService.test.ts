@@ -77,6 +77,36 @@ describe('workoutService API Interactions', () => {
     mockFetch.mockReset();
   });
 
+  describe('login', () => {
+    it('should send a POST request with the hash and return data on success', async () => {
+      const mockHash = 'deadbeef';
+      const mockResponse = { success: true };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse
+      });
+
+      const result = await workoutService.login(mockHash);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ hash: mockHash }),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json'
+        })
+      }));
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should throw "Login failed" with status when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+
+      const promise = workoutService.login('badhash');
+      await expect(promise).rejects.toThrow('Login failed');
+      await promise.catch(e => expect(e.status).toBe(401));
+    });
+  });
+
   describe('fetchWorkouts', () => {
     it('should fetch and return workout data on success', async () => {
       const mockData = [{ id: '1', exerciseId: 'DUMBBELL_CURL', weight: 20 }];
