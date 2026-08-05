@@ -9,7 +9,7 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp } from 'lucide-react';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp, Eye, EyeOff } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
 import { logger } from './utils/logger';
@@ -18,6 +18,7 @@ const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
@@ -255,16 +256,25 @@ const App: React.FC = () => {
           <h1 className="text-2xl font-bold text-white text-center mb-6">LiftLogic Locked</h1>
           
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
+            <div className="relative flex items-center w-full">
               <input 
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
+                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 pr-12 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
                 placeholder="Enter password to unlock"
                 autoFocus
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute right-3 p-1 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
             
             <button 
