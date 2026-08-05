@@ -11,6 +11,17 @@
   "observability": {
     "enabled": true
   },
+  "ratelimits": [
+    {
+      "name": "LOGIN_RATE_LIMITER",
+      // Must be a positive integer that is unique among rate-limit bindings in this Cloudflare account.
+      "namespace_id": "26080501",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ],
   "assets": {
     "directory": "liftlogic/dist",
     "binding": "ASSETS",
