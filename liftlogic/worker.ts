@@ -13,32 +13,40 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
 }
 
 
-function validateWorkoutItem(item: unknown, headers: Record<string, string>, inArray = false): Response | null {
+function validateWorkoutItem(item: unknown, inArray = false): string | null {
   const suffix = inArray ? " in array" : "";
   if (typeof item !== 'object' || item === null || Array.isArray(item)) {
-    return new Response(JSON.stringify({ error: `Invalid payload${suffix}` }), { status: 400, headers });
+    return `Invalid payload${suffix}`;
   }
   const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>);
   if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-    return new Response(JSON.stringify({ error: `Invalid id${suffix}` }), { status: 400, headers });
+    return `Invalid id${suffix}`;
   }
   if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-    return new Response(JSON.stringify({ error: `Invalid exerciseId${suffix}` }), { status: 400, headers });
+    return `Invalid exerciseId${suffix}`;
   }
   if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-    return new Response(JSON.stringify({ error: `Invalid timestamp${suffix}` }), { status: 400, headers });
+    return `Invalid timestamp${suffix}`;
   }
   if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-    return new Response(JSON.stringify({ error: `Invalid weight${suffix}` }), { status: 400, headers });
+    return `Invalid weight${suffix}`;
   }
   if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-    return new Response(JSON.stringify({ error: `Invalid reps${suffix}` }), { status: 400, headers });
+    return `Invalid reps${suffix}`;
   }
   if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-    return new Response(JSON.stringify({ error: `Invalid sets${suffix}` }), { status: 400, headers });
+    return `Invalid sets${suffix}`;
   }
   if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-    return new Response(JSON.stringify({ error: `Invalid notes${suffix}` }), { status: 400, headers });
+    return `Invalid notes${suffix}`;
+  }
+  return null;
+}
+
+function validateWorkoutLogs(items: unknown[], inArray = false): string | null {
+  for (const item of items) {
+    const errorString = validateWorkoutItem(item, inArray);
+    if (errorString) return errorString;
   }
   return null;
 }
@@ -366,10 +374,8 @@ export default {
         }
 
         // Validate items
-        for (const item of body) {
-          const errorResponse = validateWorkoutItem(item, headers, true);
-          if (errorResponse) return errorResponse;
-        }
+        const bulkError = validateWorkoutLogs(body, true);
+        if (bulkError) return new Response(JSON.stringify({ error: bulkError }), { status: 400, headers });
 
         await executeBulkInsert(pool, body);
 
@@ -390,10 +396,8 @@ export default {
         }
 
         // Validate all items before inserting
-        for (const item of items) {
-          const errorResponse = validateWorkoutItem(item, headers);
-          if (errorResponse) return errorResponse;
-        }
+        const upsertError = validateWorkoutLogs(items, false);
+        if (upsertError) return new Response(JSON.stringify({ error: upsertError }), { status: 400, headers });
 
         await executeBulkInsert(pool, items);
 
