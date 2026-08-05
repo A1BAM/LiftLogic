@@ -171,8 +171,6 @@ export default {
         delete headers['Access-Control-Allow-Credentials'];
       } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
         headers['Access-Control-Allow-Origin'] = requestOrigin;
-      } else {
-        headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
       }
     }
 
