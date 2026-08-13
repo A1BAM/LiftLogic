@@ -1,73 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { workoutService } from './workoutService';
-import { logger } from '../utils/logger';
-import { ExerciseDef } from '../types';
 import { API_URL } from '../constants';
-
-describe('workoutService localStorage', () => {
-  const STORAGE_KEY = 'liftlogic_custom_exercises';
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
-  });
-
-  describe('getLocalExercises', () => {
-    it('should return an empty array when localStorage is empty', () => {
-      const result = workoutService.getLocalExercises();
-      expect(result).toEqual([]);
-    });
-
-    it('should return parsed exercises when valid data exists in localStorage', () => {
-      const mockExercises: ExerciseDef[] = [
-        {
-          id: '1',
-          name: 'Push Up',
-          muscleGroup: 'Chest',
-          defaultWeight: 0,
-          increment: 0,
-          targetReps: 10,
-          dayType: 'PUSH'
-        }
-      ];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mockExercises));
-
-      const result = workoutService.getLocalExercises();
-      expect(result).toEqual(mockExercises);
-    });
-
-    it('should return an empty array and log error when JSON is invalid', () => {
-      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
-      localStorage.setItem(STORAGE_KEY, 'invalid json');
-
-      const result = workoutService.getLocalExercises();
-
-      expect(result).toEqual([]);
-      expect(loggerSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('setLocalExercises', () => {
-    it('should store exercises as JSON in localStorage', () => {
-      const mockExercises: ExerciseDef[] = [
-        {
-          id: '2',
-          name: 'Pull Up',
-          muscleGroup: 'Back',
-          defaultWeight: 0,
-          increment: 0,
-          targetReps: 8,
-          dayType: 'PULL'
-        }
-      ];
-
-      workoutService.setLocalExercises(mockExercises);
-
-      const stored = localStorage.getItem(STORAGE_KEY);
-      expect(stored).toBe(JSON.stringify(mockExercises));
-    });
-  });
-});
 
 describe('workoutService API Interactions', () => {
   const mockFetch = vi.fn();
@@ -75,36 +8,6 @@ describe('workoutService API Interactions', () => {
 
   beforeEach(() => {
     mockFetch.mockReset();
-  });
-
-  describe('login', () => {
-    it('should send a POST request with the hash and return data on success', async () => {
-      const mockHash = 'deadbeef';
-      const mockResponse = { success: true };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await workoutService.login(mockHash);
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ hash: mockHash }),
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json'
-        })
-      }));
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('should throw "Login failed" with status when response is not ok', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
-
-      const promise = workoutService.login('badhash');
-      await expect(promise).rejects.toThrow('Login failed');
-      await promise.catch(e => expect(e.status).toBe(401));
-    });
   });
 
   describe('fetchWorkouts', () => {
@@ -231,33 +134,4 @@ describe('workoutService API Interactions', () => {
       await expect(workoutService.deleteItem({})).rejects.toThrow('Failed to delete item');
     });
   });
-
-  describe('saveProfile', () => {
-    it('should send a POST request with the correct body and return data on success', async () => {
-      const payload = { heightCm: 180, weightLbs: 160, age: 30 };
-      const mockResponse = { success: true };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await workoutService.saveProfile(payload);
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/profile`, expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json'
-        })
-      }));
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('should throw "Failed to save profile" when response is not ok', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false });
-
-      await expect(workoutService.saveProfile({ heightCm: 180, weightLbs: 160 })).rejects.toThrow('Failed to save profile');
-    });
-  });
-
 });

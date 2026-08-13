@@ -4,6 +4,7 @@ import { WorkoutLog } from '../types';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useWorkoutData } from './useWorkoutData';
 import { workoutService } from '../services/workoutService';
+import { exerciseService } from '../services/exerciseService';
 import { logger } from '../utils/logger';
 import { DEFINITION_ID } from '../constants';
 
@@ -116,8 +117,8 @@ describe('useWorkoutData fetching logic', () => {
     ]);
 
     // Mock getLocalExercises to prevent unrelated syncing behavior
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+    vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
 
     const { result } = renderHook(() => useWorkoutData(true));
 
@@ -131,8 +132,8 @@ describe('useWorkoutData fetching logic', () => {
 
   it('throws wrapped error when importLogs API fails', async () => {
     vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+    vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
 
     vi.spyOn(workoutService, 'saveItems').mockRejectedValue(new Error('Network error'));
 

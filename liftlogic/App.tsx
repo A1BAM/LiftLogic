@@ -12,6 +12,7 @@ import { RestTimer } from './components/RestTimer';
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp, Eye, EyeOff, Trophy } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
+import { authService } from './services/authService';
 import { logger } from './utils/logger';
 
 const App: React.FC = () => {
@@ -67,7 +68,7 @@ const App: React.FC = () => {
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
       
       try {
-        await workoutService.login(hashHex);
+        await authService.login(hashHex);
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
@@ -89,7 +90,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await workoutService.logout();
+      await authService.logout();
     } catch (err) {
       logger.error("Logout error", err);
     }
