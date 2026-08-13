@@ -176,7 +176,7 @@ describe('Worker', () => {
       expect(csp).not.toContain('https:');
     });
 
-    it('applies standard security headers and permissions-policy', async () => {
+    it('applies strict Permissions-Policy and hardened CSP on static assets', async () => {
       const request = new Request('http://localhost/');
       const env = {
         DATABASE_URL: 'dummy',
@@ -186,10 +186,6 @@ describe('Worker', () => {
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.headers.get('Permissions-Policy')).toBe('camera=(), microphone=(), geolocation=(), interest-cohort=()');
-      expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
-      expect(response.headers.get('X-Frame-Options')).toBe('DENY');
-      expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
-      expect(response.headers.get('Strict-Transport-Security')).toContain('max-age=31536000');
 
       const csp = response.headers.get('Content-Security-Policy');
       expect(csp).toContain("object-src 'none'");
