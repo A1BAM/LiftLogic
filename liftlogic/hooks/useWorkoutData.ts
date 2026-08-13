@@ -284,7 +284,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     const lastLog = exerciseLogs[lastLogIndex];
     const d = new Date(lastLog.timestamp);
     const localOffsetMs = d.getTimezoneOffset() * 60000;
-    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) / 86400000);
+    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) * INV_MS_PER_DAY);
     const startOfLastDay = lastDayId * 86400000 + localOffsetMs;
 
     const results: WorkoutLog[] = [];

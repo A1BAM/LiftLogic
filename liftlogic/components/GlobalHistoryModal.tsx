@@ -17,6 +17,7 @@ interface GlobalHistoryModalProps {
 const globalDateCache = new Map<number, string>();
 
 const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
+const INV_MS_PER_DAY = 1 / 86400000;
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -28,7 +29,7 @@ export function calculateGlobalHistoryStats(
   allExercisesMap: Record<string, ExerciseDef>
 ) {
   const groups: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]> = {};
-  const todayDayId = Math.floor((Date.now() - tzOffsetMs) / 86400000);
+  const todayDayId = Math.floor((Date.now() - tzOffsetMs) * INV_MS_PER_DAY);
   const uniqueDays = new Set<number>();
   const todayExercises = new Set<string>();
 
@@ -44,7 +45,7 @@ export function calculateGlobalHistoryStats(
     totalVolume += vol;
 
     // Shift timestamp by local timezone offset, then divide by ms in a day to get a unique local day ID
-    const dayId = Math.floor((log.timestamp - tzOffsetMs) / 86400000);
+    const dayId = Math.floor((log.timestamp - tzOffsetMs) * INV_MS_PER_DAY);
 
     if (dayId !== currentDayId) {
       currentDayId = dayId;
