@@ -75,13 +75,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
   const referenceSession = todaySession ? sessions[1] : sessions[0];
 
+  const targetSets = 3;
+
+  const totalSetsToday = useMemo(() => {
+    if (!todaySession) return 0;
+    return todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+  }, [todaySession]);
+
   const isCompletedToday = useMemo(() => {
-    if (!todaySession) return false;
-    // Set Logic: All days now default to 3 sets
-    const targetSets = 3;
-    const totalSets = todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
-    return totalSets >= targetSets;
-  }, [todaySession, exercise]);
+    return totalSetsToday >= targetSets;
+  }, [totalSetsToday]);
 
   const referenceMaxWeight = useMemo(() => {
     return referenceSession ? Math.max(...referenceSession.logs.map(l => l.weight)) : 0;
@@ -187,9 +190,29 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
             {exercise.name}
           </h3>
-          <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
-            {exercise.muscleGroup}
-          </span>
+          <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+            <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
+              {exercise.muscleGroup}
+            </span>
+            {todaySession && (
+              <div
+                className="flex items-center gap-1"
+                role="img"
+                aria-label={`Progress: ${totalSetsToday} of ${targetSets} sets completed`}
+              >
+                {[...Array(targetSets)].map((_, i) => (
+                  <span
+                    key={i}
+                    className={`w-2.5 h-2.5 rounded-full border transition-all duration-300 ${
+                      i < totalSetsToday
+                        ? "bg-green-500 border-green-400 shadow-sm shadow-green-500/50"
+                        : "bg-slate-700 border-slate-600"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
