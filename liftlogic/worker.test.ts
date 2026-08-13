@@ -40,7 +40,7 @@ describe('Worker', () => {
     it('blocks GET requests on login/logout paths without auth', async () => {
       const loginRequest = createRequest('GET', 'http://localhost/gym-api/login', undefined, null as any);
       const logoutRequest = createRequest('GET', 'http://localhost/gym-api/logout', undefined, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const loginRes = await worker.fetch(loginRequest, env, {} as any);
       expect(loginRes.status).toBe(401);
@@ -54,7 +54,7 @@ describe('Worker', () => {
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
-        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
         ASSETS: { fetch: vi.fn() } as any
       };
 
@@ -69,7 +69,7 @@ describe('Worker', () => {
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
-        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
         ASSETS: { fetch: vi.fn() } as any
       };
 
@@ -90,7 +90,7 @@ describe('Worker', () => {
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
-        LOGIN_RATE_LIMITER: { limit },
+        API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, LOGIN_RATE_LIMITER: { limit },
         ASSETS: { fetch: vi.fn() } as any
       };
 
@@ -120,7 +120,7 @@ describe('Worker', () => {
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
-        LOGIN_RATE_LIMITER: { limit: vi.fn().mockRejectedValue(new Error('rate-limit outage')) },
+        API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, LOGIN_RATE_LIMITER: { limit: vi.fn().mockRejectedValue(new Error('rate-limit outage')) },
         ASSETS: { fetch: vi.fn() } as any
       };
 
@@ -134,7 +134,7 @@ describe('Worker', () => {
 
     it('handles logout', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/logout', {}, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
@@ -152,7 +152,7 @@ describe('Worker', () => {
           'Cookie': 'liftlogic_auth_token=testsecret'
         })
       });
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200); // Because it authenticates and hits the 'dummy' db fallback
@@ -237,7 +237,7 @@ describe('Worker', () => {
 
       // Create request with the hash in Authorization header
       const request = createRequest('GET', 'http://localhost/gym-api', undefined, hashHex);
-      const env = { DATABASE_URL: 'dummy', PASSWORD: password, ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', PASSWORD: password, API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
 
       expect(response.status).toBe(200);
@@ -260,7 +260,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Connection failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -276,7 +276,7 @@ describe('Worker', () => {
       mockQuery.mockResolvedValueOnce({ rows: mockRows });
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -287,7 +287,7 @@ describe('Worker', () => {
   describe('POST Bulk Requests (Validation)', () => {
     it('returns 400 for non-array payload', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', { id: '1' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -296,7 +296,7 @@ describe('Worker', () => {
 
     it('returns 400 for invalid item in array', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', [{ id: '' }]);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -310,7 +310,7 @@ describe('Worker', () => {
         { id: '2', exerciseId: 'ex2', timestamp: 124, weight: 150, reps: 5 }
       ];
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       const data = await response.json() as any;
@@ -322,7 +322,7 @@ describe('Worker', () => {
     it('returns 400 if bulk payload exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -337,7 +337,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -348,7 +348,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: -10, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -359,7 +359,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: NaN, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -370,7 +370,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 2001, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weight' });
@@ -380,7 +380,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 1001
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid reps' });
@@ -390,7 +390,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 101
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid sets' });
@@ -399,7 +399,7 @@ describe('Worker', () => {
     it('returns 400 if items array exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -412,7 +412,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 301, weightLbs: 150
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid heightCm' });
@@ -422,7 +422,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 1001
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weightLbs' });
@@ -432,7 +432,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: -1
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -442,7 +442,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: 151
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -452,7 +452,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: '30'
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid age' });
@@ -462,7 +462,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/profile', {
         heightCm: 180, weightLbs: 150, age: 30
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ success: true });
@@ -472,7 +472,7 @@ describe('Worker', () => {
   describe('DELETE Requests', () => {
     it('returns 400 if body is empty', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', {});
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -482,7 +482,7 @@ describe('Worker', () => {
 
     it('returns 400 if exerciseId is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: '' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -492,7 +492,7 @@ describe('Worker', () => {
 
     it('returns 400 if id is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { id: '' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -505,7 +505,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Super secret DB credentials failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(500);
@@ -514,7 +514,7 @@ describe('Worker', () => {
 
     it('returns 400 for invalid JSON payload', async () => {
       const request = new Request('http://localhost/gym-api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer testsecret' }, body: '{ invalid json: ' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid JSON' });
@@ -525,7 +525,7 @@ describe('Worker', () => {
     it('rejects overly long Authorization header to prevent CPU exhaustion', async () => {
       const longSecret = 'a'.repeat(1000);
       const request = createRequest('GET', 'http://localhost/gym-api', undefined, longSecret);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(401);
@@ -535,7 +535,7 @@ describe('Worker', () => {
     it('rejects overly long login hash payload to prevent CPU exhaustion', async () => {
       const longHash = 'a'.repeat(1000);
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: longHash }, null as any);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -543,7 +543,7 @@ describe('Worker', () => {
     });
 
     it('rejects non-object or array payloads for endpoints expecting an object', async () => {
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', API_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }, ASSETS: { fetch: vi.fn() } as any };
 
       // 1. Login with array instead of object
       const loginRequest = createRequest('POST', 'http://localhost/gym-api/login', [1, 2, 3], null as any);
@@ -562,6 +562,24 @@ describe('Worker', () => {
       const deleteResponse = await worker.fetch(deleteRequest, env, {} as any);
       expect(deleteResponse.status).toBe(400);
       expect(await deleteResponse.json()).toEqual({ error: 'Invalid payload' });
+    });
+
+    it('rate limits authenticated API endpoints', async () => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const request = createRequest('POST', 'http://localhost/gym-api/bulk', [], 'testsecret');
+      request.headers.set('CF-Connecting-IP', '203.0.113.11');
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        API_RATE_LIMITER: { limit },
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
+      const response = await worker.fetch(request, env, {} as any);
+      expect(limit).toHaveBeenCalledOnce();
+      const [{ key }] = limit.mock.calls[0];
+      expect(key).toMatch(/^api:[a-f0-9]{64}$/);
+      expect(response.status).toBe(429);
     });
   });
 });

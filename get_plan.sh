@@ -1,0 +1,5 @@
+echo "1. Update \`worker.ts\` interface Env to include \`API_RATE_LIMITER?: RateLimit;\`."
+echo "2. Add \`getApiRateLimitKey\` helper function similar to \`getLoginRateLimitKey\` to rate limit authenticated requests."
+echo "3. Add rate limiting logic for authenticated API requests inside \`worker.ts\`."
+echo "4. Update \`worker.test.ts\` to mock \`API_RATE_LIMITER\` and test rate limit functionality."
+echo "5. Submit PR with Sentinel security description."

@@ -140,12 +140,22 @@ async function getLoginRateLimitKey(request: Request): Promise<string> {
   return `login:${digestHex}`;
 }
 
+async function getApiRateLimitKey(request: Request): Promise<string> {
+  const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
+  const digestHex = Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `api:${digestHex}`;
+}
+
 export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
   PASSWORD?: string;
   LOGIN_RATE_LIMITER?: RateLimit;
+  API_RATE_LIMITER?: RateLimit;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -227,6 +237,28 @@ export default {
           status: 401,
           headers: headers
         });
+      }
+
+      if (!env.API_RATE_LIMITER) {
+        logger.error("API_RATE_LIMITER binding not set. Refusing API access without rate limiting.");
+        return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500, headers });
+      }
+
+      try {
+        const { success } = await env.API_RATE_LIMITER.limit({
+          key: await getApiRateLimitKey(request)
+        });
+        if (!success) {
+          const rateLimitHeaders = new Headers(headers);
+          rateLimitHeaders.set('Retry-After', '60');
+          return new Response(JSON.stringify({ error: "Too many requests" }), {
+            status: 429,
+            headers: rateLimitHeaders
+          });
+        }
+      } catch (error) {
+        logger.error("API_RATE_LIMITER failed. Refusing API access while rate limiting is unavailable.", error);
+        return new Response(JSON.stringify({ error: "API temporarily unavailable" }), { status: 503, headers });
       }
     }
 

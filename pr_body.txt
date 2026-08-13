@@ -1,4 +1,0 @@
-🎯 **What:** Replaced `any` with `unknown` in catch blocks across `App.tsx`, `GlobalHistoryModal.tsx`, `useWorkoutData.ts`, and `worker.ts`. Added proper type-checking for accessing error properties (e.g. `err instanceof Error ? err.message : String(err)`).
-💡 **Why:** `unknown` is the safer and recommended type for caught errors in TypeScript (since TS 4.4). Using `any` allows potentially unsafe property accesses which can crash at runtime if the thrown object is unexpected.
-✅ **Verification:** Ran `tsc --noEmit` and the full `vitest` suite (`pnpm test --run`). All type checks and tests passed successfully.
-✨ **Result:** Improved type safety, eliminating `any` from error handlers and making the code more robust against unexpected throw types.
