@@ -24,3 +24,8 @@
 **Vulnerability:** Unconstrained input lengths for variables compared using constant-time string comparison (`timingSafeEqual`) allow an attacker to send extremely long payloads (such as several megabytes), forcing the comparison loop to run excessively and causing CPU-based Denial of Service (DoS) in Cloudflare Workers.
 **Learning:** While `timingSafeEqual` prevents timing attacks by running a full loop regardless of character matches, its complexity scales linearly with the input length `O(N)`. If input lengths are not strictly capped before comparison, attackers can trigger resource exhaustion/DoS.
 **Prevention:** Always implement strict, reasonable input length limits (e.g., maximum 100 characters for SHA-256 hex hashes and 200 characters for Authorization headers) and validate the payload type BEFORE executing any constant-time comparison.
+
+## 2026-07-22 - Strict Permissions-Policy and CSP Hardening for Static Assets
+**Vulnerability:** Lack of explicit browser permission constraints allowed modern features (such as camera, microphone, and geolocation) to run in the application context by default, and a standard CSP lacked explicit restrictions on object-src and base-uri.
+**Learning:** Hardening headers is a vital part of defense-in-depth, preventing future injection-based vector bypasses and disabling unnecessary browser APIs to reduce the overall attack surface.
+**Prevention:** Always include a strict `Permissions-Policy` header on all responses and ensure static asset CSPs explicitly disable `object-src` and restrict `base-uri` to `self`.
