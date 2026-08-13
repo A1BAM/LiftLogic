@@ -159,6 +159,7 @@ export default {
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
     };
 
     // Handle static assets
@@ -167,7 +168,7 @@ export default {
       const newHeaders = new Headers(response.headers);
       Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
       // Asset specific CSP: application JavaScript and styles are bundled locally.
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none';");
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self';");
 
       return new Response(response.body, {
         status: response.status,
