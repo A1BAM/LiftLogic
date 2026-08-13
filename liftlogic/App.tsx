@@ -242,6 +242,14 @@ const App: React.FC = () => {
     }
   ), [allExercises, workoutDay]);
 
+  // Pre-compute and attach resolved logs directly to displayed exercises to avoid O(1) dictionary lookups inside JSX render loop
+  const displayedExercisesWithLogs = useMemo(() => {
+    return displayedExercises.map(exercise => ({
+      exercise,
+      logs: getLogsForExercise(exercise.id)
+    }));
+  }, [displayedExercises, getLogsForExercise]);
+
   const archivedExercises = useMemo(() => allExercises.filter(ex => ex.isArchived), [allExercises]);
 
   const progressStats = useMemo(() => {
@@ -529,7 +537,7 @@ const App: React.FC = () => {
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
-                exerciseLogs={getLogsForExercise(exercise.id)}
+                exerciseLogs={logs}
                 onLogClick={handleLogClick}
                 onHistoryClick={handleHistoryClick}
                 onArchive={handleArchiveClick}

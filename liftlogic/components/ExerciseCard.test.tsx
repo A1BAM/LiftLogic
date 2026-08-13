@@ -109,6 +109,16 @@ describe('ExerciseCard', () => {
     expect(screen.getByText('Done')).toBeInTheDocument(); // Matches uppercase tracking-wider span
   });
 
+  it('renders progress indicator with the correct accessible label', () => {
+    const today = new Date('2023-10-15T12:00:00Z').getTime();
+    const logs = [createLog(today, 135, 10, 2)]; // 2 sets today
+
+    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
+
+    const progressIndicator = screen.getByLabelText('Progress: 2 of 3 sets completed');
+    expect(progressIndicator).toBeInTheDocument();
+  });
+
   it('handles interaction callbacks correctly', () => {
     render(<ExerciseCard {...defaultProps} />);
 
