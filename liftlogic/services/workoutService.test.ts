@@ -13,6 +13,15 @@ describe('workoutService localStorage', () => {
   });
 
   describe('getLocalExercises', () => {
+    it('should return empty array and log error when localStorage contains invalid JSON', () => {
+      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+      localStorage.setItem(STORAGE_KEY, '{ invalid json }');
+
+      const result = workoutService.getLocalExercises();
+
+      expect(result).toEqual([]);
+      expect(loggerSpy).toHaveBeenCalledWith('Error parsing local exercises', expect.any(Error));
+    });
     it('should return an empty array when localStorage is empty', () => {
       const result = workoutService.getLocalExercises();
       expect(result).toEqual([]);
