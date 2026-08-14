@@ -3,6 +3,7 @@ import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
 
 const exerciseDateCache = new Map<number, string>();
+const INV_MS_PER_DAY = 1 / 86400000;
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
@@ -44,16 +45,18 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     let currentDayStart = -1;
     let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
     const d = new Date(); // Allocate once
+    const localOffsetMs = d.getTimezoneOffset() * 60000;
 
     for (const log of exerciseLogs) {
       // If the timestamp crosses the boundary to a previous day, or if it's the first log
       if (log.timestamp < currentDayStart || !currentSession) {
         d.setTime(log.timestamp);
         const localOffsetMs = d.getTimezoneOffset() * 60000;
-        const dayId = Math.floor((log.timestamp - localOffsetMs) / 86400000);
+        const dayId = Math.floor((log.timestamp - localOffsetMs) * INV_MS_PER_DAY);
 
         let dateStr = exerciseDateCache.get(dayId);
         if (!dateStr) {
+          d.setTime(log.timestamp);
           dateStr = d.toDateString();
           exerciseDateCache.set(dayId, dateStr);
         }
@@ -79,7 +82,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
   const totalSetsToday = useMemo(() => {
     if (!todaySession) return 0;
-    return todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    let total = 0;
+    for (let i = 0; i < todaySession.logs.length; i++) {
+      total += todaySession.logs[i].sets || 1;
+    }
+    return total;
   }, [todaySession]);
 
   const isCompletedToday = useMemo(() => {
@@ -101,7 +108,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     }
 
     const logs = referenceSession.logs;
-    const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    let totalSets = 0;
+    for (let i = 0; i < logs.length; i++) {
+      totalSets += logs[i].sets || 1;
+    }
     const usedWeight = referenceMaxWeight;
     const minReps = Math.min(...logs.map(l => l.reps));
     
