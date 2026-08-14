@@ -234,6 +234,68 @@ function ChronologicalLogList({
   );
 }
 
+
+function GlobalHistoryHeader({
+  isImporting,
+  setIsImporting,
+  handleExport,
+  copied,
+  onClose,
+  setError
+}: {
+  isImporting: boolean;
+  setIsImporting: (val: boolean) => void;
+  handleExport: () => void;
+  copied: boolean;
+  onClose: () => void;
+  setError: (val: string | null) => void;
+}) {
+  return (
+    <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
+      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <Calendar className="text-blue-500" size={20} />
+        {isImporting ? 'Import Data' : 'Workout Journal'}
+      </h2>
+      <div className="flex items-center gap-2">
+        {!isImporting ? (
+          <>
+            <button
+              onClick={() => setIsImporting(true)}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+              aria-label="Import Data"
+              title="Import Data"
+            >
+              <Download size={20} />
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied' : 'Export'}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => { setIsImporting(false); setError(null); }}
+            className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            aria-label="Cancel import"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+          aria-label="Close"
+        >
+          <X size={24} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function GlobalHistoryModal({
   onClose, 
   logs,
@@ -310,49 +372,14 @@ export function GlobalHistoryModal({
         aria-modal="true"
       >
         
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Calendar className="text-blue-500" size={20} />
-            {isImporting ? 'Import Data' : 'Workout Journal'}
-          </h2>
-          <div className="flex items-center gap-2">
-            {!isImporting ? (
-              <>
-                <button 
-                  onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                  aria-label="Import Data"
-                  title="Import Data"
-                >
-                  <Download size={20} />
-                </button>
-                <button 
-                  onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied ? 'Copied' : 'Export'}
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => { setIsImporting(false); setError(null); }}
-                className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                aria-label="Cancel import"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-              aria-label="Close"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
+        <GlobalHistoryHeader
+          isImporting={isImporting}
+          setIsImporting={setIsImporting}
+          handleExport={handleExport}
+          copied={copied}
+          onClose={onClose}
+          setError={setError}
+        />
 
         {isImporting ? (
           <ImportLogsView
