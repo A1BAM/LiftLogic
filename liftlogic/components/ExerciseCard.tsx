@@ -3,6 +3,7 @@ import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
 
 const exerciseDateCache = new Map<number, string>();
+const INV_MS_PER_DAY = 1 / 86400000;
 
 interface ExerciseCardProps {
   exercise: ExerciseDef;
@@ -49,7 +50,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     for (const log of exerciseLogs) {
       // If the timestamp crosses the boundary to a previous day, or if it's the first log
       if (log.timestamp < currentDayStart || !currentSession) {
-        const dayId = Math.floor((log.timestamp - localOffsetMs) / 86400000);
+        d.setTime(log.timestamp);
+        const localOffsetMs = d.getTimezoneOffset() * 60000;
+        const dayId = Math.floor((log.timestamp - localOffsetMs) * INV_MS_PER_DAY);
 
         let dateStr = exerciseDateCache.get(dayId);
         if (!dateStr) {
