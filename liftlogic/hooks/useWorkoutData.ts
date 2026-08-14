@@ -13,21 +13,28 @@ const parseFetchedData = (allData: WorkoutLog[]) => {
   // Optimization: Single-pass processing of fetched data
   for (const item of allData) {
     if (item.exerciseId === DEFINITION_ID) {
-      try {
-        // Performance Optimization: Check if we already parsed this definition.
-        // Definition IDs start with 'def_' in the database ID.
-        const extractedId = item.id.startsWith('def_') ? item.id.slice(4) : null;
-        if (extractedId && cloudIds.has(extractedId)) {
-          continue; // Skip expensive JSON.parse if we already have this definition
-        }
+      const extractedId = item.id.startsWith('def_') ? item.id.slice(4) : null;
+      if (extractedId && cloudIds.has(extractedId)) {
+        continue; // Skip expensive JSON.parse if we already have this definition
+      }
 
-        const ex = JSON.parse(item.notes || "");
+      const notes = item.notes;
+      // Fast path: skip JSON.parse entirely if notes is empty or doesn't look like a JSON object
+      if (!notes || notes.length < 2 || notes[0] !== '{') {
+        if (extractedId) cloudIds.add(extractedId); // Avoid retrying this bad ID later
+        continue;
+      }
+
+      try {
+        const ex = JSON.parse(notes);
         if (ex && ex.id) {
           cloudExercises.push(ex);
           cloudIds.add(ex.id);
         }
+        if (extractedId) cloudIds.add(extractedId); // Always track extractedId so we don't try it again
       } catch (e) {
         // Ignore malformed definitions
+        if (extractedId) cloudIds.add(extractedId); // Mark as processed so we don't parse it again if duplicate
       }
     } else {
       fetchedLogs.push(item);
