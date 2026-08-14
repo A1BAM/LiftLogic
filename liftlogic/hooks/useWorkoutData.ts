@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
+import { exerciseService } from '../services/exerciseService';
+import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 import { useWorkoutExercises } from './useWorkoutExercises';
 import { useWorkoutLogs } from './useWorkoutLogs';
@@ -90,7 +92,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
       const { fetchedLogs, cloudExercises, cloudIds } = parseFetchedData(allData);
 
-      const localExercises = workoutService.getLocalExercises();
+      const localExercises = exerciseService.getLocalExercises();
       const missingFromCloud = getMissingLocalExercises(localExercises, cloudIds);
 
       if (missingFromCloud.length > 0) {
@@ -104,7 +106,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setSyncedExercises(uniqueExercises);
       // Maintain descending chronological order (newest first)
       setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
-      workoutService.setLocalExercises(uniqueExercises);
+      exerciseService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: unknown) {
       logger.error("Fetch and sync error:", err);
@@ -188,7 +190,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       const updatedMap = new Map(prevSynced.map(ex => [ex.id, ex]));
       exercisesToSave.forEach(ex => updatedMap.set(ex.id, ex));
       const updatedSynced = Array.from(updatedMap.values());
-      workoutService.setLocalExercises(updatedSynced);
+      exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
 
@@ -207,7 +209,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
     setSyncedExercises(prevSynced => {
       const updatedSynced = prevSynced.filter(e => e.id !== exerciseId);
-      workoutService.setLocalExercises(updatedSynced);
+      exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
