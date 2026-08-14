@@ -1,4 +1,5 @@
-🎯 **What:** Replaced `any` with `unknown` in catch blocks across `App.tsx`, `GlobalHistoryModal.tsx`, `useWorkoutData.ts`, and `worker.ts`. Added proper type-checking for accessing error properties (e.g. `err instanceof Error ? err.message : String(err)`).
-💡 **Why:** `unknown` is the safer and recommended type for caught errors in TypeScript (since TS 4.4). Using `any` allows potentially unsafe property accesses which can crash at runtime if the thrown object is unexpected.
-✅ **Verification:** Ran `tsc --noEmit` and the full `vitest` suite (`pnpm test --run`). All type checks and tests passed successfully.
-✨ **Result:** Improved type safety, eliminating `any` from error handlers and making the code more robust against unexpected throw types.
+🎯 **What:** The `timingSafeEqual` function used in `utils/security.ts` to compare authentication hashes and tokens relied on a custom XOR loop over characters.
+
+⚠️ **Risk:** Custom JavaScript loops are susceptible to timing attacks due to V8 optimizations (e.g., branch prediction or execution time variations for operations) and early returns based on string lengths. This could potentially allow an attacker to guess authentication tokens or hashes character by character by measuring the exact response time of the login or API endpoints.
+
+🛡️ **Solution:** Rewrote `timingSafeEqual` to be asynchronous, utilizing `crypto.subtle.digest('SHA-256', ...)` to hash both strings before comparing them. Hashing ensures both inputs are reduced to fixed-length representations and entirely mitigates length and execution time leaks. All usages of `timingSafeEqual` in the worker and tests were updated to properly `await` the new secure implementation.

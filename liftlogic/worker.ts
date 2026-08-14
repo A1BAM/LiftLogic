@@ -118,7 +118,7 @@ let cachedPasswordForHash: string | null = null;
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash !== null && timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
+    if (cachedTargetHash !== null && cachedPasswordForHash !== null && await timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
       return cachedTargetHash;
     }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
@@ -222,7 +222,7 @@ export default {
         });
       }
 
-      if (!authHeader || authHeader.length > 200 || !timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
+      if (!authHeader || authHeader.length > 200 || !await timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -295,7 +295,7 @@ export default {
         }
 
         const targetHash = await getTargetHash(env);
-        if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
+        if (!hash || !targetHash || !await timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
