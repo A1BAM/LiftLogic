@@ -44,16 +44,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     let currentDayStart = -1;
     let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
     const d = new Date(); // Allocate once
+    const localOffsetMs = d.getTimezoneOffset() * 60000;
 
     for (const log of exerciseLogs) {
       // If the timestamp crosses the boundary to a previous day, or if it's the first log
       if (log.timestamp < currentDayStart || !currentSession) {
-        d.setTime(log.timestamp);
-        const localOffsetMs = d.getTimezoneOffset() * 60000;
         const dayId = Math.floor((log.timestamp - localOffsetMs) / 86400000);
 
         let dateStr = exerciseDateCache.get(dayId);
         if (!dateStr) {
+          d.setTime(log.timestamp);
           dateStr = d.toDateString();
           exerciseDateCache.set(dayId, dateStr);
         }
