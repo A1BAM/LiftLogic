@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const originalEnv = process.env;
 
 describe('logger', () => {
-  let consoleLogSpy: any;
+  let consoleInfoSpy: any;
   let consoleWarnSpy: any;
   let consoleErrorSpy: any;
   let consoleDebugSpy: any;
@@ -13,7 +13,7 @@ describe('logger', () => {
   beforeEach(() => {
     vi.resetModules(); // clears cache so we can re-import logger with different process.env
     process.env = { ...originalEnv };
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
@@ -28,7 +28,7 @@ describe('logger', () => {
     process.env.NODE_ENV = 'development';
     const { logger } = await import('./logger');
     logger.info('test info');
-    expect(consoleLogSpy).toHaveBeenCalledWith('[INFO] test info');
+    expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test info');
   });
 
   it('should log warn messages with [WARN] prefix when not in production', async () => {
@@ -56,14 +56,14 @@ describe('logger', () => {
     process.env.NODE_ENV = 'development';
     const { logger } = await import('./logger');
     logger.info('test info', { key: 'value' });
-    expect(consoleLogSpy).toHaveBeenCalledWith('[INFO] test info', { key: 'value' });
+    expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test info', { key: 'value' });
   });
 
   it('should not log info messages when in production', async () => {
     process.env.NODE_ENV = 'production';
     const { logger } = await import('./logger');
     logger.info('test info');
-    expect(consoleLogSpy).not.toHaveBeenCalled();
+    expect(consoleInfoSpy).not.toHaveBeenCalled();
   });
 
   it('should not log warn messages when in production', async () => {

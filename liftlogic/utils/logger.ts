@@ -5,7 +5,7 @@ const isProduction =
 
 export const logger = {
   info: (message: string, ...args: unknown[]) => {
-    if (!isProduction) console.log(`[INFO] ${message}`, ...args);
+    if (!isProduction) console.info(`[INFO] ${message}`, ...args);
   },
   warn: (message: string, ...args: unknown[]) => {
     if (!isProduction) console.warn(`[WARN] ${message}`, ...args);
