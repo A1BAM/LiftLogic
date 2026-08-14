@@ -101,9 +101,18 @@ describe('useWorkoutData filtering logic', () => {
 });
 
 describe('useWorkoutData fetching logic', () => {
-  it('ignores malformed JSON definitions gracefully', async () => {
+  it('ignores malformed JSON definitions gracefully and parses remaining valid definitions', async () => {
     // Mock workoutService to return a mix of valid data and a malformed definition
     vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([
+      {
+        id: 'def_valid1',
+        exerciseId: DEFINITION_ID,
+        timestamp: 123,
+        weight: 0,
+        reps: 0,
+        sets: 0,
+        notes: JSON.stringify({ id: 'valid1', name: 'Valid Exercise 1' })
+      },
       {
         id: 'bad-def',
         exerciseId: DEFINITION_ID,
@@ -112,6 +121,15 @@ describe('useWorkoutData fetching logic', () => {
         reps: 0,
         sets: 0,
         notes: 'this is not valid json'
+      },
+      {
+        id: 'def_valid2',
+        exerciseId: DEFINITION_ID,
+        timestamp: 123,
+        weight: 0,
+        reps: 0,
+        sets: 0,
+        notes: JSON.stringify({ id: 'valid2', name: 'Valid Exercise 2' })
       }
     ]);
 
@@ -125,7 +143,10 @@ describe('useWorkoutData fetching logic', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.syncedExercises).toEqual([]);
+    expect(result.current.syncedExercises).toEqual([
+      { id: 'valid1', name: 'Valid Exercise 1' },
+      { id: 'valid2', name: 'Valid Exercise 2' }
+    ]);
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
   });
 
