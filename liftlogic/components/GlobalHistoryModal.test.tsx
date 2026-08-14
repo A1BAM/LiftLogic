@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+
+import { logger } from '../utils/logger';
 import { GlobalHistoryModal, calculateGlobalHistoryStats } from './GlobalHistoryModal';
 
 describe('calculateGlobalHistoryStats', () => {
@@ -32,6 +34,41 @@ describe('GlobalHistoryModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('handles clipboard export failure gracefully', async () => {
+    // Mock logger.error to verify it gets called and to prevent console noise
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    // Mock alert
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    // Mock clipboard writeText to reject
+    const clipboardError = new Error('Clipboard access denied');
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockRejectedValue(clipboardError),
+      },
+    });
+
+    render(<GlobalHistoryModal {...defaultProps} logs={[{ id: '1', exerciseId: 'ex1', timestamp: Date.now(), weight: 100, reps: 5, sets: 1, notes: '' }]} />);
+
+    // Click Export button
+    const exportBtn = screen.getByRole('button', { name: 'Export' });
+    fireEvent.click(exportBtn);
+
+    // Verify error handling
+    await waitFor(() => {
+      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to copy:', clipboardError);
+      expect(alertSpy).toHaveBeenCalledWith('Failed to copy data to clipboard');
+    });
+
+    loggerErrorSpy.mockRestore();
+    alertSpy.mockRestore();
   });
 
   it('shows error message when importing invalid JSON', () => {
