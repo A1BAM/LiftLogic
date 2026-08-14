@@ -79,7 +79,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
   const totalSetsToday = useMemo(() => {
     if (!todaySession) return 0;
-    return todaySession.logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    let total = 0;
+    for (let i = 0; i < todaySession.logs.length; i++) {
+      total += todaySession.logs[i].sets || 1;
+    }
+    return total;
   }, [todaySession]);
 
   const isCompletedToday = useMemo(() => {
@@ -101,7 +105,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     }
 
     const logs = referenceSession.logs;
-    const totalSets = logs.reduce((acc, log) => acc + (log.sets || 1), 0);
+    let totalSets = 0;
+    for (let i = 0; i < logs.length; i++) {
+      totalSets += logs[i].sets || 1;
+    }
     const usedWeight = referenceMaxWeight;
     const minReps = Math.min(...logs.map(l => l.reps));
     
