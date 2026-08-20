@@ -533,12 +533,12 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {displayedExercises.map((exercise) => {
+          {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }) => {
             return (
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
-                exerciseLogs={logs}
+                exerciseLogs={exerciseLogs}
                 onLogClick={handleLogClick}
                 onHistoryClick={handleHistoryClick}
                 onArchive={handleArchiveClick}
