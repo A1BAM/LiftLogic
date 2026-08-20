@@ -290,7 +290,7 @@ const App: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 pr-12 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
+                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 pr-12 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-600"
                 placeholder="Enter password to unlock"
                 autoFocus
                 required
@@ -298,7 +298,7 @@ const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(prev => !prev)}
-                className="absolute right-3 p-1 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                className="absolute right-3 p-1 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors focus:outline-none"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 title={showPassword ? "Hide password" : "Show password"}
               >
@@ -308,7 +308,7 @@ const App: React.FC = () => {
             
             <button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 focus-visible:ring-2 focus-visible:ring-blue-400 focus:outline-none"
             >
               Unlock App
             </button>
@@ -350,7 +350,7 @@ const App: React.FC = () => {
         <div className="absolute top-4 right-4 flex gap-2">
            <button 
              onClick={handleLogout} 
-             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
            >
              <LogOut size={16} /> Logout
            </button>
@@ -368,7 +368,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-sm space-y-4">
           <button 
             onClick={() => setWorkoutDay('PUSH')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <span>Push Day</span>
             <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Chest • Shoulders • Triceps</span>
@@ -376,7 +376,7 @@ const App: React.FC = () => {
 
           <button 
             onClick={() => setWorkoutDay('PULL')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <span>Pull Day</span>
             <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Back • Biceps</span>
@@ -384,7 +384,7 @@ const App: React.FC = () => {
 
           <button 
             onClick={() => setWorkoutDay('LEGS')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <span>Leg Day</span>
             <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Quads • Hamstrings • Calves</span>
@@ -394,7 +394,7 @@ const App: React.FC = () => {
         <div className="mt-12 flex gap-6">
           <button 
             onClick={() => setActiveModal('globalHistory')}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm px-2 py-1 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <ClipboardList size={16} /> View Journal
           </button>
@@ -402,7 +402,7 @@ const App: React.FC = () => {
 
           <button 
             onClick={() => setActiveModal('archived')}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm px-2 py-1 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
           >
             <Archive size={16} /> Archived Exercises
           </button>
@@ -452,7 +452,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setWorkoutDay(null)}
-              className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
               aria-label="Back to Dashboard"
             >
               <ChevronLeft size={28} />
@@ -470,7 +470,7 @@ const App: React.FC = () => {
               onClick={() => setActiveModal('globalHistory')}
 
 
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
               title="View Workout Journal"
               aria-label="View Workout Journal"
             >
@@ -478,7 +478,7 @@ const App: React.FC = () => {
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
               title="Logout"
               aria-label="Logout"
             >
