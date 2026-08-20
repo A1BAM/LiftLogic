@@ -52,6 +52,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     const buckets = new Map<number, { date: string; dayStart: number; logs: WorkoutLog[] }>();
 
     for (const log of exerciseLogs) {
+      // This prop means "logs for this exercise". Enforce it rather than trust
+      // it: a caller passing the unfiltered log list would otherwise sum other
+      // exercises' sets into today's total and take the progression target from
+      // an unrelated lift's session.
+      if (log.exerciseId !== exercise.id) continue;
       if (!Number.isFinite(log.timestamp)) continue; // Ignore corrupt rows
       const d = new Date(log.timestamp);
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -70,7 +75,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       session.logs.sort((a, b) => b.timestamp - a.timestamp);
     }
     return sessionsArr;
-  }, [exerciseLogs]);
+  }, [exerciseLogs, exercise.id]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
   // Matched on the day boundary rather than by array position, so a future-dated row
