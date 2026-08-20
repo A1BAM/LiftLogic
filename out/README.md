@@ -1,1 +1,0 @@
-This folder contains the built output assets for the worker "liftlogic" generated at 2026-04-08T17:56:46.609Z.

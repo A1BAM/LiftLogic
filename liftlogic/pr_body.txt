@@ -1,6 +1,0 @@
-🎯 **What:** Optimized `executeBulkInsert` in `worker.ts` to use PostgreSQL's `UNNEST` rather than chunking data and invoking `pool.query` concurrently with `Promise.all`.
-💡 **Why:** Running queries in a loop with `Promise.all` results in high database network overhead (N+1 inserts) and excess memory usage tracking multiple active Promises in Node. Using `UNNEST` allows for a single query to insert all records efficiently.
-📊 **Measured Improvement:** The benchmark output in `pnpm test` confirms a significant speed boost:
-- **Baseline (N+1 N API calls time for 500 items):** ~60.72ms
-- **Optimized (Bulk API call time for 500 items):** ~0.80ms
-- **Improvement:** ~76.05x faster query execution time on the backend.
