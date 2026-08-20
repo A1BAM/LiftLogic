@@ -68,13 +68,18 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {
     const map = new Map<string, WorkoutLog[]>();
-    // logs is already maintained in descending chronological order (newest first)
-    // enabling early-exit optimizations in consumers like getTodaysLogs.
     for (const log of logs) {
       if (!map.has(log.exerciseId)) {
         map.set(log.exerciseId, []);
       }
       map.get(log.exerciseId)!.push(log);
+    }
+    // Consumers (getTodaysLogs, getLastSessionLogs, ExerciseCard) early-exit on the
+    // assumption that each bucket is in descending chronological order. Enforce it here
+    // instead of assuming it: an edited timestamp or a partial update can otherwise leave
+    // `logs` out of order, which silently truncates or merges sessions.
+    for (const bucket of map.values()) {
+      bucket.sort((a, b) => b.timestamp - a.timestamp);
     }
     return map;
   }, [logs]);

@@ -22,7 +22,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   onArchive,
   onSwitch
 }) => {
-  
+  const handleLogClick = () => onLogClick(exercise);
+  const handleHistoryClick = () => onHistoryClick(exercise);
+  const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
+      onArchive(exercise);
+    }
+  } : undefined;
+  const handleSwitchClick = onSwitch ? (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSwitch(exercise);
+  } : undefined;
+
   // A log row always represents at least one set. Guard against corrupt or legacy
   // `sets` values (0, negative, non-numeric) that would otherwise mis-count completion.
   const countSets = (logs: WorkoutLog[]) =>
