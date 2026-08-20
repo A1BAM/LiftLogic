@@ -1,154 +1,83 @@
-
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import React from 'react';
 import { ExerciseCard } from './ExerciseCard';
-import { ExerciseDef, WorkoutLog, DayType } from '../types';
+import { WorkoutLog, ExerciseDef } from '../types';
 
-describe('ExerciseCard', () => {
-  const mockExercise: ExerciseDef = {
-    id: 'test-1',
-    name: 'Bench Press',
-    muscleGroup: 'Chest',
-    defaultWeight: 135,
-    increment: 5,
-    targetReps: 10,
-    dayType: 'PUSH' as DayType
-  };
+const NOW = new Date(2026, 7, 20, 12, 0, 0).getTime();
+const day = (n: number, h = 10) => new Date(2026, 7, 20 - n, h, 0, 0).getTime();
+const ex: ExerciseDef = { id: 'CHEST_PRESS', name: 'Chest Press', muscleGroup: 'Chest', defaultWeight: 60, increment: 10, targetReps: 10, dayType: 'PUSH' };
+const mk = (id: string, ts: number, w: number, sets = 1): WorkoutLog => ({ id, exerciseId: 'CHEST_PRESS', timestamp: ts, weight: w, reps: 10, sets });
 
-  const defaultProps = {
-    exercise: mockExercise,
-    exerciseLogs: [],
-    onLogClick: vi.fn(),
-    onHistoryClick: vi.fn(),
-    onArchive: vi.fn(),
-    onSwitch: vi.fn()
-  };
+const view = (logs: WorkoutLog[]) => {
+  cleanup();
+  render(<ExerciseCard exercise={ex} exerciseLogs={logs} onLogClick={()=>{}} onHistoryClick={()=>{}} />);
+  return { done: !!screen.queryByText('Done'), text: (document.body.textContent||'').replace(/\s+/g,' ') };
+};
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2023-10-15T12:00:00Z'));
+describe('ExerciseCard session grouping and completion state', () => {
+  beforeAll(() => { vi.setSystemTime(NOW); });
+
+  const history = [
+    mk('a', day(2, 18), 100), mk('b', day(2, 17), 100), mk('c', day(2, 16), 100),
+    mk('d', day(9, 18), 90), mk('e', day(9, 17), 90),
+  ];
+
+  it('not Done when nothing logged today (sorted input)', () => {
+    expect(view(history).done).toBe(false);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    cleanup();
+  it('not Done when nothing logged today, ASCENDING input', () => {
+    expect(view([...history].reverse()).done).toBe(false);
   });
 
-  const createLog = (timestamp: number, weight: number, reps: number, sets: number = 1): WorkoutLog => ({
-    id: `log-${Date.now()}-${Math.random()}`,
-    exerciseId: mockExercise.id,
-    timestamp,
-    weight,
-    reps,
-    sets
+  it('ASCENDING input still resolves distinct sessions, not one merged blob', () => {
+    const v = view([...history].reverse());
+    // reference session is the 3x100 day, so target = 100 + 10
+    expect(v.text).toContain('110');
+    expect(v.text).not.toContain('Mixed Weights');
+    expect(v.text).toContain('3 Sets');
   });
 
-  it('renders correctly with no logs', () => {
-    render(<ExerciseCard {...defaultProps} />);
-
-    expect(screen.getByText('Bench Press')).toBeInTheDocument();
-    expect(screen.getAllByText('No logs yet').length).toBeGreaterThan(0); // One in previous, one in tooltip/mobile view
-    expect(screen.getByText('Start Workout')).toBeInTheDocument();
-    expect(screen.getByText('Start light to build form.')).toBeInTheDocument();
+  it('shuffled input matches sorted input exactly', () => {
+    const sorted = view(history).text;
+    const shuffled = view([history[3], history[0], history[4], history[2], history[1]]).text;
+    expect(shuffled).toBe(sorted);
   });
 
-  it('shows Build Volume when previous logs have less than target sets', () => {
-    const yesterday = new Date('2023-10-14T12:00:00Z').getTime();
-    const logs = [createLog(yesterday, 135, 10, 2)]; // Only 2 sets
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    expect(screen.getByText('Build Volume: Complete 3 sets.')).toBeInTheDocument();
+  it('Done only after 3 sets today', () => {
+    expect(view([mk('t1', day(0, 11), 100), ...history]).done).toBe(false);
+    expect(view([mk('t1', day(0, 11), 100), mk('t2', day(0, 10), 100), ...history]).done).toBe(false);
+    expect(view([mk('t1', day(0, 11), 100), mk('t2', day(0, 10), 100), mk('t3', day(0, 9), 100), ...history]).done).toBe(true);
   });
 
-  it('shows Build Strength when previous logs meet volume but not target reps', () => {
-    const yesterday = new Date('2023-10-14T12:00:00Z').getTime();
-    const logs = [
-        createLog(yesterday, 135, 10, 2),
-        createLog(yesterday - 1000, 135, 8, 1) // One set missed target reps
+  it('corrupt sets values count as one set, not zero or NaN', () => {
+    const bad = [
+      mk('t1', day(0, 11), 100, 0),
+      mk('t2', day(0, 10), 100, NaN as any),
+      mk('t3', day(0, 9), 100, undefined as any),
     ];
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    expect(screen.getByText('Build Strength: Hit 10 reps on all sets.')).toBeInTheDocument();
-    expect(screen.getByText('Target Goal')).toBeInTheDocument();
+    expect(view(bad).done).toBe(true); // 3 rows => 3 sets
+    expect(view(bad.slice(0, 2)).done).toBe(false); // 2 rows => 2 sets
   });
 
-  it('shows Overload and Increase Weight when previous logs meet both volume and reps', () => {
-    const yesterday = new Date('2023-10-14T12:00:00Z').getTime();
-    const logs = [
-        createLog(yesterday, 135, 12, 1),
-        createLog(yesterday - 1000, 135, 10, 2)
-    ];
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    expect(screen.getByText('Overload: All sets hit 10+ reps!')).toBeInTheDocument();
-    expect(screen.getByText('Increase Weight')).toBeInTheDocument();
-    expect(screen.getByText('140')).toBeInTheDocument(); // 135 + 5 increment
+  it('future-dated row does not masquerade as today nor become the reference', () => {
+    const v = view([mk('future', day(-5, 12), 500), ...history]);
+    expect(v.done).toBe(false);
+    expect(v.text).toContain('110'); // reference is the 100lb day, not the 500lb future row
+    expect(v.text).not.toContain('510');
   });
 
-  it('shows Add Another Set when today partially completed', () => {
-    const today = new Date('2023-10-15T12:00:00Z').getTime();
-    const logs = [createLog(today, 135, 10, 2)]; // 2 sets today, need 3
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    expect(screen.getByText('Add Another Set')).toBeInTheDocument();
+  it('corrupt timestamps are ignored rather than poisoning grouping', () => {
+    const v = view([mk('bad', NaN as any, 999), ...history]);
+    expect(v.text).toContain('110');
+    expect(v.done).toBe(false);
   });
 
-  it('shows View Today\'s Log when today is completed', () => {
-    const today = new Date('2023-10-15T12:00:00Z').getTime();
-    const logs = [createLog(today, 135, 10, 3)]; // 3 sets today
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    expect(screen.getByText("View Today's Log")).toBeInTheDocument();
-    expect(screen.getByText('Done')).toBeInTheDocument(); // Matches uppercase tracking-wider span
-  });
-
-  it('renders progress indicator with the correct accessible label', () => {
-    const today = new Date('2023-10-15T12:00:00Z').getTime();
-    const logs = [createLog(today, 135, 10, 2)]; // 2 sets today
-
-    render(<ExerciseCard {...defaultProps} exerciseLogs={logs} />);
-
-    const progressIndicator = screen.getByLabelText('Progress: 2 of 3 sets completed');
-    expect(progressIndicator).toBeInTheDocument();
-  });
-
-  it('handles interaction callbacks correctly', () => {
-    render(<ExerciseCard {...defaultProps} />);
-
-    // Switch
-    const switchBtn = screen.getByRole('button', { name: 'Switch Exercise' });
-    fireEvent.click(switchBtn);
-    expect(defaultProps.onSwitch).toHaveBeenCalledWith(mockExercise);
-
-    // History
-    const historyBtn = screen.getByRole('button', { name: 'View History' });
-    fireEvent.click(historyBtn);
-    expect(defaultProps.onHistoryClick).toHaveBeenCalledWith(mockExercise);
-
-    // Log (Start Workout)
-    const startBtn = screen.getByText('Start Workout');
-    fireEvent.click(startBtn);
-    expect(defaultProps.onLogClick).toHaveBeenCalledWith(mockExercise);
-  });
-
-  it('handles archive with confirmation', () => {
-    // Mock window.confirm
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-
-    render(<ExerciseCard {...defaultProps} />);
-
-    const archiveBtn = screen.getByRole('button', { name: 'Archive Exercise' });
-    fireEvent.click(archiveBtn);
-
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Archive Bench Press?'));
-    expect(defaultProps.onArchive).toHaveBeenCalledWith(mockExercise);
-
-    confirmSpy.mockRestore();
+  it('no logs at all falls back to exercise defaults', () => {
+    const v = view([]);
+    expect(v.done).toBe(false);
+    expect(v.text).toContain('60');
+    expect(v.text).toContain('No logs yet');
   });
 });

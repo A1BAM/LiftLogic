@@ -23,60 +23,59 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   onSwitch
 }) => {
   
-  const handleLogClick = () => onLogClick(exercise);
-  const handleHistoryClick = () => onHistoryClick(exercise);
-  const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
-      onArchive(exercise);
-    }
-  } : undefined;
-  const handleSwitchClick = onSwitch ? (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSwitch(exercise);
-  } : undefined;
+  // A log row always represents at least one set. Guard against corrupt or legacy
+  // `sets` values (0, negative, non-numeric) that would otherwise mis-count completion.
+  const countSets = (logs: WorkoutLog[]) =>
+    logs.reduce((acc, log) => {
+      const n = Math.floor(Number(log.sets));
+      return acc + (Number.isFinite(n) && n > 0 ? n : 1);
+    }, 0);
 
-  // 1. Organize logs into sessions (grouped by date)
-  // Optimization: Since exerciseLogs are already sorted descending (newest first),
-  // we can group them in a single O(n) pass without subsequent sorting.
-  // We use DST-safe timezone offset math and a cache map to avoid instantiating multiple Date objects for every log.
+  // 1. Organize logs into sessions (grouped by calendar day)
+  // Logs are bucketed by local calendar day and then ordered newest-first. This does
+  // not assume any particular input ordering: an out-of-order array would previously
+  // collapse a whole history into one "session", which made unrelated days look like
+  // a single completed workout.
   const sessions = useMemo(() => {
-    const sessionsArr: { date: string; logs: WorkoutLog[] }[] = [];
-    let currentDayStart = -1;
-    let currentSession: { date: string; logs: WorkoutLog[] } | null = null;
-    const d = new Date(); // Allocate once
-    const localOffsetMs = d.getTimezoneOffset() * 60000;
+    const buckets = new Map<number, { date: string; dayStart: number; logs: WorkoutLog[] }>();
 
     for (const log of exerciseLogs) {
-      // If the timestamp crosses the boundary to a previous day, or if it's the first log
-      if (log.timestamp < currentDayStart || !currentSession) {
-        d.setTime(log.timestamp);
-        const localOffsetMs = d.getTimezoneOffset() * 60000;
-        const dayId = Math.floor((log.timestamp - localOffsetMs) * INV_MS_PER_DAY);
+      if (!Number.isFinite(log.timestamp)) continue; // Ignore corrupt rows
+      const d = new Date(log.timestamp);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-        let dateStr = exerciseDateCache.get(dayId);
-        if (!dateStr) {
-          d.setTime(log.timestamp);
-          dateStr = d.toDateString();
-          exerciseDateCache.set(dayId, dateStr);
-        }
-
-        currentSession = { date: dateStr, logs: [] };
-        sessionsArr.push(currentSession);
-
-        // Calculate the start of this day (midnight local time) in a DST-safe way
-        currentDayStart = dayId * 86400000 + localOffsetMs;
+      let bucket = buckets.get(dayStart);
+      if (!bucket) {
+        bucket = { date: d.toDateString(), dayStart, logs: [] };
+        buckets.set(dayStart, bucket);
       }
-      currentSession.logs.push(log);
+      bucket.logs.push(log);
+    }
+
+    const sessionsArr = Array.from(buckets.values());
+    sessionsArr.sort((a, b) => b.dayStart - a.dayStart);
+    for (const session of sessionsArr) {
+      session.logs.sort((a, b) => b.timestamp - a.timestamp);
     }
     return sessionsArr;
   }, [exerciseLogs]);
 
   // 2. Identify "Today's Session" and "Reference Session" (for goal calc)
-  // Optimization: Use direct index access on sorted sessions instead of .find()
-  const todayDateStr = useMemo(() => new Date().toDateString(), []);
-  const todaySession = sessions.length > 0 && sessions[0].date === todayDateStr ? sessions[0] : undefined;
-  const referenceSession = todaySession ? sessions[1] : sessions[0];
+  // Matched on the day boundary rather than by array position, so a future-dated row
+  // (clock skew, bad import) can neither masquerade as today nor become the reference.
+  const todayStart = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  }, []);
+  const todaySession = useMemo(
+    () => sessions.find(s => s.dayStart === todayStart),
+    [sessions, todayStart]
+  );
+  // The reference is the most recent session strictly before today.
+  const referenceSession = useMemo(
+    () => sessions.find(s => s.dayStart < todayStart),
+    [sessions, todayStart]
+  );
 
   const targetSets = 3;
 
@@ -90,11 +89,20 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   }, [todaySession]);
 
   const isCompletedToday = useMemo(() => {
-    return totalSetsToday >= targetSets;
-  }, [totalSetsToday]);
+    if (!todaySession) return false;
+    // Set Logic: All days now default to 3 sets
+    const targetSets = 3;
+    return countSets(todaySession.logs) >= targetSets;
+  }, [todaySession, exercise]);
 
   const referenceMaxWeight = useMemo(() => {
-    return referenceSession ? Math.max(...referenceSession.logs.map(l => l.weight)) : 0;
+    if (!referenceSession) return 0;
+    // reduce rather than Math.max(...spread): no -Infinity on an empty session and no
+    // stack overflow on a long history.
+    return referenceSession.logs.reduce((max, l) => {
+      const w = Number(l.weight);
+      return Number.isFinite(w) && w > max ? w : max;
+    }, 0);
   }, [referenceSession]);
 
 // 3. Calculate Recommendation based on Reference Session
@@ -108,12 +116,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     }
 
     const logs = referenceSession.logs;
-    let totalSets = 0;
-    for (let i = 0; i < logs.length; i++) {
-      totalSets += logs[i].sets || 1;
-    }
+    const totalSets = countSets(logs);
     const usedWeight = referenceMaxWeight;
-    const minReps = Math.min(...logs.map(l => l.reps));
+    const minReps = logs.reduce((min, l) => {
+      const r = Number(l.reps);
+      return Number.isFinite(r) && r < min ? r : min;
+    }, Infinity);
     
     // Rule 1: Volume
     const targetSets = 3;
@@ -130,7 +138,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     let nextReps = Math.max(6, exercise.targetReps - 4);
     let reason = `Overload: All sets hit ${exercise.targetReps}+ reps!`;
 
-    if (minReps >= exercise.targetReps) {
+    if (Number.isFinite(minReps) && minReps >= exercise.targetReps) {
       return {
         weight: nextWeight,
         reps: nextReps,
