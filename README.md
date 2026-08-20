@@ -82,18 +82,19 @@ degrading to unauthenticated access.
 
 ```bash
 cd liftlogic
-npm install
-npm run dev      # Vite dev server
-npm test         # vitest
-npm run build    # tsc && vite build
+pnpm install
+pnpm dev      # Vite dev server
+pnpm build    # tsc && vite build
+pnpm test     # vitest
+pnpm check    # build followed by the complete test suite
 ```
 
-`npm run build` typechecks before bundling, so a type error fails the
+`pnpm build` typechecks before bundling, so a type error fails the
 build. CI runs the same three steps on every pull request.
 
 ## Deployment
 
 Cloudflare Workers Builds deploys this repo automatically. `wrangler.jsonc`
-runs `cd liftlogic && npm install && npm run build`, then serves
+runs `cd liftlogic && pnpm install && pnpm run build`, then serves
 `liftlogic/dist`. Because the bundle is rebuilt on every deploy, `dist/` is
 not committed.

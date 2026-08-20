@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { WorkoutLog } from '../types';
 import { workoutService } from '../services/workoutService';
 import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
+import { getLocalDateKey, getLocalDayBounds } from '../utils/date';
 
 export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
@@ -88,65 +89,43 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
     return logsByExercise.get(id) || [];
   }, [logsByExercise]);
 
-  // Cache day boundaries to avoid redundant Date allocations on every render
-  const todayCache = useRef<{ startOfDay: number, endOfDay: number, timestamp: number } | null>(null);
-
-  const getDayBoundaries = useCallback(() => {
-    const nowTimestamp = Date.now();
-    // Cache valid for 1 minute to handle midnight crossing while avoiding per-render allocations
-    if (!todayCache.current || nowTimestamp - todayCache.current.timestamp > 60000) {
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      todayCache.current = {
-        startOfDay,
-        endOfDay: startOfDay + 24 * 60 * 60 * 1000,
-        timestamp: nowTimestamp
-      };
-    }
-    return todayCache.current;
-  }, []);
-
   const getTodaysLogs = useCallback((id: string) => {
-    const { startOfDay, endOfDay } = getDayBoundaries();
+    const { start, end } = getLocalDayBounds();
 
     const exerciseLogs = getLogsForExercise(id);
     const results: WorkoutLog[] = [];
 
     // Early-exit loop on pre-sorted logs
     for (const log of exerciseLogs) {
-      if (log.timestamp >= endOfDay) continue; // Future logs (safety)
-      if (log.timestamp < startOfDay) break; // Reached previous days
+      if (log.timestamp >= end) continue;
+      if (log.timestamp < start) break;
       results.push(log);
     }
 
     // Return in ascending order (oldest first) as expected by the UI
     return results.reverse();
-  }, [getLogsForExercise, getDayBoundaries]);
+  }, [getLogsForExercise]);
 
   const getLastSessionLogs = useCallback((id: string) => {
     const exerciseLogs = getLogsForExercise(id);
-    const { startOfDay: startOfToday } = getDayBoundaries();
+    const { start: startOfToday } = getLocalDayBounds();
 
     // Find the first log before today
     const lastLogIndex = exerciseLogs.findIndex(l => l.timestamp < startOfToday);
     if (lastLogIndex === -1) return [];
 
-    const lastLog = exerciseLogs[lastLogIndex];
-    const d = new Date(lastLog.timestamp);
-    const localOffsetMs = d.getTimezoneOffset() * 60000;
-    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) / 86400000);
-    const startOfLastDay = lastDayId * 86400000 + localOffsetMs;
+    const lastSessionDate = getLocalDateKey(exerciseLogs[lastLogIndex].timestamp);
 
     const results: WorkoutLog[] = [];
     // Early-exit loop on pre-sorted logs starting from the session found
     for (let i = lastLogIndex; i < exerciseLogs.length; i++) {
       const log = exerciseLogs[i];
-      if (log.timestamp < startOfLastDay) break;
+      if (getLocalDateKey(log.timestamp) !== lastSessionDate) break;
       results.push(log);
     }
 
     return results;
-  }, [getLogsForExercise, getDayBoundaries]);
+  }, [getLogsForExercise]);
 
   return {
     logs,

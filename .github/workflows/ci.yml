@@ -15,20 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: liftlogic/package-lock.json
+          cache: pnpm
+          cache-dependency-path: liftlogic/pnpm-lock.yaml
 
-      # `npm ci` mirrors the wrangler build command, which runs npm install.
-      - run: npm ci
+      # Keep CI and Cloudflare deployments on the same locked dependency tree.
+      - run: pnpm install --frozen-lockfile
 
       # Runs `tsc && vite build`, the same script Cloudflare runs on deploy, so
       # a tree that cannot ship fails here instead of on main. Must precede the
       # tests: security-assets.test.ts asserts on the built dist/index.html.
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       - name: Test
-        run: npm test
+        run: pnpm test
