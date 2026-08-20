@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: liftlogic
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: liftlogic/package-lock.json
+
+      # `npm ci` mirrors the wrangler build command, which runs npm install.
+      - run: npm ci
+
+      # Runs `tsc && vite build`, the same script Cloudflare runs on deploy, so
+      # a tree that cannot ship fails here instead of on main. Must precede the
+      # tests: security-assets.test.ts asserts on the built dist/index.html.
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test

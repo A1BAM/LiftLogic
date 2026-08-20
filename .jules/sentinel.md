@@ -29,3 +29,8 @@
 **Vulnerability:** Lack of explicit browser permission constraints allowed modern features (such as camera, microphone, and geolocation) to run in the application context by default, and a standard CSP lacked explicit restrictions on object-src and base-uri.
 **Learning:** Hardening headers is a vital part of defense-in-depth, preventing future injection-based vector bypasses and disabling unnecessary browser APIs to reduce the overall attack surface.
 **Prevention:** Always include a strict `Permissions-Policy` header on all responses and ensure static asset CSPs explicitly disable `object-src` and restrict `base-uri` to `self`.
+
+## 2024-07-10 - Fix JSON Parsing Vulnerability in Auth Endpoints
+**Vulnerability:** Empty POST requests to the `/logout` endpoint were throwing 400 Bad Request errors due to unconditional `await request.json()` execution in the generic request handler, failing the session termination.
+**Learning:** Generic request handlers must explicitly check the `Content-Type` header before parsing `request.json()` because an empty body or missing JSON content will throw an exception, breaking endpoints that do not expect a body.
+**Prevention:** Always verify `request.headers.get('Content-Type')?.includes('application/json')` before attempting to parse a JSON body from a Fetch API `Request` object in Cloudflare Workers.
