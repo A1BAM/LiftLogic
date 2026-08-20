@@ -2,16 +2,19 @@ import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
 
+const exerciseDateCache = new Map<number, string>();
+const INV_MS_PER_DAY = 1 / 86400000;
+
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise
-  onLogClick: () => void;
-  onHistoryClick: () => void;
-  onArchive?: () => void;
-  onSwitch?: () => void;
+  onLogClick: (exercise: ExerciseDef) => void;
+  onHistoryClick: (exercise: ExerciseDef) => void;
+  onArchive?: (exercise: ExerciseDef) => void;
+  onSwitch?: (exercise: ExerciseDef) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
+export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   exercise, 
   exerciseLogs,
   onLogClick, 
@@ -73,6 +76,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     () => sessions.find(s => s.dayStart < todayStart),
     [sessions, todayStart]
   );
+
+  const targetSets = 3;
+
+  const totalSetsToday = useMemo(() => {
+    if (!todaySession) return 0;
+    let total = 0;
+    for (let i = 0; i < todaySession.logs.length; i++) {
+      total += todaySession.logs[i].sets || 1;
+    }
+    return total;
+  }, [todaySession]);
 
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
@@ -145,13 +159,25 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     const session = todaySession || referenceSession;
     if (!session) return "No logs yet";
 
-    const weights = Array.from(new Set(session.logs.map(l => l.weight)));
-    if (weights.length === 1) {
-      const w = weights[0];
-      const repList = session.logs.map(l => l.reps).join(', ');
+    if (session.logs.length === 0) return <span className="text-slate-400 italic">No logs yet</span>;
+
+    let firstWeight = session.logs[0].weight;
+    let isSingleWeight = true;
+    let repList = String(session.logs[0].reps);
+
+    for (let i = 1; i < session.logs.length; i++) {
+      const l = session.logs[i];
+      if (l.weight !== firstWeight) {
+        isSingleWeight = false;
+        break;
+      }
+      repList += ', ' + l.reps;
+    }
+
+    if (isSingleWeight) {
       return (
         <span>
-          <span className="font-bold text-lg">{w}</span>
+          <span className="font-bold text-lg">{firstWeight}</span>
           <span className="text-xs text-slate-500 ml-0.5">lbs</span>
           <span className="mx-2 text-slate-600">•</span>
           <span className="text-slate-300">{repList}</span>
@@ -182,9 +208,29 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
             {exercise.name}
           </h3>
-          <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
-            {exercise.muscleGroup}
-          </span>
+          <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+            <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
+              {exercise.muscleGroup}
+            </span>
+            {todaySession && (
+              <div
+                className="flex items-center gap-1"
+                role="img"
+                aria-label={`Progress: ${totalSetsToday} of ${targetSets} sets completed`}
+              >
+                {[...Array(targetSets)].map((_, i) => (
+                  <span
+                    key={i}
+                    className={`w-2.5 h-2.5 rounded-full border transition-all duration-300 ${
+                      i < totalSetsToday
+                        ? "bg-green-500 border-green-400 shadow-sm shadow-green-500/50"
+                        : "bg-slate-700 border-slate-600"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -237,12 +283,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
 
       <div className="flex gap-2 mt-4">
-        {onArchive && (
+        {handleArchiveClick && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if(window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) onArchive();
-            }}
+            onClick={handleArchiveClick}
             className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
             title="Archive Exercise"
             aria-label="Archive Exercise"
@@ -251,12 +294,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </button>
         )}
 
-        {onSwitch && (
+        {handleSwitchClick && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSwitch();
-            }}
+            onClick={handleSwitchClick}
             className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors"
             title="Switch Exercise"
             aria-label="Switch Exercise"
@@ -266,7 +306,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
 
         <button 
-          onClick={onHistoryClick}
+          onClick={handleHistoryClick}
           className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
           aria-label="View History"
         >
@@ -274,7 +314,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </button>
 
         <button
-          onClick={onLogClick}
+          onClick={handleLogClick}
           className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
             isCompletedToday
               ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
@@ -287,4 +327,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ExerciseCard.displayName = 'ExerciseCard';

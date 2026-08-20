@@ -16,20 +16,26 @@ interface GlobalHistoryModalProps {
 
 const globalDateCache = new Map<number, string>();
 
+const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
+const INV_MS_PER_DAY = 1 / 86400000;
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+
 export function calculateGlobalHistoryStats(
   logs: WorkoutLog[],
   currentDayType: string | null,
   allExercisesMap: Record<string, ExerciseDef>
 ) {
-  const groups: Record<string, WorkoutLog[]> = {};
-  const todayStr = new Date().toDateString();
+  const groups: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]> = {};
+  const todayDayId = Math.floor((Date.now() - tzOffsetMs) * INV_MS_PER_DAY);
   const uniqueDays = new Set<number>();
   const todayExercises = new Set<string>();
 
   let totalVolume = 0;
   let todayVolume = 0;
 
-  let currentDayStart = -1;
   let currentDayId = -1;
   let currentDateKey = '';
   let isToday = false;
@@ -38,29 +44,32 @@ export function calculateGlobalHistoryStats(
     const vol = log.weight * log.reps * (log.sets || 1);
     totalVolume += vol;
 
-    if (log.timestamp < currentDayStart || currentDayStart === -1) {
-      const d = new Date(log.timestamp);
-      currentDayId = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-      currentDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    // Shift timestamp by local timezone offset, then divide by ms in a day to get a unique local day ID
+    const dayId = Math.floor((log.timestamp - tzOffsetMs) * INV_MS_PER_DAY);
+
+    if (dayId !== currentDayId) {
+      currentDayId = dayId;
 
       let dateKey = globalDateCache.get(currentDayId);
       if (!dateKey) {
-        dateKey = d.toLocaleDateString(undefined, {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
+        // Use pre-instantiated formatter on cache miss
+        dateKey = dateFormatter.format(log.timestamp);
         globalDateCache.set(currentDayId, dateKey);
       }
       currentDateKey = dateKey;
-      isToday = (d.toDateString() === todayStr);
+
+      // We still need to know if this is "today"
+      isToday = (currentDayId === todayDayId);
     }
 
     uniqueDays.add(currentDayId);
 
     if (!groups[currentDateKey]) groups[currentDateKey] = [];
-    groups[currentDateKey].push(log);
+
+    const exercise = allExercisesMap[log.exerciseId];
+    groups[currentDateKey].push({ log, exercise });
 
     if (currentDayType && isToday) {
-      const exercise = allExercisesMap[log.exerciseId];
       if (exercise?.dayType === currentDayType) {
         todayVolume += vol;
         todayExercises.add(log.exerciseId);
@@ -80,6 +89,212 @@ export function calculateGlobalHistoryStats(
     } : null,
     groupedLogs: groups
   };
+}
+
+
+
+function ImportLogsView({
+  importText,
+  setImportText,
+  error,
+  onImportSubmit
+}: {
+  importText: string;
+  setImportText: (t: string) => void;
+  error: string | null;
+  onImportSubmit: () => void;
+}) {
+  return (
+    <div className="p-6 flex-1 flex flex-col gap-4">
+      <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200">
+        Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
+      </div>
+      <textarea
+        autoFocus
+        aria-label="Workout history JSON"
+        className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 resize-none min-h-[200px]"
+        placeholder='[{"id":"...", "weight": 20, ...}]'
+        value={importText}
+        onChange={(e) => setImportText(e.target.value)}
+      />
+      {error && (
+        <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
+          <AlertCircle size={16} /> {error}
+        </div>
+      )}
+      <button
+        onClick={onImportSubmit}
+        className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
+      >
+        Import Logs
+      </button>
+    </div>
+  );
+}
+
+
+function TodaySummaryCard({
+  todaySummary,
+  currentDayType
+}: {
+  todaySummary: { volume: number; exercisesCount: number; } | null;
+  currentDayType: string | null;
+}) {
+  if (!todaySummary || !currentDayType) return null;
+  return (
+    <div className="mx-4 mt-4 bg-gradient-to-r from-blue-900/40 to-slate-800 border border-blue-500/30 rounded-xl p-4 flex justify-between items-center shadow-lg">
+      <div>
+        <h3 className="text-blue-200 font-bold text-sm uppercase tracking-wider mb-1">Today's {currentDayType} Session</h3>
+        <div className="text-xs text-blue-400/80 font-medium">
+          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-2xl font-bold text-white font-mono">{(todaySummary.volume / 1000).toFixed(1)}k <span className="text-sm text-slate-400 font-sans">lbs</span></div>
+        <div className="text-xs text-slate-300">{todaySummary.exercisesCount} Exercises Completed</div>
+      </div>
+    </div>
+  );
+}
+
+
+function StatsSummaryRow({
+  stats
+}: {
+  stats: { totalWorkouts: number; totalVolume: number; totalDays: number; }
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-slate-800">
+      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
+        <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Workouts</div>
+        <div className="text-xl font-bold text-white">{stats.totalWorkouts}</div>
+      </div>
+      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
+          <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Volume</div>
+          <div className="text-xl font-bold text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</div>
+          <div className="text-[9px] text-slate-500">lbs moved</div>
+      </div>
+      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
+          <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Active Days</div>
+          <div className="text-xl font-bold text-white">{stats.totalDays}</div>
+      </div>
+    </div>
+  );
+}
+
+
+function ChronologicalLogList({
+  groupedLogs
+}: {
+  groupedLogs: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]>
+}) {
+  return (
+    <div className="overflow-y-auto flex-1 p-4 space-y-6">
+      {Object.entries(groupedLogs).length === 0 ? (
+          <div className="text-center text-slate-500 py-10 flex flex-col items-center">
+            <Dumbbell size={48} className="opacity-20 mb-4" />
+            <p>No workouts recorded yet.</p>
+            <p className="text-xs mt-2">Start lifting to see your history!</p>
+          </div>
+      ) : (
+        Object.entries(groupedLogs).map(([date, dayLogs]) => (
+          <div key={date}>
+            <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 sticky top-0 bg-slate-900 py-2 z-10 border-b border-slate-800/50 backdrop-blur-sm">
+              {date}
+            </h3>
+            <div className="space-y-2">
+              {dayLogs.map((item: any) => {
+                const log = item.log;
+                const exercise = item.exercise;
+                return (
+                  <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
+                    <div>
+                      <div className={`font-bold ${exercise ? 'text-slate-200' : 'text-slate-500 italic'}`}>
+                        {exercise ? exercise.name : 'Unknown Exercise (Deleted)'}
+                      </div>
+                      <div className="text-xs text-slate-400 flex items-center gap-1">
+                        {exercise?.muscleGroup}
+                      </div>
+                    </div>
+                    <div className="text-right font-mono">
+                      <div className="text-white font-bold text-lg">
+                        {log.weight}<span className="text-sm text-slate-500 ml-1">lbs</span>
+                      </div>
+                      <div className="text-xs text-slate-400 flex items-center justify-end gap-1">
+                          <Layers size={10} /> {log.sets || 1} x {log.reps}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+
+function GlobalHistoryHeader({
+  isImporting,
+  setIsImporting,
+  handleExport,
+  copied,
+  onClose,
+  setError
+}: {
+  isImporting: boolean;
+  setIsImporting: (val: boolean) => void;
+  handleExport: () => void;
+  copied: boolean;
+  onClose: () => void;
+  setError: (val: string | null) => void;
+}) {
+  return (
+    <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
+      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <Calendar className="text-blue-500" size={20} />
+        {isImporting ? 'Import Data' : 'Workout Journal'}
+      </h2>
+      <div className="flex items-center gap-2">
+        {!isImporting ? (
+          <>
+            <button
+              onClick={() => setIsImporting(true)}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+              aria-label="Import Data"
+              title="Import Data"
+            >
+              <Download size={20} />
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied' : 'Export'}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => { setIsImporting(false); setError(null); }}
+            className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            aria-label="Cancel import"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+          aria-label="Close"
+        >
+          <X size={24} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function GlobalHistoryModal({
@@ -141,8 +356,8 @@ export function GlobalHistoryModal({
       onImport(validatedLogs);
       setIsImporting(false);
       setImportText('');
-    } catch (err: any) {
-      setError(err.message || "Invalid JSON data.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid JSON data.");
     }
   };
 
@@ -158,153 +373,27 @@ export function GlobalHistoryModal({
         aria-modal="true"
       >
         
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Calendar className="text-blue-500" size={20} />
-            {isImporting ? 'Import Data' : 'Workout Journal'}
-          </h2>
-          <div className="flex items-center gap-2">
-            {!isImporting ? (
-              <>
-                <button 
-                  onClick={() => setIsImporting(true)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                  aria-label="Import Data"
-                  title="Import Data"
-                >
-                  <Download size={20} />
-                </button>
-                <button 
-                  onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied ? 'Copied' : 'Export'}
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => { setIsImporting(false); setError(null); }}
-                className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-                aria-label="Cancel import"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-              aria-label="Close"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
+        <GlobalHistoryHeader
+          isImporting={isImporting}
+          setIsImporting={setIsImporting}
+          handleExport={handleExport}
+          copied={copied}
+          onClose={onClose}
+          setError={setError}
+        />
 
         {isImporting ? (
-           <div className="p-6 flex-1 flex flex-col gap-4">
-             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200">
-               Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
-             </div>
-             <textarea 
-               autoFocus
-               aria-label="Workout history JSON"
-               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 resize-none min-h-[200px]"
-               placeholder='[{"id":"...", "weight": 20, ...}]'
-               value={importText}
-               onChange={(e) => setImportText(e.target.value)}
-             />
-             {error && (
-               <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
-                 <AlertCircle size={16} /> {error}
-               </div>
-             )}
-             <button 
-               onClick={handleImportSubmit}
-               className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
-             >
-               Import Logs
-             </button>
-           </div>
+          <ImportLogsView
+            importText={importText}
+            setImportText={setImportText}
+            error={error}
+            onImportSubmit={handleImportSubmit}
+          />
         ) : (
           <>
-            {/* Today's Summary (Conditional) */}
-            {todaySummary && (
-              <div className="mx-4 mt-4 bg-gradient-to-r from-blue-900/40 to-slate-800 border border-blue-500/30 rounded-xl p-4 flex justify-between items-center shadow-lg">
-                <div>
-                  <h3 className="text-blue-200 font-bold text-sm uppercase tracking-wider mb-1">Today's {currentDayType} Session</h3>
-                  <div className="text-xs text-blue-400/80 font-medium">
-                    {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-white font-mono">{(todaySummary.volume / 1000).toFixed(1)}k <span className="text-sm text-slate-400 font-sans">lbs</span></div>
-                  <div className="text-xs text-slate-300">{todaySummary.exercisesCount} Exercises Completed</div>
-                </div>
-              </div>
-            )}
-
-            {/* Stats Summary */}
-            <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-slate-800">
-              <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-                <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Workouts</div>
-                <div className="text-xl font-bold text-white">{stats.totalWorkouts}</div>
-              </div>
-              <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-                 <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Volume</div>
-                 <div className="text-xl font-bold text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</div>
-                 <div className="text-[9px] text-slate-500">lbs moved</div>
-              </div>
-              <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-                 <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Active Days</div>
-                 <div className="text-xl font-bold text-white">{stats.totalDays}</div>
-              </div>
-            </div>
-
-            {/* Chronological List */}
-            <div className="overflow-y-auto flex-1 p-4 space-y-6">
-              {Object.entries(groupedLogs).length === 0 ? (
-                 <div className="text-center text-slate-500 py-10 flex flex-col items-center">
-                   <Dumbbell size={48} className="opacity-20 mb-4" />
-                   <p>No workouts recorded yet.</p>
-                   <p className="text-xs mt-2">Start lifting to see your history!</p>
-                 </div>
-              ) : (
-                Object.entries(groupedLogs).map(([date, dayLogs]) => (
-                  <div key={date}>
-                    <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 sticky top-0 bg-slate-900 py-2 z-10 border-b border-slate-800/50 backdrop-blur-sm">
-                      {date}
-                    </h3>
-                    <div className="space-y-2">
-                      {(dayLogs as WorkoutLog[]).map(log => {
-                        const exercise = allExercisesMap[log.exerciseId];
-                        return (
-                          <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
-                            <div>
-                              <div className={`font-bold ${exercise ? 'text-slate-200' : 'text-slate-500 italic'}`}>
-                                {exercise ? exercise.name : 'Unknown Exercise (Deleted)'}
-                              </div>
-                              <div className="text-xs text-slate-400 flex items-center gap-1">
-                                {exercise?.muscleGroup}
-                              </div>
-                            </div>
-                            <div className="text-right font-mono">
-                              <div className="text-white font-bold text-lg">
-                                {log.weight}<span className="text-sm text-slate-500 ml-1">lbs</span>
-                              </div>
-                              <div className="text-xs text-slate-400 flex items-center justify-end gap-1">
-                                 <Layers size={10} /> {log.sets || 1} x {log.reps}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <TodaySummaryCard todaySummary={todaySummary} currentDayType={currentDayType} />
+            <StatsSummaryRow stats={stats} />
+            <ChronologicalLogList groupedLogs={groupedLogs} />
           </>
         )}
       </div>

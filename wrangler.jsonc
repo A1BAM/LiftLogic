@@ -5,12 +5,23 @@
   // DO NOT add it to the "vars" block here, as it will overwrite the secret with a plain text value.
   "main": "./liftlogic/worker.ts",
   "build": {
-    "command": "cd liftlogic && npm install && npm run build"
+    "command": "cd liftlogic && pnpm install && pnpm run build"
   },
   "compatibility_date": "2024-11-01",
   "observability": {
     "enabled": true
   },
+  "ratelimits": [
+    {
+      "name": "LOGIN_RATE_LIMITER",
+      // Must be a positive integer that is unique among rate-limit bindings in this Cloudflare account.
+      "namespace_id": "26080501",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ],
   "assets": {
     "directory": "liftlogic/dist",
     "binding": "ASSETS",

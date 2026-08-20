@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
+import { exerciseService } from '../services/exerciseService';
 import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
+import { useWorkoutExercises } from './useWorkoutExercises';
+import { useWorkoutLogs } from './useWorkoutLogs';
 
 const parseFetchedData = (allData: WorkoutLog[]) => {
   const fetchedLogs: WorkoutLog[] = [];
@@ -13,14 +16,28 @@ const parseFetchedData = (allData: WorkoutLog[]) => {
   // Optimization: Single-pass processing of fetched data
   for (const item of allData) {
     if (item.exerciseId === DEFINITION_ID) {
+      const extractedId = item.id.startsWith('def_') ? item.id.slice(4) : null;
+      if (extractedId && cloudIds.has(extractedId)) {
+        continue; // Skip expensive JSON.parse if we already have this definition
+      }
+
+      const notes = item.notes;
+      // Fast path: skip JSON.parse entirely if notes is empty or doesn't look like a JSON object
+      if (!notes || notes.length < 2 || notes[0] !== '{') {
+        if (extractedId) cloudIds.add(extractedId); // Avoid retrying this bad ID later
+        continue;
+      }
+
       try {
-        const ex = JSON.parse(item.notes || "");
+        const ex = JSON.parse(notes);
         if (ex && ex.id) {
           cloudExercises.push(ex);
           cloudIds.add(ex.id);
         }
+        if (extractedId) cloudIds.add(extractedId); // Always track extractedId so we don't try it again
       } catch (e) {
         // Ignore malformed definitions
+        if (extractedId) cloudIds.add(extractedId); // Mark as processed so we don't parse it again if duplicate
       }
     } else {
       fetchedLogs.push(item);
@@ -41,28 +58,32 @@ const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<s
 };
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
-  const [logs, setLogs] = useState<WorkoutLog[]>([]);
-  const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const saveDefinitionsToCloud = async (exercises: ExerciseDef[]) => {
-    const payloads = exercises.map(exercise => ({
-      id: `def_${exercise.id}`,
-      exerciseId: DEFINITION_ID,
-      timestamp: Date.now(),
-      weight: 0,
-      reps: 0,
-      sets: 0,
-      notes: JSON.stringify(exercise)
-    }));
-    if (payloads.length > 0) {
-      await workoutService.saveItems(payloads);
-    }
-  };
 
-  const saveDefinitionToCloud = async (exercise: ExerciseDef) => {
-    await saveDefinitionsToCloud([exercise]);
-  };
+  // Forward declaration for mutual dependency
+  let fetchDataAndSyncFn: () => Promise<void>;
+
+  const {
+    logs,
+    setLogs,
+    addLog,
+    removeLog,
+    updateLog,
+    importLogs,
+    getLogsForExercise,
+    getTodaysLogs,
+    getLastSessionLogs
+  } = useWorkoutLogs(() => fetchDataAndSyncFn());
+
+  const {
+    syncedExercises,
+    setSyncedExercises,
+    saveDefinitionsToCloud,
+    saveExercise,
+    saveExercises,
+    deleteExercisePermanently
+  } = useWorkoutExercises(setLogs);
 
   const fetchDataAndSync = useCallback(async () => {
     try {
@@ -71,7 +92,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
       const { fetchedLogs, cloudExercises, cloudIds } = parseFetchedData(allData);
 
-      const localExercises = workoutService.getLocalExercises();
+      const localExercises = exerciseService.getLocalExercises();
       const missingFromCloud = getMissingLocalExercises(localExercises, cloudIds);
 
       if (missingFromCloud.length > 0) {
@@ -85,15 +106,18 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setSyncedExercises(uniqueExercises);
       // Maintain descending chronological order (newest first)
       setLogs(fetchedLogs.sort((a, b) => b.timestamp - a.timestamp));
-      workoutService.setLocalExercises(uniqueExercises);
+      exerciseService.setLocalExercises(uniqueExercises);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("Fetch and sync error:", err);
-      setError(err.message || "Could not load workout history.");
+      setError(err instanceof Error ? err.message : "Could not load workout history.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [saveDefinitionsToCloud, setSyncedExercises, setLogs]);
+
+  // Resolve the forward declaration
+  fetchDataAndSyncFn = fetchDataAndSync;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -101,7 +125,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, [isAuthenticated, fetchDataAndSync]);
 
-  const addLog = async (exerciseId: string, weight: number, reps: number) => {
+  const addLog = useCallback(async (exerciseId: string, weight: number, reps: number) => {
     const logToSave: WorkoutLog = {
       id: generateId(),
       exerciseId,
@@ -121,9 +145,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const removeLog = async (logId: string) => {
+  const removeLog = useCallback(async (logId: string) => {
     setLogs(prev => prev.filter(l => l.id !== logId));
     try {
       await workoutService.deleteItem({ id: logId });
@@ -132,9 +156,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const updateLog = async (log: WorkoutLog) => {
+  const updateLog = useCallback(async (log: WorkoutLog) => {
     setLogs(prev => prev.map(l => l.id === log.id ? log : l));
     try {
       await workoutService.saveItem(log);
@@ -143,46 +167,51 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       fetchDataAndSync();
       throw err;
     }
-  };
+  }, [fetchDataAndSync]);
 
-  const importLogs = async (importedLogs: WorkoutLog[]) => {
+  const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
-      const logMap = new Map(prevLogs.map(l => [l.id, l]));
-      importedLogs.forEach(l => logMap.set(l.id, l));
-      return Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+      const importedMap = new Map(importedLogs.map(l => [l.id, l]));
+      const merged = prevLogs.filter(l => !importedMap.has(l.id)).concat(Array.from(importedMap.values()));
+      return merged.sort((a, b) => b.timestamp - a.timestamp);
     });
 
     try {
       await workoutService.saveItems(importedLogs);
-    } catch (err: any) {
-      throw new Error(`Import failed: ${err.message}`);
+    } catch (err: unknown) {
+      throw new Error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-  };
+  }, []);
 
-  const saveExercise = async (exercise: ExerciseDef) => {
-    const existingIndex = syncedExercises.findIndex(ex => ex.id === exercise.id);
-    let updatedSynced;
-    if (existingIndex >= 0) {
-      updatedSynced = syncedExercises.map(ex => ex.id === exercise.id ? exercise : ex);
-    } else {
-      updatedSynced = [...syncedExercises, exercise];
-    }
+  const saveExercises = useCallback(async (exercisesToSave: ExerciseDef[]) => {
+    if (exercisesToSave.length === 0) return;
 
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+    setSyncedExercises(prevSynced => {
+      const updatedMap = new Map(prevSynced.map(ex => [ex.id, ex]));
+      exercisesToSave.forEach(ex => updatedMap.set(ex.id, ex));
+      const updatedSynced = Array.from(updatedMap.values());
+      exerciseService.setLocalExercises(updatedSynced);
+      return updatedSynced;
+    });
 
     try {
-      await saveDefinitionToCloud(exercise);
+      await saveDefinitionsToCloud(exercisesToSave);
     } catch (err) {
-      logger.error("Failed to sync exercise to cloud", err);
+      logger.error("Failed to sync exercises to cloud", err);
       throw err;
     }
-  };
+  }, [saveDefinitionsToCloud]);
 
-  const deleteExercisePermanently = async (exerciseId: string) => {
-    const updatedSynced = syncedExercises.filter(e => e.id !== exerciseId);
-    setSyncedExercises(updatedSynced);
-    workoutService.setLocalExercises(updatedSynced);
+  const saveExercise = useCallback(async (exercise: ExerciseDef) => {
+    await saveExercises([exercise]);
+  }, [saveExercises]);
+
+  const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
+    setSyncedExercises(prevSynced => {
+      const updatedSynced = prevSynced.filter(e => e.id !== exerciseId);
+      exerciseService.setLocalExercises(updatedSynced);
+      return updatedSynced;
+    });
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
     try {
@@ -192,7 +221,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       logger.error("Failed to delete exercise from cloud", err);
       throw err;
     }
-  };
+  }, []);
 
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {
@@ -217,10 +246,26 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     return logsByExercise.get(id) || [];
   }, [logsByExercise]);
 
+  // Cache day boundaries to avoid redundant Date allocations on every render
+  const todayCache = useRef<{ startOfDay: number, endOfDay: number, timestamp: number } | null>(null);
+
+  const getDayBoundaries = useCallback(() => {
+    const nowTimestamp = Date.now();
+    // Cache valid for 1 minute to handle midnight crossing while avoiding per-render allocations
+    if (!todayCache.current || nowTimestamp - todayCache.current.timestamp > 60000) {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      todayCache.current = {
+        startOfDay,
+        endOfDay: startOfDay + 24 * 60 * 60 * 1000,
+        timestamp: nowTimestamp
+      };
+    }
+    return todayCache.current;
+  }, []);
+
   const getTodaysLogs = useCallback((id: string) => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+    const { startOfDay, endOfDay } = getDayBoundaries();
 
     const exerciseLogs = getLogsForExercise(id);
     const results: WorkoutLog[] = [];
@@ -234,12 +279,11 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     // Return in ascending order (oldest first) as expected by the UI
     return results.reverse();
-  }, [getLogsForExercise]);
+  }, [getLogsForExercise, getDayBoundaries]);
 
   const getLastSessionLogs = useCallback((id: string) => {
     const exerciseLogs = getLogsForExercise(id);
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const { startOfDay: startOfToday } = getDayBoundaries();
 
     // Find the first log before today
     const lastLogIndex = exerciseLogs.findIndex(l => l.timestamp < startOfToday);
@@ -247,7 +291,9 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
 
     const lastLog = exerciseLogs[lastLogIndex];
     const d = new Date(lastLog.timestamp);
-    const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const localOffsetMs = d.getTimezoneOffset() * 60000;
+    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) * INV_MS_PER_DAY);
+    const startOfLastDay = lastDayId * 86400000 + localOffsetMs;
 
     const results: WorkoutLog[] = [];
     // Early-exit loop on pre-sorted logs starting from the session found
@@ -258,9 +304,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
 
     return results;
-  }, [getLogsForExercise]);
+  }, [getLogsForExercise, getDayBoundaries]);
   return {
-
     logs,
     syncedExercises,
     isLoading,
@@ -271,10 +316,10 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     updateLog,
     importLogs,
     saveExercise,
+    saveExercises,
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
-
     getLastSessionLogs,
   };
 };

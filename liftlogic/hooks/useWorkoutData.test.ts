@@ -1,8 +1,11 @@
+
 import { describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useWorkoutData } from './useWorkoutData';
 import { workoutService } from '../services/workoutService';
+import { exerciseService } from '../services/exerciseService';
+import { logger } from '../utils/logger';
 import { DEFINITION_ID } from '../constants';
 
 
@@ -99,9 +102,18 @@ describe('useWorkoutData filtering logic', () => {
 });
 
 describe('useWorkoutData fetching logic', () => {
-  it('ignores malformed JSON definitions gracefully', async () => {
+  it('ignores malformed JSON definitions gracefully and parses remaining valid definitions', async () => {
     // Mock workoutService to return a mix of valid data and a malformed definition
     vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([
+      {
+        id: 'def_valid1',
+        exerciseId: DEFINITION_ID,
+        timestamp: 123,
+        weight: 0,
+        reps: 0,
+        sets: 0,
+        notes: JSON.stringify({ id: 'valid1', name: 'Valid Exercise 1' })
+      },
       {
         id: 'bad-def',
         exerciseId: DEFINITION_ID,
@@ -110,12 +122,21 @@ describe('useWorkoutData fetching logic', () => {
         reps: 0,
         sets: 0,
         notes: 'this is not valid json'
+      },
+      {
+        id: 'def_valid2',
+        exerciseId: DEFINITION_ID,
+        timestamp: 123,
+        weight: 0,
+        reps: 0,
+        sets: 0,
+        notes: JSON.stringify({ id: 'valid2', name: 'Valid Exercise 2' })
       }
     ]);
 
     // Mock getLocalExercises to prevent unrelated syncing behavior
-    vi.spyOn(workoutService, 'getLocalExercises').mockReturnValue([]);
-    vi.spyOn(workoutService, 'setLocalExercises').mockImplementation(() => {});
+    vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
 
     const { result } = renderHook(() => useWorkoutData(true));
 
@@ -123,7 +144,28 @@ describe('useWorkoutData fetching logic', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.syncedExercises).toEqual([]);
+    expect(result.current.syncedExercises).toEqual([
+      { id: 'valid1', name: 'Valid Exercise 1' },
+      { id: 'valid2', name: 'Valid Exercise 2' }
+    ]);
     expect(result.current.error).toBeNull(); // No error thrown or captured due to JSON.parse failure
+  });
+
+  it('throws wrapped error when importLogs API fails', async () => {
+    vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue([]);
+    vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
+
+    vi.spyOn(workoutService, 'saveItems').mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const mockLog = { id: 'import1', exerciseId: 'ex1', timestamp: 12345, weight: 100, reps: 5, sets: 1 };
+
+    await expect(result.current.importLogs([mockLog])).rejects.toThrow('Import failed: Network error');
   });
 });

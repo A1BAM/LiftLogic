@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -9,15 +9,17 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, TrendingUp } from 'lucide-react';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff, Trophy } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
+import { authService } from './services/authService';
 import { logger } from './utils/logger';
 
 const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
@@ -37,6 +39,7 @@ const App: React.FC = () => {
     updateLog,
     importLogs,
     saveExercise,
+    saveExercises,
     deleteExercisePermanently,
     getLogsForExercise,
     getTodaysLogs,
@@ -65,12 +68,14 @@ const App: React.FC = () => {
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
       
       try {
-        await workoutService.login(hashHex);
+        await authService.login(hashHex);
         await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
-      } catch (err: any) {
-        if (err.status === 401 || err.message === '401' || String(err).includes('401')) {
+      } catch (err: unknown) {
+        const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
+        const message = err instanceof Error ? err.message : undefined;
+        if (status === 401 || message === '401' || String(err).includes('401')) {
           alert("Wrong Password");
         } else {
           alert("Connection Error. Please check your network or server status.");
@@ -85,7 +90,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await workoutService.logout();
+      await authService.logout();
     } catch (err) {
       logger.error("Logout error", err);
     }
@@ -94,17 +99,17 @@ const App: React.FC = () => {
   };
 
   // UI Handlers
-  const openLogModal = (exercise: ExerciseDef) => {
+  const handleLogClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('log');
-  };
+  }, []);
 
-  const openHistoryModal = (exercise: ExerciseDef) => {
+  const handleHistoryClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('history');
-  };
+  }, []);
 
-  const handleAddSet = async (data: { weight: number; reps: number; sets: number }) => {
+  const handleAddSet = useCallback(async (data: { weight: number; reps: number; sets: number }) => {
     if (!selectedExercise) return;
     try {
       await addLog(selectedExercise.id, data.weight, data.reps);
@@ -114,80 +119,83 @@ const App: React.FC = () => {
     } catch (err) {
       alert("Failed to save to cloud.");
     }
-  };
+  }, [selectedExercise, addLog]);
 
-  const handleDeleteLog = async (logId: string) => {
+  const handleDeleteLog = useCallback(async (logId: string) => {
     try {
       await removeLog(logId);
     } catch (err) {
       alert("Failed to delete from cloud.");
     }
-  };
+  }, [removeLog]);
   
-  const handleEditLog = async (log: WorkoutLog) => {
-      setActiveModal(null);
-      try {
-        await updateLog(log);
-      } catch (err) {
-          // Handled in hook
-      }
-  };
+  const handleEditLog = useCallback(async (log: WorkoutLog) => {
+    setActiveModal(null);
+    try {
+      await updateLog(log);
+    } catch (err) {
+      // Handled in hook
+    }
+  }, [updateLog]);
 
-  const handleEditInit = (log: WorkoutLog) => {
+  const handleEditInit = useCallback((log: WorkoutLog) => {
     const newWeight = prompt("Enter new weight:", log.weight.toString());
     const newReps = prompt("Enter new reps:", log.reps.toString());
     if (newWeight && newReps) {
-        handleEditLog({
-            ...log,
-            weight: Number(newWeight),
-            reps: Number(newReps)
-        });
+      handleEditLog({
+        ...log,
+        weight: Number(newWeight),
+        reps: Number(newReps)
+      });
     }
-  };
+  }, [handleEditLog]);
 
-  const handleImportLogs = async (importedLogs: WorkoutLog[]) => {
+  const handleImportLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     try {
       await importLogs(importedLogs);
       alert("Import successful!");
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message);
     }
-  };
+  }, [importLogs]);
 
-  const handleSaveNewExercise = async (newExercise: ExerciseDef) => {
+  const handleSaveNewExercise = useCallback(async (newExercise: ExerciseDef) => {
     setActiveModal(null);
     try {
       await saveExercise(newExercise);
     } catch (e) {
       alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
     }
-  };
+  }, [saveExercise]);
 
-  const handleArchiveExercise = async (exercise: ExerciseDef) => {
+  const handleArchiveClick = useCallback(async (exercise: ExerciseDef) => {
+    navigator.vibrate?.(10);
+    const updatedExercise = { ...exercise, isArchived: true };
+    try {
       navigator.vibrate?.(10);
-      const updatedExercise = { ...exercise, isArchived: true };
-      try {
-        navigator.vibrate?.(10);
-        await saveExercise(updatedExercise);
-        navigator.vibrate?.(50);
-      } catch (e) {
-        logger.error("Failed to sync archive status", e);
-      }
-  };
+      await saveExercise(updatedExercise);
+      navigator.vibrate?.(50);
+    } catch (e) {
+      logger.error("Failed to sync archive status", e);
+    }
+  }, [saveExercise]);
 
-  const handleSwitchExercise = async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
+  const handleSwitchExercise = useCallback(async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
     navigator.vibrate?.(10);
     try {
-      await saveExercise({ ...currentExercise, isArchived: true });
-      await saveExercise({ ...replacementExercise, isArchived: false });
+      await saveExercises([
+        { ...currentExercise, isArchived: true },
+        { ...replacementExercise, isArchived: false }
+      ]);
       navigator.vibrate?.(50);
       setActiveModal(null);
     } catch (e) {
       logger.error("Failed to sync switch status", e);
     }
-  };
+  }, [saveExercises]);
 
-  const handleRestoreExercise = async (exercise: ExerciseDef) => {
+  const handleRestoreExercise = useCallback(async (exercise: ExerciseDef) => {
     navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: false };
     try {
@@ -197,9 +205,9 @@ const App: React.FC = () => {
     } catch (e) {
       logger.error("Failed to sync restore status", e);
     }
-};
+  }, [saveExercise]);
 
-  const handleDeleteExercisePermanently = async (exerciseId: string) => {
+  const handleDeleteExercisePermanently = useCallback(async (exerciseId: string) => {
     if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
       if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
          try {
@@ -209,7 +217,12 @@ const App: React.FC = () => {
          }
       }
     }
-  };
+  }, [deleteExercisePermanently]);
+
+  const handleSwitchInit = useCallback((exercise: ExerciseDef) => {
+    setSelectedExercise(exercise);
+    setActiveModal('switch');
+  }, []);
 
   // Combine Default and Synced Exercises (Synced overrides Default)
   const allExercises = useMemo(() => {
@@ -230,7 +243,32 @@ const App: React.FC = () => {
     }
   ), [allExercises, workoutDay]);
 
+  // Pre-compute and attach resolved logs directly to displayed exercises to avoid O(1) dictionary lookups inside JSX render loop
+  const displayedExercisesWithLogs = useMemo(() => {
+    return displayedExercises.map(exercise => ({
+      exercise,
+      logs: getLogsForExercise(exercise.id)
+    }));
+  }, [displayedExercises, getLogsForExercise]);
+
   const archivedExercises = useMemo(() => allExercises.filter(ex => ex.isArchived), [allExercises]);
+
+  const progressStats = useMemo(() => {
+    if (!workoutDay || displayedExercises.length === 0) {
+      return { completed: 0, total: 0, percent: 0 };
+    }
+    let completed = 0;
+    displayedExercises.forEach(ex => {
+      const todaysLogs = getTodaysLogs(ex.id);
+      const totalSets = todaysLogs.reduce((acc, log) => acc + (log.sets || 1), 0);
+      if (totalSets >= 3) {
+        completed++;
+      }
+    });
+    const total = displayedExercises.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percent };
+  }, [workoutDay, displayedExercises, getTodaysLogs]);
 
   // --- RENDERING ---
 
@@ -247,16 +285,25 @@ const App: React.FC = () => {
           <h1 className="text-2xl font-bold text-white text-center mb-6">LiftLogic Locked</h1>
           
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
+            <div className="relative flex items-center w-full">
               <input 
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
+                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 pr-12 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
                 placeholder="Enter password to unlock"
                 autoFocus
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute right-3 p-1 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
             
             <button 
@@ -444,19 +491,58 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-md mx-auto p-4 animate-in slide-in-from-right-4 fade-in duration-300">
         <div className="space-y-6">
+          {workoutDay && displayedExercises.length > 0 && (
+            <div
+              className="bg-slate-800 border border-slate-700/60 rounded-xl p-4 shadow-md flex items-center gap-4 animate-in fade-in duration-300"
+              role="region"
+              aria-label="Today's Workout Progress"
+            >
+              <div className="bg-blue-600/10 p-2.5 rounded-full text-blue-400 shrink-0">
+                <Trophy size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-baseline mb-1">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Today's Progress
+                  </span>
+                  <span className="text-sm font-bold text-blue-400 font-mono">
+                    {progressStats.completed} / {progressStats.total} Exercises
+                  </span>
+                </div>
+                <div
+                  className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800/80"
+                  role="progressbar"
+                  aria-valuenow={progressStats.percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${progressStats.percent}% of exercises completed today`}
+                >
+                  <div
+                    className="bg-blue-500 h-full transition-all duration-500 ease-out rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+                    style={{ width: `${progressStats.percent}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1.5 italic leading-none">
+                  {progressStats.percent === 100
+                    ? "🎉 Workout complete! Amazing work!"
+                    : progressStats.completed === 0
+                      ? "Let's go! Start your first exercise below."
+                      : "Keep pushing, you're doing great!"}
+                </p>
+              </div>
+            </div>
+          )}
+
           {displayedExercises.map((exercise) => {
             return (
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
-                exerciseLogs={getLogsForExercise(exercise.id)}
-                onLogClick={() => openLogModal(exercise)}
-                onHistoryClick={() => openHistoryModal(exercise)}
-                onArchive={() => handleArchiveExercise(exercise)}
-                onSwitch={() => {
-                  setSelectedExercise(exercise);
-                  setActiveModal('switch');
-                }}
+                exerciseLogs={logs}
+                onLogClick={handleLogClick}
+                onHistoryClick={handleHistoryClick}
+                onArchive={handleArchiveClick}
+                onSwitch={handleSwitchInit}
               />
             );
           })}

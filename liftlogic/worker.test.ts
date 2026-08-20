@@ -37,9 +37,26 @@ describe('Worker', () => {
 
 
   describe('Authentication Endpoints', () => {
+    it('blocks GET requests on login/logout paths without auth', async () => {
+      const loginRequest = createRequest('GET', 'http://localhost/gym-api/login', undefined, null as any);
+      const logoutRequest = createRequest('GET', 'http://localhost/gym-api/logout', undefined, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const loginRes = await worker.fetch(loginRequest, env, {} as any);
+      expect(loginRes.status).toBe(401);
+
+      const logoutRes = await worker.fetch(logoutRequest, env, {} as any);
+      expect(logoutRes.status).toBe(401);
+    });
+
     it('handles successful login', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
@@ -49,10 +66,68 @@ describe('Worker', () => {
 
     it('handles failed login', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'wrong' }, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(401);
+    });
+
+    it('rate limits login attempts by connecting client', async () => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const request = new Request('http://localhost/gym-api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CF-Connecting-IP': '203.0.113.10'
+        },
+        body: JSON.stringify({ hash: 'wrong' })
+      });
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit },
+        ASSETS: { fetch: vi.fn() } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(limit).toHaveBeenCalledOnce();
+      const [{ key }] = limit.mock.calls[0];
+      expect(key).toMatch(/^login:[a-f0-9]{64}$/);
+      expect(key).not.toContain('203.0.113.10');
+      expect(response.status).toBe(429);
+      expect(response.headers.get('Retry-After')).toBe('60');
+      expect(await response.json()).toEqual({ error: 'Too many login attempts' });
+    });
+
+    it('fails closed when the login rate-limit binding is missing', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'Server Configuration Error' });
+    });
+
+    it('fails closed when login rate limiting is unavailable', async () => {
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockRejectedValue(new Error('rate-limit outage')) },
+        ASSETS: { fetch: vi.fn() } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'Login temporarily unavailable' });
     });
 
 
@@ -85,6 +160,37 @@ describe('Worker', () => {
   });
 
   describe('CORS and Security Headers', () => {
+
+    it('does not allow the Tailwind CDN to execute in the application origin', async () => {
+      const request = new Request('http://localhost/');
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<!doctype html>')) } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+      const csp = response.headers.get('Content-Security-Policy');
+
+      expect(csp).not.toContain('cdn.tailwindcss.com');
+      expect(csp).not.toContain('https:');
+    });
+
+    it('applies strict Permissions-Policy and hardened CSP on static assets', async () => {
+      const request = new Request('http://localhost/');
+      const env = {
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: 'testsecret',
+        ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<!doctype html>')) } as any
+      };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.headers.get('Permissions-Policy')).toBe('camera=(), microphone=(), geolocation=(), interest-cohort=()');
+
+      const csp = response.headers.get('Content-Security-Policy');
+      expect(csp).toContain("object-src 'none'");
+      expect(csp).toContain("base-uri 'self'");
+    });
 
     it('handles OPTIONS preflight request', async () => {
       const request = createRequest('OPTIONS', 'http://localhost/gym-api');
@@ -412,6 +518,50 @@ describe('Worker', () => {
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid JSON' });
+    });
+  });
+
+  describe('Security and DoS Mitigation', () => {
+    it('rejects overly long Authorization header to prevent CPU exhaustion', async () => {
+      const longSecret = 'a'.repeat(1000);
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, longSecret);
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: 'Unauthorized' });
+    });
+
+    it('rejects overly long login hash payload to prevent CPU exhaustion', async () => {
+      const longHash = 'a'.repeat(1000);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: longHash }, null as any);
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid hash' });
+    });
+
+    it('rejects non-object or array payloads for endpoints expecting an object', async () => {
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      // 1. Login with array instead of object
+      const loginRequest = createRequest('POST', 'http://localhost/gym-api/login', [1, 2, 3], null as any);
+      const loginResponse = await worker.fetch(loginRequest, env, {} as any);
+      expect(loginResponse.status).toBe(400);
+      expect(await loginResponse.json()).toEqual({ error: 'Invalid payload' });
+
+      // 2. Profile with primitive string instead of object
+      const profileRequest = createRequest('POST', 'http://localhost/gym-api/profile', 'not-an-object');
+      const profileResponse = await worker.fetch(profileRequest, env, {} as any);
+      expect(profileResponse.status).toBe(400);
+      expect(await profileResponse.json()).toEqual({ error: 'Invalid payload' });
+
+      // 3. Delete with array instead of object
+      const deleteRequest = createRequest('DELETE', 'http://localhost/gym-api', [1, 2, 3]);
+      const deleteResponse = await worker.fetch(deleteRequest, env, {} as any);
+      expect(deleteResponse.status).toBe(400);
+      expect(await deleteResponse.json()).toEqual({ error: 'Invalid payload' });
     });
   });
 });

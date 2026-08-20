@@ -19,6 +19,14 @@ export const LogModal: React.FC<LogModalProps> = ({
   onSave,
   onDelete
 }) => {
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   // Determine default values for the input form
   // 1. If we just logged a set today, copy that weight/reps for convenience
   // 2. If no logs today, use the LAST session's weight and Target Reps
@@ -61,6 +69,8 @@ export const LogModal: React.FC<LogModalProps> = ({
       <div
         className="bg-slate-900 w-full max-w-md sm:rounded-2xl border-t sm:border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl"
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         
         {/* Header */}

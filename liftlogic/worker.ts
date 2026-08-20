@@ -12,8 +12,50 @@ async function deleteLogById(pool: Pool, id: string, headers: Record<string, str
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
-async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string, string>): Promise<Response> {
-  const { id, exerciseId } = body || {};
+
+function validateWorkoutItem(item: unknown, inArray = false): string | null {
+  const suffix = inArray ? " in array" : "";
+  if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+    return `Invalid payload${suffix}`;
+  }
+  const { id, exerciseId, timestamp, weight, reps, sets, notes } = (item as Record<string, unknown>);
+  if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+    return `Invalid id${suffix}`;
+  }
+  if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+    return `Invalid exerciseId${suffix}`;
+  }
+  if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+    return `Invalid timestamp${suffix}`;
+  }
+  if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
+    return `Invalid weight${suffix}`;
+  }
+  if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
+    return `Invalid reps${suffix}`;
+  }
+  if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
+    return `Invalid sets${suffix}`;
+  }
+  if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
+    return `Invalid notes${suffix}`;
+  }
+  return null;
+}
+
+function validateWorkoutLogs(items: unknown[], inArray = false): string | null {
+  for (const item of items) {
+    const errorString = validateWorkoutItem(item, inArray);
+    if (errorString) return errorString;
+  }
+  return null;
+}
+
+async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<string, string>): Promise<Response> {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+  }
+  const { id, exerciseId } = (body as Record<string, unknown>);
 
   if (exerciseId !== undefined) {
     if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
@@ -33,13 +75,50 @@ async function handleDeleteRequest(body: any, pool: Pool, headers: Record<string
 }
 
 
+
+async function executeBulkInsert(pool: Pool, items: unknown[]): Promise<void> {
+  if (items.length === 0) return;
+
+  const ids: string[] = [];
+  const exerciseIds: string[] = [];
+  const timestamps: number[] = [];
+  const weights: number[] = [];
+  const reps: number[] = [];
+  const sets: number[] = [];
+  const notes: (string | null)[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = (items[i] as Record<string, unknown>) || {};
+    ids.push(item.id as string);
+    exerciseIds.push(item.exerciseId as string);
+    timestamps.push(item.timestamp as number);
+    weights.push(item.weight as number);
+    reps.push(item.reps as number);
+    sets.push((item.sets as number) || 1);
+    notes.push((item.notes as string) || null);
+  }
+
+  const query = `
+    INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
+    SELECT * FROM UNNEST ($1::text[], $2::text[], $3::bigint[], $4::numeric[], $5::integer[], $6::integer[], $7::text[])
+    AS t(id, exercise_id, timestamp, weight, reps, sets, notes)
+    ON CONFLICT (id) DO UPDATE SET
+      weight = EXCLUDED.weight,
+      reps = EXCLUDED.reps,
+      sets = EXCLUDED.sets,
+      notes = EXCLUDED.notes;
+  `;
+
+  await pool.query(query, [ids, exerciseIds, timestamps, weights, reps, sets, notes]);
+}
+
 let cachedTargetHash: string | null = null;
 let cachedPasswordForHash: string | null = null;
 
 async function getTargetHash(env: Env): Promise<string | null> {
   if (env.TARGET_HASH) return env.TARGET_HASH;
   if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash === env.PASSWORD) {
+    if (cachedTargetHash !== null && cachedPasswordForHash !== null && await timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
       return cachedTargetHash;
     }
     const msgBuffer = new TextEncoder().encode(env.PASSWORD);
@@ -52,11 +131,21 @@ async function getTargetHash(env: Env): Promise<string | null> {
   return null;
 }
 
+async function getLoginRateLimitKey(request: Request): Promise<string> {
+  const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
+  const digestHex = Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `login:${digestHex}`;
+}
+
 export interface Env {
   DATABASE_URL: string;
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
   PASSWORD?: string;
+  LOGIN_RATE_LIMITER?: RateLimit;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -70,6 +159,7 @@ export default {
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
     };
 
     // Handle static assets
@@ -77,8 +167,8 @@ export default {
       const response = await env.ASSETS.fetch(request);
       const newHeaders = new Headers(response.headers);
       Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
-      // Asset specific CSP: allows tailwind CDN and esm.sh for React/Lucide
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'sha256-33CEPSXJm9APfrBGk9mG/r1NOXLRuqCbYLodgApfMq0=' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self' https://esm.sh; frame-ancestors 'none';");
+      // Asset specific CSP: application JavaScript and styles are bundled locally.
+      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self';");
 
       return new Response(response.body, {
         status: response.status,
@@ -106,8 +196,6 @@ export default {
         delete headers['Access-Control-Allow-Credentials'];
       } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
         headers['Access-Control-Allow-Origin'] = requestOrigin;
-      } else {
-        headers['Access-Control-Allow-Origin'] = allowedOrigins[0];
       }
     }
 
@@ -121,7 +209,10 @@ export default {
       }
     }
 
-if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pathname.endsWith('/logout')) {
+    const isLoginEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/');
+    const isLogoutEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/');
+
+    if (request.method !== 'OPTIONS' && !isLoginEndpoint && !isLogoutEndpoint) {
       const targetHash = await getTargetHash(env);
       if (!targetHash) {
         logger.error("TARGET_HASH or PASSWORD not set. Refusing to serve requests without authentication.");
@@ -131,7 +222,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         });
       }
 
-      if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
+      if (!authHeader || authHeader.length > 200 || !await timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -155,10 +246,14 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
     const pool = new Pool({ connectionString });
 
     try {
-      let body: any = null;
+      let body: unknown = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
         const contentType = request.headers.get('Content-Type') || '';
         if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
+            const contentLength = request.headers.get('Content-Length');
+            if (contentLength && parseInt(contentLength, 10) > 1024 * 1024) { // 1MB limit
+              return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
+            }
             try {
               body = await request.json();
             } catch (e) {
@@ -168,10 +263,39 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // Handle Login
-      if (request.method === 'POST' && url.pathname.endsWith('/login')) {
-        const { hash } = body || {};
+      if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+        }
+        const { hash } = (body as Record<string, unknown>);
+        if (typeof hash !== 'string' || hash.length === 0 || hash.length > 100) {
+          return new Response(JSON.stringify({ error: "Invalid hash" }), { status: 400, headers });
+        }
+
+        if (!env.LOGIN_RATE_LIMITER) {
+          logger.error("LOGIN_RATE_LIMITER binding not set. Refusing login without rate limiting.");
+          return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500, headers });
+        }
+
+        try {
+          const { success } = await env.LOGIN_RATE_LIMITER.limit({
+            key: await getLoginRateLimitKey(request)
+          });
+          if (!success) {
+            const rateLimitHeaders = new Headers(headers);
+            rateLimitHeaders.set('Retry-After', '60');
+            return new Response(JSON.stringify({ error: "Too many login attempts" }), {
+              status: 429,
+              headers: rateLimitHeaders
+            });
+          }
+        } catch (error) {
+          logger.error("LOGIN_RATE_LIMITER failed. Refusing login while rate limiting is unavailable.", error);
+          return new Response(JSON.stringify({ error: "Login temporarily unavailable" }), { status: 503, headers });
+        }
+
         const targetHash = await getTargetHash(env);
-        if (!hash || !targetHash || !timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
+        if (!hash || !targetHash || !await timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
@@ -182,20 +306,15 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // Handle Logout
-      if (request.method === 'POST' && url.pathname.endsWith('/logout')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/')) {
         const cookie = `liftlogic_auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
       }
 
-      if (request.method === 'POST' && (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login'))) {
-          // Handled above, shouldn't hit this.
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-      }
-
       // GET Profile
-      if (request.method === 'GET' && url.pathname.endsWith('/profile')) {
+      if (request.method === 'GET' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
         try {
           const { rows } = await pool.query('SELECT id, height_cm, weight_lbs, age FROM user_profile LIMIT 1');
           if (rows.length === 0) {
@@ -207,7 +326,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
             weightLbs: Number(rows[0].weight_lbs),
             age: rows[0].age ? Number(rows[0].age) : undefined
           }), { status: 200, headers });
-        } catch (err: any) {
+        } catch (err: unknown) {
           if (connectionString.includes('dummy')) {
             return new Response(JSON.stringify(null), { status: 200, headers });
           }
@@ -216,8 +335,11 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // POST Profile
-      if (request.method === 'POST' && url.pathname.endsWith('/profile')) {
-        const { heightCm, weightLbs, age } = body || {};
+      if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+          return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
+        }
+        const { heightCm, weightLbs, age } = (body as Record<string, unknown>);
 
         if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
           return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
@@ -244,7 +366,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
       }
 
       // GET: Fetch all logs
-      if (request.method === 'GET') {
+      if (request.method === 'GET' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         try {
           const { rows } = await pool.query('SELECT id, exercise_id, timestamp, weight, reps, sets, notes FROM workouts ORDER BY timestamp DESC');
 
@@ -262,7 +384,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
             status: 200,
             headers
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           // Fallback for dummy database in local development
           if (connectionString.includes('dummy')) {
             return new Response(JSON.stringify([]), {
@@ -276,7 +398,7 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
 
 
       // POST: Bulk Create
-      if (request.method === 'POST' && url.pathname.endsWith('/bulk')) {
+      if (request.method === 'POST' && (url.pathname === '/gym-api/bulk' || url.pathname === '/gym-api/bulk/')) {
         if (!Array.isArray(body)) {
           return new Response(JSON.stringify({ error: "Invalid payload: must be an array" }), { status: 400, headers });
         }
@@ -290,71 +412,18 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
 
         // Validate items
-        for (const item of body) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id in array" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId in array" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp in array" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight in array" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps in array" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets in array" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes in array" }), { status: 400, headers });
-          }
-        }
+        const bulkError = validateWorkoutLogs(body, true);
+        if (bulkError) return new Response(JSON.stringify({ error: bulkError }), { status: 400, headers });
 
-        // Chunking and bulk insert
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < body.length; i += CHUNK_SIZE) {
-          const chunk = body.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, body);
 
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
       }
 
       // POST: Create or Update (Upsert)
-      if (request.method === 'POST') {
-        if (url.pathname.endsWith('/logout') || url.pathname.endsWith('/login') || url.pathname.endsWith('/profile')) {
-          // Stop execution
-          return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
-        }
-        const items = Array.isArray(body) ? body : [body || {}];
+      if (request.method === 'POST' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
+        const items = Array.isArray(body) ? body : [(body || {}) as Record<string, unknown>];
 
         if (items.length > 10000) {
           return new Response(JSON.stringify({ error: "Payload too large: max 10,000 items" }), { status: 400, headers });
@@ -365,73 +434,24 @@ if (request.method !== 'OPTIONS' && !url.pathname.endsWith('/login') && !url.pat
         }
 
         // Validate all items before inserting
-        for (const item of items) {
-          const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-          if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
-          }
-          if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
-            return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
-          }
-          if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
-            return new Response(JSON.stringify({ error: "Invalid timestamp" }), { status: 400, headers });
-          }
-          if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
-            return new Response(JSON.stringify({ error: "Invalid weight" }), { status: 400, headers });
-          }
-          if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
-            return new Response(JSON.stringify({ error: "Invalid reps" }), { status: 400, headers });
-          }
-          if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
-            return new Response(JSON.stringify({ error: "Invalid sets" }), { status: 400, headers });
-          }
-          if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
-            return new Response(JSON.stringify({ error: "Invalid notes" }), { status: 400, headers });
-          }
-        }
+        const upsertError = validateWorkoutLogs(items, false);
+        if (upsertError) return new Response(JSON.stringify({ error: upsertError }), { status: 400, headers });
 
-        // Chunk inserts to avoid Postgres parameter limits (max 65535, we use 7 per row)
-        const CHUNK_SIZE = 1000;
-        const promises: Promise<any>[] = [];
-        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-          const chunk = items.slice(i, i + CHUNK_SIZE);
-          const values: any[] = [];
-          const placeholders: string[] = [];
-
-          chunk.forEach((item, index) => {
-            const { id, exerciseId, timestamp, weight, reps, sets, notes } = item;
-            const offset = index * 7;
-            placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`);
-            values.push(id, exerciseId, timestamp, weight, reps, sets || 1, notes || null);
-          });
-
-          const query = `
-            INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-            VALUES ${placeholders.join(', ')}
-            ON CONFLICT (id) DO UPDATE SET
-              weight = EXCLUDED.weight,
-              reps = EXCLUDED.reps,
-              sets = EXCLUDED.sets,
-              notes = EXCLUDED.notes;
-          `;
-
-          promises.push(pool.query(query, values));
-        }
-        await Promise.all(promises);
+        await executeBulkInsert(pool, items);
 
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
       }
 
       // DELETE: Remove a log OR all logs for an exercise
-      if (request.method === 'DELETE') {
+      if (request.method === 'DELETE' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         return await handleDeleteRequest(body, pool, headers);
       }
 
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
 
-    } catch (error: any) {
-      logger.error('Database Error:', error);
+    } catch (error: unknown) {
+      logger.error('Database Error:', error instanceof Error ? error.message : String(error));
       // Security: Do not leak error details to the client
       return new Response(JSON.stringify({ error: "Internal Server Error" }), {
         status: 500,
