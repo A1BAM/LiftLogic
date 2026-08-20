@@ -10,20 +10,20 @@ export enum ExerciseId {
 export type DayType = 'PUSH' | 'PULL' | 'LEGS';
 
 export interface ExerciseDef {
-  id: string; // Changed from ExerciseId to string to allow custom IDs
+  id: string;
   name: string;
   muscleGroup: string;
   defaultWeight: number;
-  increment: number; // How much to add when progressing
-  targetReps: number; // Reps to hit before moving up in weight
+  increment: number;
+  targetReps: number;
   dayType: DayType;
-  isCustom?: boolean; // Flag to identify user-created exercises
-  isArchived?: boolean; // Flag to hide exercise without deleting data
+  isCustom?: boolean;
+  isArchived?: boolean;
 }
 
 export interface WorkoutLog {
   id: string;
-  exerciseId: string; // Changed to string
+  exerciseId: string;
   timestamp: number;
   weight: number;
   reps: number;

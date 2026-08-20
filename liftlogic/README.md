@@ -1,17 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# LiftLogic application
 
-# Run and deploy your app
+The application code lives in this directory. See the [project README](../README.md)
+for the architecture, Neon schema, Cloudflare configuration, and deployment steps.
 
-This contains everything you need to run your app locally.
+## Commands
 
-## Run Locally
+Run these commands from this directory:
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Run the app:
-   `npm run dev`
+```bash
+pnpm install
+pnpm dev       # local Vite frontend
+pnpm build     # TypeScript check and production bundle
+pnpm test      # test suite
+pnpm check     # build, then test the generated assets and source
+```

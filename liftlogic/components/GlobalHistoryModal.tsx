@@ -4,6 +4,7 @@ import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
 import { validateWorkoutLogs } from '../utils/validation';
 import { EXERCISES } from '../constants';
+import { getLocalDateKey } from '../utils/date';
 
 interface GlobalHistoryModalProps {
   logs: WorkoutLog[];
@@ -13,11 +14,6 @@ interface GlobalHistoryModalProps {
   customExercises: ExerciseDef[];
 }
 
-
-const globalDateCache = new Map<number, string>();
-
-const tzOffsetMs = new Date().getTimezoneOffset() * 60000;
-const INV_MS_PER_DAY = 1 / 86400000;
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -29,47 +25,27 @@ export function calculateGlobalHistoryStats(
   allExercisesMap: Record<string, ExerciseDef>
 ) {
   const groups: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]> = {};
-  const todayDayId = Math.floor((Date.now() - tzOffsetMs) * INV_MS_PER_DAY);
-  const uniqueDays = new Set<number>();
+  const todayDateKey = getLocalDateKey(Date.now());
+  const uniqueDays = new Set<string>();
   const todayExercises = new Set<string>();
 
   let totalVolume = 0;
   let todayVolume = 0;
 
-  let currentDayId = -1;
-  let currentDateKey = '';
-  let isToday = false;
-
   for (const log of logs) {
     const vol = log.weight * log.reps * (log.sets || 1);
     totalVolume += vol;
 
-    // Shift timestamp by local timezone offset, then divide by ms in a day to get a unique local day ID
-    const dayId = Math.floor((log.timestamp - tzOffsetMs) * INV_MS_PER_DAY);
+    const localDateKey = getLocalDateKey(log.timestamp);
+    const displayDate = dateFormatter.format(log.timestamp);
+    uniqueDays.add(localDateKey);
 
-    if (dayId !== currentDayId) {
-      currentDayId = dayId;
-
-      let dateKey = globalDateCache.get(currentDayId);
-      if (!dateKey) {
-        // Use pre-instantiated formatter on cache miss
-        dateKey = dateFormatter.format(log.timestamp);
-        globalDateCache.set(currentDayId, dateKey);
-      }
-      currentDateKey = dateKey;
-
-      // We still need to know if this is "today"
-      isToday = (currentDayId === todayDayId);
-    }
-
-    uniqueDays.add(currentDayId);
-
-    if (!groups[currentDateKey]) groups[currentDateKey] = [];
+    if (!groups[displayDate]) groups[displayDate] = [];
 
     const exercise = allExercisesMap[log.exerciseId];
-    groups[currentDateKey].push({ log, exercise });
+    groups[displayDate].push({ log, exercise });
 
-    if (currentDayType && isToday) {
+    if (currentDayType && localDateKey === todayDateKey) {
       if (exercise?.dayType === currentDayType) {
         todayVolume += vol;
         todayExercises.add(log.exerciseId);
@@ -203,7 +179,7 @@ function ChronologicalLogList({
               {date}
             </h3>
             <div className="space-y-2">
-              {dayLogs.map((item: any) => {
+              {dayLogs.map((item) => {
                 const log = item.log;
                 const exercise = item.exercise;
                 return (
