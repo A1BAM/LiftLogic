@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
+import { exerciseService } from '../services/exerciseService';
 import { logger } from '../utils/logger';
 
 export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction<import('../types').WorkoutLog[]>>) => {
@@ -29,7 +30,7 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
       const updatedMap = new Map(prevSynced.map(ex => [ex.id, ex]));
       exercisesToSave.forEach(ex => updatedMap.set(ex.id, ex));
       const updatedSynced = Array.from(updatedMap.values());
-      workoutService.setLocalExercises(updatedSynced);
+      exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
 
@@ -48,7 +49,7 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
   const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
     setSyncedExercises(prevSynced => {
       const updatedSynced = prevSynced.filter(e => e.id !== exerciseId);
-      workoutService.setLocalExercises(updatedSynced);
+      exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
