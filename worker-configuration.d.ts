@@ -962,7 +962,7 @@ interface FileOptions {
 */
 declare abstract class CacheStorage {
     /**
-     * The **`open()`** method of the the Cache object matching the `cacheName`.
+     * The **`open()`** method of the Cache object matching the `cacheName`.
      *
      * [MDN Reference](https://developer.mozilla.org/docs/Web/API/CacheStorage/open)
      */

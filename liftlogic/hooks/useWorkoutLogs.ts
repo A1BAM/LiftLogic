@@ -92,9 +92,10 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
     if (!todayCache.current || nowTimestamp - todayCache.current.timestamp > 60000) {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
       todayCache.current = {
         startOfDay,
-        endOfDay: startOfDay + 24 * 60 * 60 * 1000,
+        endOfDay,
         timestamp: nowTimestamp
       };
     }
@@ -128,9 +129,7 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
 
     const lastLog = exerciseLogs[lastLogIndex];
     const d = new Date(lastLog.timestamp);
-    const localOffsetMs = d.getTimezoneOffset() * 60000;
-    const lastDayId = Math.floor((lastLog.timestamp - localOffsetMs) / 86400000);
-    const startOfLastDay = lastDayId * 86400000 + localOffsetMs;
+    const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
     const results: WorkoutLog[] = [];
     // Early-exit loop on pre-sorted logs starting from the session found

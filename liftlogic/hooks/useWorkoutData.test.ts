@@ -1,5 +1,5 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { WorkoutLog } from '../types';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useWorkoutData } from './useWorkoutData';
@@ -7,97 +7,67 @@ import { workoutService } from '../services/workoutService';
 import { exerciseService } from '../services/exerciseService';
 import { logger } from '../utils/logger';
 import { DEFINITION_ID } from '../constants';
-
-
-// Mocking the optimized logic from useWorkoutData.ts for verification
-const getLogsByExerciseMap = (logs: WorkoutLog[]) => {
-  const map = new Map<string, WorkoutLog[]>();
-  // Optimised: input logs are assumed pre-sorted DESC
-  for (const log of logs) {
-    if (!map.has(log.exerciseId)) map.set(log.exerciseId, []);
-    map.get(log.exerciseId)!.push(log);
-  }
-  return map;
-};
-
-const getLogsForExercise = (map: Map<string, WorkoutLog[]>, id: string) => {
-  return map.get(id) || [];
-};
-
-const getTodaysLogs = (map: Map<string, WorkoutLog[]>, id: string) => {
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
-
-  const exerciseLogs = getLogsForExercise(map, id);
-  const results: WorkoutLog[] = [];
-  for (const log of exerciseLogs) {
-    if (log.timestamp >= endOfDay) continue;
-    if (log.timestamp < startOfDay) break;
-    results.push(log);
-  }
-  return results.reverse();
-};
-
-const getLastSessionLogs = (map: Map<string, WorkoutLog[]>, id: string) => {
-  const exerciseLogs = getLogsForExercise(map, id);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
-  const lastLogIndex = exerciseLogs.findIndex(l => l.timestamp < startOfToday);
-  if (lastLogIndex === -1) return [];
-
-  const lastLog = exerciseLogs[lastLogIndex];
-  const d = new Date(lastLog.timestamp);
-  const startOfLastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-  const results: WorkoutLog[] = [];
-  for (let i = lastLogIndex; i < exerciseLogs.length; i++) {
-    const log = exerciseLogs[i];
-    if (log.timestamp < startOfLastDay) break;
-    results.push(log);
-  }
-  return results;
-};
-
 describe('useWorkoutData filtering logic', () => {
   const exerciseId = 'test-ex';
   const now = new Date(2024, 0, 15, 12, 0, 0).getTime(); // Jan 15, 2024, 12:00
   const startOfToday = new Date(2024, 0, 15, 0, 0, 0).getTime();
   const startOfYesterday = new Date(2024, 0, 14, 0, 0, 0).getTime();
 
-  vi.setSystemTime(now);
-
   const logs: WorkoutLog[] = [
-    { id: '2', exerciseId, timestamp: startOfToday + 2000, weight: 100, reps: 10, sets: 1 }, // Today
+    // Intentionally unsorted to verify that fetched API data is normalized by the hook.
     { id: '1', exerciseId, timestamp: startOfToday + 1000, weight: 100, reps: 10, sets: 1 }, // Today
-    { id: '4', exerciseId, timestamp: startOfYesterday + 2000, weight: 90, reps: 10, sets: 1 }, // Yesterday
+    { id: '2', exerciseId, timestamp: startOfToday + 2000, weight: 100, reps: 10, sets: 1 }, // Today
     { id: '3', exerciseId, timestamp: startOfYesterday + 1000, weight: 90, reps: 10, sets: 1 }, // Yesterday
+    { id: '4', exerciseId, timestamp: startOfYesterday + 2000, weight: 90, reps: 10, sets: 1 }, // Yesterday
     { id: '5', exerciseId, timestamp: startOfYesterday - 1000, weight: 80, reps: 10, sets: 1 }, // Day before yesterday
   ];
 
-  it('getTodaysLogs returns only logs from today in chronological order (oldest first for UI)', () => {
-    const map = getLogsByExerciseMap(logs);
-    const result = getTodaysLogs(map, exerciseId);
-    expect(result).toHaveLength(2);
-    expect(result[0].id).toBe('1'); // Oldest today
-    expect(result[1].id).toBe('2'); // Newest today
+  beforeEach(() => {
+    vi.setSystemTime(now);
+    localStorage.clear();
+    vi.spyOn(workoutService, 'fetchWorkouts').mockResolvedValue(logs);
+    vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
+    vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
   });
 
-  it('getLastSessionLogs returns logs from the most recent session before today', () => {
-    const map = getLogsByExerciseMap(logs);
-    const result = getLastSessionLogs(map, exerciseId);
-    expect(result).toHaveLength(2);
-    expect(result.every(l => l.weight === 90)).toBe(true);
-    expect(result[0].id).toBe('4');
-    expect(result[1].id).toBe('3');
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
-  it('getLastSessionLogs returns empty array if no logs before today', () => {
-    const todayOnlyLogs = logs.filter(l => l.timestamp >= startOfToday);
-    const map = getLogsByExerciseMap(todayOnlyLogs);
-    const result = getLastSessionLogs(map, exerciseId);
-    expect(result).toHaveLength(0);
+  it('exposes normalized today and previous-session logs through the real hook', async () => {
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => expect(result.current.logs).toHaveLength(logs.length));
+
+    expect(result.current.getTodaysLogs(exerciseId).map(log => log.id)).toEqual(['1', '2']);
+    expect(result.current.getLastSessionLogs(exerciseId).map(log => log.id)).toEqual(['4', '3']);
+  });
+
+  it('returns no previous session when the API only returns today\'s logs', async () => {
+    vi.mocked(workoutService.fetchWorkouts).mockResolvedValue(
+      logs.filter(log => log.timestamp >= startOfToday)
+    );
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => expect(result.current.logs).toHaveLength(2));
+
+    expect(result.current.getLastSessionLogs(exerciseId)).toEqual([]);
+  });
+
+  it('uses the next local midnight as today\'s upper boundary', async () => {
+    const lateToday = new Date(2024, 2, 10, 23, 30).getTime();
+    const earlyTomorrow = new Date(2024, 2, 11, 0, 30).getTime();
+    vi.setSystemTime(new Date(2024, 2, 10, 23, 45));
+    vi.mocked(workoutService.fetchWorkouts).mockResolvedValue([
+      { id: 'tomorrow', exerciseId, timestamp: earlyTomorrow, weight: 100, reps: 10, sets: 1 },
+      { id: 'today', exerciseId, timestamp: lateToday, weight: 100, reps: 10, sets: 1 },
+    ]);
+    const { result } = renderHook(() => useWorkoutData(true));
+
+    await waitFor(() => expect(result.current.logs).toHaveLength(2));
+
+    expect(result.current.getTodaysLogs(exerciseId).map(log => log.id)).toEqual(['today']);
   });
 });
 
