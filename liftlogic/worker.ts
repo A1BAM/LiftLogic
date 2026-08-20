@@ -249,7 +249,7 @@ export default {
       let body: unknown = null;
       if (request.method === 'POST' || request.method === 'DELETE') {
         const contentType = request.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
+        if (contentType.includes('application/json') && !isLogoutEndpoint) {
             const contentLength = request.headers.get('Content-Length');
             if (contentLength && parseInt(contentLength, 10) > 1024 * 1024) { // 1MB limit
               return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });

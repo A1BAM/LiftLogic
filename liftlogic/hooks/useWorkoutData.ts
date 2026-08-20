@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -7,6 +7,8 @@ import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 import { useWorkoutExercises } from './useWorkoutExercises';
 import { useWorkoutLogs } from './useWorkoutLogs';
+
+const INV_MS_PER_DAY = 1 / 86400000;
 
 const parseFetchedData = (allData: WorkoutLog[]) => {
   const fetchedLogs: WorkoutLog[] = [];
@@ -67,22 +69,12 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const {
     logs,
     setLogs,
-    addLog,
-    removeLog,
-    updateLog,
-    importLogs,
-    getLogsForExercise,
-    getTodaysLogs,
-    getLastSessionLogs
   } = useWorkoutLogs(() => fetchDataAndSyncFn());
 
   const {
     syncedExercises,
     setSyncedExercises,
     saveDefinitionsToCloud,
-    saveExercise,
-    saveExercises,
-    deleteExercisePermanently
   } = useWorkoutExercises(setLogs);
 
   const fetchDataAndSync = useCallback(async () => {

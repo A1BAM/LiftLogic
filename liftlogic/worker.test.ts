@@ -142,6 +142,19 @@ describe('Worker', () => {
       expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
     });
 
+    it('handles logout with trailing slash and application/json content-type without failing JSON parsing', async () => {
+      const request = new Request('http://localhost/gym-api/logout/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=;');
+      expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+    });
+
 
 
     it('authenticates using cookie', async () => {
