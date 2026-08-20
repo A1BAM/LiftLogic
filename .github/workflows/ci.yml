@@ -24,13 +24,11 @@ jobs:
       # `npm ci` mirrors the wrangler build command, which runs npm install.
       - run: npm ci
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      # Runs `tsc && vite build`, the same script Cloudflare runs on deploy, so
+      # a tree that cannot ship fails here instead of on main. Must precede the
+      # tests: security-assets.test.ts asserts on the built dist/index.html.
+      - name: Build
+        run: npm run build
 
       - name: Test
         run: npm test
-
-      # Runs `tsc && vite build`, the same script Cloudflare runs on deploy,
-      # so a tree that cannot ship fails here instead of on main.
-      - name: Build
-        run: npm run build
