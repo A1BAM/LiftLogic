@@ -8,13 +8,16 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "check": "pnpm build && pnpm test"
+    "check": "pnpm build && pnpm test",
+    "check:animations": "node ../scripts/check-animations.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
+    "@types/three": "^0.185.4",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260408.1",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -9,6 +9,8 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
+
+const FormViewerModal = lazy(() => import('./components/FormViewerModal'));
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff, Trophy } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
@@ -22,7 +24,7 @@ const App: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // UI State
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | 'form' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
@@ -102,6 +104,23 @@ const App: React.FC = () => {
   const handleLogClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('log');
+  }, []);
+
+  const handleFormClick = useCallback((exercise: ExerciseDef) => {
+    setSelectedExercise(exercise);
+    setActiveModal('form');
+  }, []);
+
+  // Closing the viewer drops straight back into the log, mid-workout, with
+  // nothing lost: only the modal layer changed, all workout state is untouched.
+  const handleFormLogSet = useCallback(() => {
+    setActiveModal('log');
+    // Wait for the log modal to mount before reaching for its weight field.
+    requestAnimationFrame(() => {
+      const input = document.getElementById('weight-input') as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
   }, []);
 
   const handleHistoryClick = useCallback((exercise: ExerciseDef) => {
@@ -543,6 +562,7 @@ const App: React.FC = () => {
                 onHistoryClick={handleHistoryClick}
                 onArchive={handleArchiveClick}
                 onSwitch={handleSwitchInit}
+                onFormClick={handleFormClick}
               />
             );
           })}
@@ -559,6 +579,20 @@ const App: React.FC = () => {
       </main>
 
       {/* Modals */}
+      {activeModal === 'form' && selectedExercise && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
+            Loading form model…
+          </div>
+        }>
+          <FormViewerModal
+            exercise={selectedExercise}
+            onClose={() => setActiveModal(null)}
+            onLogSet={handleFormLogSet}
+          />
+        </Suspense>
+      )}
+
       {activeModal === 'log' && selectedExercise && (
         <LogModal
           exercise={selectedExercise}

@@ -1,0 +1,328 @@
+{
+  "displayName": "Face Pulls",
+  "resolvedAs": "Standing high cable face pull with a rope",
+  "equipment": "cable-high",
+  "defaultCamera": "45",
+  "targetMuscles": [
+    "rear-shoulders",
+    "back"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Arms reaching forward and slightly up at the rope, shoulders stretched forward",
+      "joints": {
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -78,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -78,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -12,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -12,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Elbows opening outward and staying up at shoulder height",
+      "joints": {
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -76,
+          0,
+          38
+        ],
+        "upperArmR": [
+          -76,
+          0,
+          -38
+        ],
+        "forearmL": [
+          -62,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -62,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "bottom",
+      "t": 0.52,
+      "note": "Hands beside the ears, elbows level with the shoulders, rope at the forehead",
+      "joints": {
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "chest": [
+          4,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -74,
+          0,
+          62
+        ],
+        "upperArmR": [
+          -74,
+          0,
+          -62
+        ],
+        "forearmL": [
+          -112,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -112,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Returning forward under control without letting the elbows drop",
+      "joints": {
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -77,
+          0,
+          26
+        ],
+        "upperArmR": [
+          -77,
+          0,
+          -26
+        ],
+        "forearmL": [
+          -44,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -44,
+          -0.0,
+          -0.0
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "id": "pull",
+      "anchor": "handR",
+      "dir": [
+        0,
+        0.15,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Pull the rope back toward your forehead, splitting your hands past either side of your head"
+    },
+    {
+      "id": "elbowheight",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        1,
+        0
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Elbows stay level with your shoulders the whole time, they must not sink toward your hips"
+    },
+    {
+      "id": "blades",
+      "anchor": "chest",
+      "dir": [
+        0,
+        0,
+        -0.8
+      ],
+      "phases": [
+        "bottom"
+      ],
+      "cue": "Finish by squeezing your shoulder blades toward each other behind you"
+    }
+  ],
+  "mistake": {
+    "label": "Elbows drop into a row",
+    "failJoints": [
+      "upperArmL",
+      "upperArmR"
+    ],
+    "cue": "Your elbows sink down toward your hips, which turns this into a row and works your lats instead of the back of your shoulders. Keep the elbows up at shoulder height.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Reaching forward, elbows already low",
+        "joints": {
+          "spine": [
+            2,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -70,
+            0,
+            8
+          ],
+          "upperArmR": [
+            -70,
+            0,
+            -8
+          ],
+          "forearmL": [
+            -14,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -14,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Elbows dropping as the rope comes back",
+        "joints": {
+          "spine": [
+            4,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -42,
+            0,
+            18
+          ],
+          "upperArmR": [
+            -42,
+            0,
+            -18
+          ],
+          "forearmL": [
+            -64,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -64,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "bottom",
+        "t": 0.52,
+        "note": "Rope pulled to the chest with elbows down by the ribs",
+        "joints": {
+          "spine": [
+            8,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -12,
+            0,
+            10
+          ],
+          "upperArmR": [
+            -12,
+            0,
+            -10
+          ],
+          "forearmL": [
+            -100,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -100,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Returning forward from the low position",
+        "joints": {
+          "spine": [
+            4,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -46,
+            0,
+            12
+          ],
+          "upperArmR": [
+            -46,
+            0,
+            -12
+          ],
+          "forearmL": [
+            -46,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -46,
+            -0.0,
+            -0.0
+          ]
+        }
+      }
+    ]
+  },
+  "exerciseId": "custom-1784413379604"
+}

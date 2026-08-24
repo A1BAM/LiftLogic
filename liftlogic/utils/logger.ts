@@ -1,6 +1,7 @@
 const isProduction =
   (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') ||
-  // @ts-expect-error import.meta.env might not be defined in all environments
+  // import.meta.env is typed via vite/client; optional chaining covers the
+  // non-Vite contexts (the Worker, plain node) where it is absent.
   (typeof import.meta !== 'undefined' && import.meta.env?.PROD);
 
 export const logger = {

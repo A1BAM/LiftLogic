@@ -1,0 +1,482 @@
+{
+  "displayName": "Calf Raises",
+  "resolvedAs": "Seated calf raise machine, knees bent about 90 degrees",
+  "equipment": "calf-seated",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "calves"
+  ],
+  "loopSeconds": 2.6,
+  "keyframes": [
+    {
+      "phase": "bottom",
+      "t": 0.0,
+      "note": "Heels sunk below the footplate, calves stretched, knees bent under the pad",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -26,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -26,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -14,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -14,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -36,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -36,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.25,
+      "note": "Heels rising, weight shifting onto the balls of the feet",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -14,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -14,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -36,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -36,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.48,
+      "note": "Fully up on the toes, heels as high as they will go",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          34,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          34,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -14,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -14,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -36,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -36,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "start",
+      "t": 0.8,
+      "note": "Lowering the heels back down slowly past level",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -10,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -10,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -14,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -14,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -36,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -36,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "up",
+      "anchor": "footR",
+      "dir": [
+        0,
+        1,
+        0
+      ],
+      "phases": [
+        "bottom",
+        "mid"
+      ],
+      "cue": "Push through the balls of your feet until your heels are as high as they will go"
+    },
+    {
+      "id": "stretch",
+      "anchor": "footL",
+      "dir": [
+        0,
+        -1,
+        0
+      ],
+      "phases": [
+        "start"
+      ],
+      "cue": "Let your heels sink below the footplate until you feel a stretch in your calf"
+    },
+    {
+      "id": "knee",
+      "anchor": "kneeR",
+      "dir": [
+        0,
+        0,
+        1
+      ],
+      "phases": [
+        "mid",
+        "lockout"
+      ],
+      "cue": "Knees stay pressed up into the thigh pad, the movement happens only at your ankles"
+    }
+  ],
+  "mistake": {
+    "label": "Bouncing through a short range",
+    "failJoints": [
+      "footL",
+      "footR"
+    ],
+    "cue": "You bounce quickly through the middle without ever sinking the heels or reaching the top, so the calf barely works. Pause at the bottom stretch and at the very top.",
+    "keyframes": [
+      {
+        "phase": "bottom",
+        "t": 0.0,
+        "note": "Heels barely below level",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -6,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -6,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.25,
+        "note": "Small fast bounce upward",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            6,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            6,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.48,
+        "note": "Top barely reached, heels only just raised",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            12,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            12,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "start",
+        "t": 0.8,
+        "note": "Dropping straight back into the next bounce",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -2,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -2,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768959628802"
+}

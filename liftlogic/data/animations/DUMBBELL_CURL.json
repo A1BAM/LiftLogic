@@ -1,0 +1,307 @@
+{
+  "displayName": "Dumbbell Bicep Curls",
+  "resolvedAs": "Standing dumbbell biceps curl",
+  "equipment": "dumbbells",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "biceps"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Arms hanging straight down, dumbbells beside the thighs",
+      "joints": {
+        "upperArmL": [
+          4,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          4,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -4,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.28,
+      "note": "Forearms halfway up, elbows still beside the ribs",
+      "joints": {
+        "upperArmL": [
+          4,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          4,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -65,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -65,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "lockout",
+      "t": 0.5,
+      "note": "Top: dumbbells at shoulder height",
+      "joints": {
+        "upperArmL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -135,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -135,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "bottom",
+      "t": 0.85,
+      "note": "Lowering back under control to straight arms",
+      "joints": {
+        "upperArmL": [
+          4,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          4,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -20,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -20,
+          -0.0,
+          -0.0
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "id": "lift",
+      "anchor": "handR",
+      "dir": [
+        0,
+        1,
+        0.15
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Bring the dumbbell up toward the front of your shoulder, moving only at the elbow"
+    },
+    {
+      "id": "elbow",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "mid",
+        "lockout"
+      ],
+      "cue": "Elbows stay touching your ribs, they do not travel forward toward the wall in front of you"
+    },
+    {
+      "id": "hips",
+      "anchor": "hips",
+      "dir": [
+        0,
+        0,
+        1
+      ],
+      "phases": [
+        "bottom"
+      ],
+      "cue": "Hips stay stacked under your shoulders, do not swing them forward to start the lift"
+    }
+  ],
+  "mistake": {
+    "label": "Swinging the weight up",
+    "failJoints": [
+      "spine",
+      "hips"
+    ],
+    "cue": "Your hips push forward and your back leans away to throw the dumbbell up. Stand still and let only your elbows bend.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Standing, about to swing",
+        "joints": {
+          "spine": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            4,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            4,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -4,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -4,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.28,
+        "note": "Hips thrust forward and torso leans back to launch the weight",
+        "joints": {
+          "spine": [
+            14,
+            0,
+            0
+          ],
+          "hips": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -14,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -14,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -70,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -70,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "lockout",
+        "t": 0.5,
+        "note": "Top reached with the back arched",
+        "joints": {
+          "spine": [
+            18,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -18,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -18,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -130,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -130,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "bottom",
+        "t": 0.85,
+        "note": "Dropping the weight rather than lowering it",
+        "joints": {
+          "spine": [
+            6,
+            0,
+            0
+          ],
+          "upperArmL": [
+            0,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            0,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -20,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -20,
+            -0.0,
+            -0.0
+          ]
+        }
+      }
+    ]
+  },
+  "exerciseId": "DUMBBELL_CURL"
+}

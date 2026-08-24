@@ -1,0 +1,338 @@
+{
+  "displayName": "Overhead Press",
+  "resolvedAs": "Standing barbell overhead press",
+  "equipment": "barbell",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "front-shoulders",
+    "side-shoulders",
+    "triceps"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Bar racked on the front shoulders, elbows under the bar, forearms vertical",
+      "joints": {
+        "spine": [
+          0,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -18,
+          0,
+          26
+        ],
+        "upperArmR": [
+          -18,
+          0,
+          -26
+        ],
+        "forearmL": [
+          -118,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -118,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.28,
+      "note": "Bar passing the forehead as the head leans back out of its path",
+      "joints": {
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          10,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -80,
+          0,
+          20
+        ],
+        "upperArmR": [
+          -80,
+          0,
+          -20
+        ],
+        "forearmL": [
+          -66,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -66,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "lockout",
+      "t": 0.52,
+      "note": "Arms straight, bar stacked over the middle of the head",
+      "joints": {
+        "spine": [
+          0,
+          0,
+          0
+        ],
+        "neck": [
+          0,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -172,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -172,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -4,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "bottom",
+      "t": 0.85,
+      "note": "Lowering the bar back to the shoulders along the same line",
+      "joints": {
+        "spine": [
+          0,
+          0,
+          0
+        ],
+        "neck": [
+          6,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -70,
+          0,
+          22
+        ],
+        "upperArmR": [
+          -70,
+          0,
+          -22
+        ],
+        "forearmL": [
+          -74,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -74,
+          -0.0,
+          -0.0
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "id": "up",
+      "anchor": "handR",
+      "dir": [
+        0,
+        1,
+        -0.12
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Press the bar straight up so it finishes over the middle of your head, not out in front of your face"
+    },
+    {
+      "id": "head",
+      "anchor": "head",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Lean your head back just enough for the bar to pass your nose, then bring it back under"
+    },
+    {
+      "id": "ribs",
+      "anchor": "hips",
+      "dir": [
+        0,
+        1,
+        0.4
+      ],
+      "phases": [
+        "lockout"
+      ],
+      "cue": "Ribs stay pulled down toward your hips at the top, do not lean your upper back away from the bar"
+    }
+  ],
+  "mistake": {
+    "label": "Pressing forward and arching back",
+    "failJoints": [
+      "spine"
+    ],
+    "cue": "The bar travels out in front of your face and you lean your upper back away to counter it, which loads your lower back. Push the bar up close to your face and finish with it over your ears.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Racked but with the elbows behind the bar",
+        "joints": {
+          "spine": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -32,
+            0,
+            30
+          ],
+          "upperArmR": [
+            -32,
+            0,
+            -30
+          ],
+          "forearmL": [
+            -110,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -110,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.28,
+        "note": "Bar swinging out forward, torso leaning back to counterbalance",
+        "joints": {
+          "spine": [
+            22,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -96,
+            0,
+            24
+          ],
+          "upperArmR": [
+            -96,
+            0,
+            -24
+          ],
+          "forearmL": [
+            -40,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -40,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "lockout",
+        "t": 0.52,
+        "note": "Locked out with the bar in front and the back arched",
+        "joints": {
+          "spine": [
+            30,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -142,
+            0,
+            16
+          ],
+          "upperArmR": [
+            -142,
+            0,
+            -16
+          ],
+          "forearmL": [
+            -8,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -8,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "bottom",
+        "t": 0.85,
+        "note": "Dropping the bar back down in front",
+        "joints": {
+          "spine": [
+            14,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -84,
+            0,
+            26
+          ],
+          "upperArmR": [
+            -84,
+            0,
+            -26
+          ],
+          "forearmL": [
+            -60,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -60,
+            -0.0,
+            -0.0
+          ]
+        }
+      }
+    ]
+  },
+  "exerciseId": "custom-1784413338033"
+}

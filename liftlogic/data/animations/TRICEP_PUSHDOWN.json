@@ -1,0 +1,284 @@
+{
+  "displayName": "Tricep Pulldown",
+  "resolvedAs": "Cable tricep pushdown, standing",
+  "equipment": "cable-high",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "triceps"
+  ],
+  "loopSeconds": 2.6,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Top: elbows bent just past 90, forearms angled up, upper arms pinned at the ribs",
+      "joints": {
+        "upperArmL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -100,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -100,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Halfway down: elbows opening, upper arms have not moved",
+      "joints": {
+        "upperArmL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -55,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -55,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "bottom",
+      "t": 0.55,
+      "note": "Arms fully straight, hands beside the thighs",
+      "joints": {
+        "upperArmL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -4,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "lockout",
+      "t": 0.7,
+      "note": "Brief squeeze with arms straight",
+      "joints": {
+        "upperArmL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          0,
+          -0.0,
+          -0.0
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "id": "push",
+      "anchor": "handR",
+      "dir": [
+        0,
+        -1,
+        0
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Push the bar down toward the tops of your thighs until your arms are completely straight"
+    },
+    {
+      "id": "elbow",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        -0.3,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid",
+        "bottom"
+      ],
+      "cue": "Elbows stay pinned against your ribs and point back toward your hips, not forward toward the wall"
+    },
+    {
+      "id": "shoulder",
+      "anchor": "shoulderR",
+      "dir": [
+        0,
+        -1,
+        0
+      ],
+      "phases": [
+        "bottom",
+        "lockout"
+      ],
+      "cue": "Shoulders stay pulled down away from your ears the whole way"
+    }
+  ],
+  "mistake": {
+    "label": "Elbows drift forward",
+    "failJoints": [
+      "upperArmL",
+      "upperArmR"
+    ],
+    "cue": "Your elbows swing forward away from your ribs, so your chest and shoulders push the weight instead of your triceps. Keep your upper arms locked against your sides.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Top, elbows already ahead of the ribs",
+        "joints": {
+          "upperArmL": [
+            -35,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -35,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -95,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -95,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Elbows swinging further forward as the weight drops",
+        "joints": {
+          "upperArmL": [
+            -50,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -50,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -55,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -55,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "bottom",
+        "t": 0.55,
+        "note": "Bottom reached by shoulder swing, not elbow extension",
+        "joints": {
+          "upperArmL": [
+            -42,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -42,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -10,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -10,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "lockout",
+        "t": 0.7,
+        "note": "Shoulders rounded forward",
+        "joints": {
+          "upperArmL": [
+            -38,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -38,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -6,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -6,
+            -0.0,
+            -0.0
+          ]
+        }
+      }
+    ]
+  },
+  "exerciseId": "TRICEP_PUSHDOWN"
+}
