@@ -1,0 +1,462 @@
+{
+  "displayName": "Leg Extension",
+  "resolvedAs": "Seated leg extension machine",
+  "equipment": "leg-extension",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "quads"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Seated with knees bent about 90 degrees, shins hanging down behind the roller",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          88,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          88,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -8,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -8,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Shins swinging up and forward, knees opening",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          48,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          48,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -10,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -10,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.52,
+      "note": "Knees straight, shins in line with the thighs, thighs still flat on the seat",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -12,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -12,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.85,
+      "note": "Lowering the shins back down under control",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          60,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          60,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -8,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -8,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "extend",
+      "anchor": "footR",
+      "dir": [
+        0,
+        0.55,
+        1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Straighten your knees until your shins line up with your thighs, pointing straight out in front"
+    },
+    {
+      "id": "back",
+      "anchor": "hips",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "mid",
+        "lockout"
+      ],
+      "cue": "Keep your back against the seat pad, do not lean away from it to finish the rep"
+    },
+    {
+      "id": "lower",
+      "anchor": "kneeR",
+      "dir": [
+        0,
+        -1,
+        0
+      ],
+      "phases": [
+        "bottom"
+      ],
+      "cue": "Lower your shins slowly until your knees are back to a right angle"
+    }
+  ],
+  "mistake": {
+    "label": "Kicking with momentum",
+    "failJoints": [
+      "hips",
+      "spine"
+    ],
+    "cue": "You throw your hips and back into it to kick the pad up, so your quads get very little of the work. Sit still and let only your knees straighten.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Seated, gripping the handles to heave",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            88,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            88,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            0,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Torso thrown backward to kick the roller up",
+        "joints": {
+          "thighL": [
+            -92,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -92,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            40,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            40,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            22,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.52,
+        "note": "Locked out with the back arched off the pad",
+        "joints": {
+          "thighL": [
+            -96,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -96,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            2,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            2,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            32,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.85,
+        "note": "Letting the weight drop back down fast",
+        "joints": {
+          "thighL": [
+            -88,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -88,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            66,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            66,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            10,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768959561580"
+}

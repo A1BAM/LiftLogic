@@ -1,0 +1,528 @@
+{
+  "displayName": "Lat Pulldown (Cable)",
+  "resolvedAs": "Seated cable lat pulldown to the chest",
+  "equipment": "cable-high",
+  "defaultCamera": "front",
+  "targetMuscles": [
+    "back",
+    "biceps"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Arms nearly straight overhead, slightly wider than the shoulders",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -4,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -162,
+          0,
+          22
+        ],
+        "upperArmR": [
+          -162,
+          0,
+          -22
+        ],
+        "forearmL": [
+          -10,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -10,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Elbows driving down and back, bar passing the forehead",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -8,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -96,
+          0,
+          38
+        ],
+        "upperArmR": [
+          -96,
+          0,
+          -38
+        ],
+        "forearmL": [
+          -58,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -58,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.52,
+      "note": "Bar at the collarbone, elbows pointing down toward the back pockets",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -12,
+          0,
+          0
+        ],
+        "chest": [
+          6,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -32,
+          0,
+          42
+        ],
+        "upperArmR": [
+          -32,
+          0,
+          -42
+        ],
+        "forearmL": [
+          -104,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -104,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Letting the bar rise back up under control to a full stretch",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -120,
+          0,
+          30
+        ],
+        "upperArmR": [
+          -120,
+          0,
+          -30
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "elbowdown",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        -1,
+        -0.35
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Drive your elbows down toward your back pockets, the bar just follows your elbows"
+    },
+    {
+      "id": "bar",
+      "anchor": "handR",
+      "dir": [
+        0,
+        -1,
+        0.2
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Bring the bar down to touch your collarbone in front, never behind your head"
+    },
+    {
+      "id": "chest",
+      "anchor": "chest",
+      "dir": [
+        0,
+        0.3,
+        1
+      ],
+      "phases": [
+        "bottom"
+      ],
+      "cue": "Lift your breastbone toward the bar as it comes down, keeping your back straight"
+    }
+  ],
+  "mistake": {
+    "label": "Leaning back and heaving",
+    "failJoints": [
+      "spine",
+      "hips"
+    ],
+    "cue": "You lean your whole torso backward to drag the bar down, so your lower back does the work. Keep your chest tall and let your elbows pull.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Seated, already rocking back",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            6,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -158,
+            0,
+            22
+          ],
+          "upperArmR": [
+            -158,
+            0,
+            -22
+          ],
+          "forearmL": [
+            -10,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -10,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Torso swinging backward to generate momentum",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            26,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -104,
+            0,
+            34
+          ],
+          "upperArmR": [
+            -104,
+            0,
+            -34
+          ],
+          "forearmL": [
+            -52,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -52,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.52,
+        "note": "Almost lying back, bar dragged to the stomach",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            44,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -40,
+            0,
+            38
+          ],
+          "upperArmR": [
+            -40,
+            0,
+            -38
+          ],
+          "forearmL": [
+            -96,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -96,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Snapping upright as the bar rises",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            14,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -118,
+            0,
+            28
+          ],
+          "upperArmR": [
+            -118,
+            0,
+            -28
+          ],
+          "forearmL": [
+            -40,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -40,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1774216069316"
+}

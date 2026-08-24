@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
-import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft } from 'lucide-react';
+import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft, PersonStanding } from 'lucide-react';
+import { hasAnimation } from '../formviewer/loader';
 
 const exerciseDateCache = new Map<number, string>();
 const INV_MS_PER_DAY = 1 / 86400000;
@@ -12,6 +13,8 @@ interface ExerciseCardProps {
   onHistoryClick: (exercise: ExerciseDef) => void;
   onArchive?: (exercise: ExerciseDef) => void;
   onSwitch?: (exercise: ExerciseDef) => void;
+  /** Opens the 3D form guide. Omitted callers simply get no form button. */
+  onFormClick?: (exercise: ExerciseDef) => void;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
@@ -20,7 +23,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   onLogClick, 
   onHistoryClick,
   onArchive,
-  onSwitch
+  onSwitch,
+  onFormClick
 }) => {
   const handleLogClick = () => onLogClick(exercise);
   const handleHistoryClick = () => onHistoryClick(exercise);
@@ -34,6 +38,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     e.stopPropagation();
     onSwitch(exercise);
   } : undefined;
+
+  // An exercise added to the database later simply has no animation file yet,
+  // so the button greys out rather than the app breaking.
+  const formModelReady = hasAnimation(exercise.id);
+  const handleFormClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (formModelReady) onFormClick?.(exercise);
+  };
 
   // A log row always represents at least one set. Guard against corrupt or legacy
   // `sets` values (0, negative, non-numeric) that would otherwise mis-count completion.
@@ -222,9 +234,26 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
       <div className="flex justify-between items-start mb-2 pr-20"> 
         <div>
-          <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
-            {exercise.name}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
+              {exercise.name}
+            </h3>
+            {onFormClick && (
+              <button
+                onClick={handleFormClick}
+                disabled={!formModelReady}
+                title={formModelReady ? `Show ${exercise.name} form` : 'No model yet'}
+                aria-label={formModelReady ? `Show ${exercise.name} form` : `${exercise.name}: no model yet`}
+                className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
+                  formModelReady
+                    ? 'bg-slate-700/70 border-slate-600 text-blue-300 active:bg-slate-600'
+                    : 'bg-slate-800/40 border-slate-700/60 text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                <PersonStanding size={18} />
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
             <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
               {exercise.muscleGroup}

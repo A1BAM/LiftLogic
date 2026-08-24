@@ -1,0 +1,560 @@
+{
+  "displayName": "Seated Row Machine (Cable)",
+  "resolvedAs": "Seated cable row to the lower ribs",
+  "equipment": "machine-seated",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "back",
+    "biceps",
+    "rear-shoulders"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Arms reaching forward, back straight, shoulders stretched forward",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -8,
+          0,
+          0
+        ],
+        "chest": [
+          -6,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -62,
+          0,
+          6
+        ],
+        "upperArmR": [
+          -62,
+          0,
+          -6
+        ],
+        "forearmL": [
+          -14,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -14,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Elbows driving back past the ribs, torso staying upright",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -2,
+          0,
+          0
+        ],
+        "chest": [
+          0,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -34,
+          0,
+          4
+        ],
+        "upperArmR": [
+          -34,
+          0,
+          -4
+        ],
+        "forearmL": [
+          -56,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -56,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.52,
+      "note": "Handles at the lower ribs, elbows behind the body, chest tall",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          2,
+          0,
+          0
+        ],
+        "chest": [
+          6,
+          0,
+          0
+        ],
+        "upperArmL": [
+          6,
+          0,
+          2
+        ],
+        "upperArmR": [
+          6,
+          0,
+          -2
+        ],
+        "forearmL": [
+          -98,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -98,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Letting the handles travel forward again without collapsing the back",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -4,
+          0,
+          0
+        ],
+        "chest": [
+          -2,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -42,
+          0,
+          4
+        ],
+        "upperArmR": [
+          -42,
+          0,
+          -4
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "elbowback",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Drive your elbows straight back so they pass behind your ribs, brushing close to your sides"
+    },
+    {
+      "id": "blades",
+      "anchor": "chest",
+      "dir": [
+        0,
+        0,
+        -0.8
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Squeeze your shoulder blades toward each other as the handles reach your stomach"
+    },
+    {
+      "id": "torso",
+      "anchor": "hips",
+      "dir": [
+        0,
+        1,
+        0
+      ],
+      "phases": [
+        "bottom",
+        "lockout"
+      ],
+      "cue": "Torso stays stacked upright over your hips, do not rock backward and forward"
+    }
+  ],
+  "mistake": {
+    "label": "Rowing with the lower back",
+    "failJoints": [
+      "spine",
+      "hips"
+    ],
+    "cue": "Your torso rocks forward and back like a pendulum, so your lower back moves the weight instead of your back muscles. Pin your torso upright and move only your arms.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Rounded forward with a collapsed back",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -34,
+            0,
+            0
+          ],
+          "chest": [
+            -16,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -72,
+            0,
+            6
+          ],
+          "upperArmR": [
+            -72,
+            0,
+            -6
+          ],
+          "forearmL": [
+            -10,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -10,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Heaving upright using the lower back",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            8,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -40,
+            0,
+            6
+          ],
+          "upperArmR": [
+            -40,
+            0,
+            -6
+          ],
+          "forearmL": [
+            -46,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -46,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.52,
+        "note": "Leaning far back at the finish",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            34,
+            0,
+            0
+          ],
+          "chest": [
+            10,
+            0,
+            0
+          ],
+          "upperArmL": [
+            0,
+            0,
+            4
+          ],
+          "upperArmR": [
+            0,
+            0,
+            -4
+          ],
+          "forearmL": [
+            -88,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -88,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Falling forward again into a rounded back",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -24,
+            0,
+            0
+          ],
+          "chest": [
+            -12,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -56,
+            0,
+            6
+          ],
+          "upperArmR": [
+            -56,
+            0,
+            -6
+          ],
+          "forearmL": [
+            -30,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -30,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1774215986619"
+}

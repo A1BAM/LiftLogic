@@ -1,0 +1,525 @@
+{
+  "displayName": "Smith Bench",
+  "resolvedAs": "Smith machine flat bench press",
+  "equipment": "smith-machine",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "chest",
+    "front-shoulders",
+    "triceps"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "lockout",
+      "t": 0.0,
+      "note": "Arms straight, bar directly over the middle of the chest",
+      "joints": {
+        "thighL": [
+          -55,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -55,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          75,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          75,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -88,
+          0,
+          12
+        ],
+        "upperArmR": [
+          -88,
+          0,
+          -12
+        ],
+        "forearmL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -4,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.35,
+        0
+      ],
+      "rootRotation": [
+        -90,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.28,
+      "note": "Bar descending, elbows opening to roughly 45 degrees from the ribs",
+      "joints": {
+        "thighL": [
+          -55,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -55,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          75,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          75,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -62,
+          0,
+          34
+        ],
+        "upperArmR": [
+          -62,
+          0,
+          -34
+        ],
+        "forearmL": [
+          -48,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -48,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.35,
+        0
+      ],
+      "rootRotation": [
+        -90,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.5,
+      "note": "Bar touching the lower chest, elbows tucked near 45, forearms vertical",
+      "joints": {
+        "thighL": [
+          -55,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -55,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          75,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          75,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -40,
+          0,
+          48
+        ],
+        "upperArmR": [
+          -40,
+          0,
+          -48
+        ],
+        "forearmL": [
+          -86,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -86,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.35,
+        0
+      ],
+      "rootRotation": [
+        -90,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "start",
+      "t": 0.8,
+      "note": "Driving back up along the same line",
+      "joints": {
+        "thighL": [
+          -55,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -55,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          75,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          75,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -70,
+          0,
+          26
+        ],
+        "upperArmR": [
+          -70,
+          0,
+          -26
+        ],
+        "forearmL": [
+          -34,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -34,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.35,
+        0
+      ],
+      "rootRotation": [
+        -90,
+        0,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "down",
+      "anchor": "handR",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "lockout",
+        "mid"
+      ],
+      "cue": "Bring the bar down to touch your lower chest at the base of your breastbone, not up at your throat"
+    },
+    {
+      "id": "elbow",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        -1,
+        -0.5
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Elbows point down toward your hips at about 45 degrees, not straight out toward the side walls"
+    },
+    {
+      "id": "press",
+      "anchor": "handR",
+      "dir": [
+        0,
+        0,
+        1
+      ],
+      "phases": [
+        "bottom",
+        "start"
+      ],
+      "cue": "Press the bar straight back up over the middle of your chest until your arms are straight"
+    }
+  ],
+  "mistake": {
+    "label": "Elbows flared straight out",
+    "failJoints": [
+      "upperArmL",
+      "upperArmR"
+    ],
+    "cue": "Your elbows point straight out at the walls and the bar drops toward your throat, which loads the front of your shoulder joint. Bring the bar lower down your chest and tuck the elbows toward your hips.",
+    "keyframes": [
+      {
+        "phase": "lockout",
+        "t": 0.0,
+        "note": "Arms straight but already flared",
+        "joints": {
+          "thighL": [
+            -55,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -55,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            75,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            75,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -88,
+            0,
+            26
+          ],
+          "upperArmR": [
+            -88,
+            0,
+            -26
+          ],
+          "forearmL": [
+            -4,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -4,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.35,
+          0
+        ],
+        "rootRotation": [
+          -90,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.28,
+        "note": "Elbows opening straight out to the sides",
+        "joints": {
+          "thighL": [
+            -55,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -55,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            75,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            75,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -70,
+            0,
+            64
+          ],
+          "upperArmR": [
+            -70,
+            0,
+            -64
+          ],
+          "forearmL": [
+            -52,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -52,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.35,
+          0
+        ],
+        "rootRotation": [
+          -90,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.5,
+        "note": "Bar over the throat with elbows at 90 degrees from the body",
+        "joints": {
+          "thighL": [
+            -55,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -55,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            75,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            75,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -58,
+            0,
+            88
+          ],
+          "upperArmR": [
+            -58,
+            0,
+            -88
+          ],
+          "forearmL": [
+            -92,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -92,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.35,
+          0
+        ],
+        "rootRotation": [
+          -90,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "start",
+        "t": 0.8,
+        "note": "Pressing back up from the flared position",
+        "joints": {
+          "thighL": [
+            -55,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -55,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            75,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            75,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -74,
+            0,
+            60
+          ],
+          "upperArmR": [
+            -74,
+            0,
+            -60
+          ],
+          "forearmL": [
+            -40,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -40,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.35,
+          0
+        ],
+        "rootRotation": [
+          -90,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768314623500"
+}

@@ -1,0 +1,322 @@
+{
+  "displayName": "Chest Fly",
+  "resolvedAs": "Standing cable crossover",
+  "equipment": "cable-crossover",
+  "defaultCamera": "45",
+  "targetMuscles": [
+    "chest"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Arms open wide and high, slight forward lean, elbows softly bent",
+      "joints": {
+        "spine": [
+          -12,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -24,
+          0,
+          96
+        ],
+        "upperArmR": [
+          -24,
+          0,
+          -96
+        ],
+        "forearmL": [
+          -22,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -22,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Hands sweeping down and in along a wide arc, elbow bend unchanged",
+      "joints": {
+        "spine": [
+          -12,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -38,
+          0,
+          54
+        ],
+        "upperArmR": [
+          -38,
+          0,
+          -54
+        ],
+        "forearmL": [
+          -22,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -22,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "bottom",
+      "t": 0.52,
+      "note": "Hands meet in front of the hips, chest squeezed",
+      "joints": {
+        "spine": [
+          -14,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -48,
+          0,
+          12
+        ],
+        "upperArmR": [
+          -48,
+          0,
+          -12
+        ],
+        "forearmL": [
+          -24,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -24,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Opening back out under control, feeling a stretch across the chest",
+      "joints": {
+        "spine": [
+          -12,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -30,
+          0,
+          66
+        ],
+        "upperArmR": [
+          -30,
+          0,
+          -66
+        ],
+        "forearmL": [
+          -22,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -22,
+          -0.0,
+          -0.0
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "id": "sweepL",
+      "anchor": "handL",
+      "dir": [
+        -1,
+        -0.55,
+        0.35
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Sweep both hands down and together toward a point in front of your hips"
+    },
+    {
+      "id": "elbow",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        0,
+        0.6
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Hold the same slight elbow bend the whole way, this is a hug not a press"
+    },
+    {
+      "id": "open",
+      "anchor": "handR",
+      "dir": [
+        1,
+        0.5,
+        -0.3
+      ],
+      "phases": [
+        "lockout"
+      ],
+      "cue": "Let your hands travel back out toward the side walls until you feel a stretch across your chest"
+    }
+  ],
+  "mistake": {
+    "label": "Turning it into a press",
+    "failJoints": [
+      "forearmL",
+      "forearmR"
+    ],
+    "cue": "Your elbows bend and straighten, so your triceps push the handles instead of your chest pulling them together. Lock the elbow angle and move only at the shoulder.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Wide, elbows already bent deeply",
+        "joints": {
+          "spine": [
+            -10,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -24,
+            0,
+            92
+          ],
+          "upperArmR": [
+            -24,
+            0,
+            -92
+          ],
+          "forearmL": [
+            -78,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -78,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Elbows straightening to push rather than sweeping",
+        "joints": {
+          "spine": [
+            -10,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -34,
+            0,
+            58
+          ],
+          "upperArmR": [
+            -34,
+            0,
+            -58
+          ],
+          "forearmL": [
+            -44,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -44,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "bottom",
+        "t": 0.52,
+        "note": "Finishing with a triceps press, arms locked out",
+        "joints": {
+          "spine": [
+            -10,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -42,
+            0,
+            16
+          ],
+          "upperArmR": [
+            -42,
+            0,
+            -16
+          ],
+          "forearmL": [
+            -6,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -6,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Re-bending the elbows on the way back out",
+        "joints": {
+          "spine": [
+            -10,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -30,
+            0,
+            62
+          ],
+          "upperArmR": [
+            -30,
+            0,
+            -62
+          ],
+          "forearmL": [
+            -58,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -58,
+            -0.0,
+            -0.0
+          ]
+        }
+      }
+    ]
+  },
+  "exerciseId": "custom-1774374972187"
+}

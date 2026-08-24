@@ -1,0 +1,513 @@
+{
+  "displayName": "Barbell/Dumbell Lateral Raise",
+  "resolvedAs": "Seated machine lateral raise",
+  "equipment": "machine-lateral",
+  "defaultCamera": "front",
+  "targetMuscles": [
+    "side-shoulders"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Seated upright, upper arms down against the pads, elbows slightly bent",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          4
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -4
+        ],
+        "forearmL": [
+          -18,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -18,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Upper arms halfway out, elbows leading",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          45
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -45
+        ],
+        "forearmL": [
+          -18,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -18,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.5,
+      "note": "Top: upper arms level with the shoulders, no higher",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          84
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -84
+        ],
+        "forearmL": [
+          -16,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -16,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.85,
+      "note": "Lowering under control, pads still touching",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          20
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -20
+        ],
+        "forearmL": [
+          -18,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -18,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "outL",
+      "anchor": "elbowL",
+      "dir": [
+        1,
+        0.35,
+        0
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Drive your elbows out toward the side walls, so your elbow arrives before your hand"
+    },
+    {
+      "id": "stop",
+      "anchor": "handR",
+      "dir": [
+        0,
+        1,
+        0
+      ],
+      "phases": [
+        "lockout"
+      ],
+      "cue": "Stop when your upper arms are level with your shoulders, do not lift them toward the ceiling"
+    },
+    {
+      "id": "shrug",
+      "anchor": "shoulderR",
+      "dir": [
+        0,
+        -1,
+        0
+      ],
+      "phases": [
+        "mid",
+        "lockout"
+      ],
+      "cue": "Shoulders stay pressed down away from your ears through the whole lift"
+    }
+  ],
+  "mistake": {
+    "label": "Shrugging the weight up",
+    "failJoints": [
+      "chest",
+      "upperArmL",
+      "upperArmR"
+    ],
+    "cue": "Your shoulders ride up toward your ears, so your neck muscles take over from the side of your shoulder. Keep your shoulders pinned down and lead with the elbows.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Seated, shoulders already creeping up",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "chest": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            0,
+            0,
+            6
+          ],
+          "upperArmR": [
+            0,
+            0,
+            -6
+          ],
+          "forearmL": [
+            -18,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -18,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Shoulders shrugging toward the ears as the arms rise",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "chest": [
+            -6,
+            0,
+            0
+          ],
+          "neck": [
+            8,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -10,
+            0,
+            40
+          ],
+          "upperArmR": [
+            -10,
+            0,
+            -40
+          ],
+          "forearmL": [
+            -24,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -24,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.5,
+        "note": "Arms above shoulder height with the neck bunched up",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "chest": [
+            -10,
+            0,
+            0
+          ],
+          "neck": [
+            12,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -14,
+            0,
+            105
+          ],
+          "upperArmR": [
+            -14,
+            0,
+            -105
+          ],
+          "forearmL": [
+            -26,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -26,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.85,
+        "note": "Dropping back down",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "chest": [
+            -4,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -6,
+            0,
+            22
+          ],
+          "upperArmR": [
+            -6,
+            0,
+            -22
+          ],
+          "forearmL": [
+            -20,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -20,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1769021252364"
+}

@@ -1,0 +1,462 @@
+{
+  "displayName": "Hamstring Curl",
+  "resolvedAs": "Seated hamstring curl machine",
+  "equipment": "ham-curl-seated",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "hamstrings"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Seated with the thigh pad locked down, legs almost straight out in front",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          12,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          12,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -6,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -6,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Heels curling down and back underneath the seat",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          52,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          52,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.52,
+      "note": "Knees fully bent, heels tucked as far under the seat as they go",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          98,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          98,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          0,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Letting the shins travel back out slowly, never letting the weight slam",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          36,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          36,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -6,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -6,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -16,
+          0,
+          10
+        ],
+        "upperArmR": [
+          -16,
+          0,
+          -10
+        ],
+        "forearmL": [
+          -40,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -40,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "curl",
+      "anchor": "footR",
+      "dir": [
+        0,
+        -0.5,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Drive your heels down and back toward the underside of the seat"
+    },
+    {
+      "id": "hip",
+      "anchor": "hips",
+      "dir": [
+        0,
+        -1,
+        -0.3
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Hips stay pressed into the seat and the thigh pad, they must not lift as you curl"
+    },
+    {
+      "id": "slow",
+      "anchor": "kneeR",
+      "dir": [
+        0,
+        0,
+        1
+      ],
+      "phases": [
+        "lockout"
+      ],
+      "cue": "Let your shins straighten out slowly instead of letting the weight stack pull them back"
+    }
+  ],
+  "mistake": {
+    "label": "Hips lifting off the seat",
+    "failJoints": [
+      "hips",
+      "spine"
+    ],
+    "cue": "Your hips rise off the seat so your lower back swings the weight instead of your hamstrings. Press your hips down into the seat and move only at the knee.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Seated, already perched forward",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            12,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            12,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -6,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Hips peeling off the seat as the heels come back",
+        "joints": {
+          "thighL": [
+            -72,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -72,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            54,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            54,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -18,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.33,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.52,
+        "note": "Hips well clear of the seat, back rounded over",
+        "joints": {
+          "thighL": [
+            -62,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -62,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            96,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            96,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -30,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.28,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Dropping back onto the seat",
+        "joints": {
+          "thighL": [
+            -80,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -80,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            34,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            34,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -12,
+            0,
+            0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.36,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768959532736"
+}

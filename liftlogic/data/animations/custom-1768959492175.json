@@ -1,0 +1,516 @@
+{
+  "displayName": "Hack Squat",
+  "resolvedAs": "Machine hack squat",
+  "equipment": "hack-squat",
+  "defaultCamera": "45",
+  "targetMuscles": [
+    "quads",
+    "glutes"
+  ],
+  "loopSeconds": 3.6,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Standing tall on the platform, back flat against the pad, knees straight",
+      "joints": {
+        "spine": [
+          0,
+          0,
+          0
+        ],
+        "thighL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          0,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          0,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          0,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          14
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -14
+        ],
+        "forearmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -30,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.28,
+      "note": "Descending, hips and knees bending together, knees tracking over the toes",
+      "joints": {
+        "spine": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -52,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -52,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          56,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          56,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -14,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -14,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          14
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -14
+        ],
+        "forearmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -30,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.24,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.5,
+      "note": "Thighs just past parallel, heels still flat, knees over the second toe",
+      "joints": {
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "thighL": [
+          -96,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -96,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          102,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          102,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -24,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -24,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          14
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -14
+        ],
+        "forearmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -30,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.46,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.82,
+      "note": "Driving back up through the whole foot to straight knees",
+      "joints": {
+        "spine": [
+          -2,
+          0,
+          0
+        ],
+        "thighL": [
+          -34,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -34,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          38,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          38,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -8,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -8,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          0,
+          0,
+          14
+        ],
+        "upperArmR": [
+          0,
+          0,
+          -14
+        ],
+        "forearmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -30,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.16,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "kneeL",
+      "anchor": "kneeL",
+      "dir": [
+        0.8,
+        0,
+        0.6
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Knees track out over your second toe, do not let them cave inward toward each other"
+    },
+    {
+      "id": "drive",
+      "anchor": "footR",
+      "dir": [
+        0,
+        1,
+        0
+      ],
+      "phases": [
+        "bottom",
+        "lockout"
+      ],
+      "cue": "Push the platform away through your whole foot, especially your heel, not just the ball of your foot"
+    },
+    {
+      "id": "back",
+      "anchor": "hips",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Keep your lower back flat against the pad as your hips travel down"
+    }
+  ],
+  "mistake": {
+    "label": "Knees caving inward",
+    "failJoints": [
+      "thighL",
+      "thighR",
+      "shinL",
+      "shinR"
+    ],
+    "cue": "Your knees collapse toward each other on the way up, which twists the knee joint. Push your knees apart so they stay in line with your second toe.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Standing, feet set",
+        "joints": {
+          "spine": [
+            0,
+            0,
+            0
+          ],
+          "thighL": [
+            0,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            0,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            0,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            0,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            0,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            0,
+            -0.0,
+            -0.0
+          ]
+        }
+      },
+      {
+        "phase": "mid",
+        "t": 0.28,
+        "note": "Knees already drifting inward as the hips drop",
+        "joints": {
+          "spine": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -52,
+            0,
+            -16
+          ],
+          "thighR": [
+            -52,
+            0,
+            16
+          ],
+          "shinL": [
+            56,
+            0,
+            10
+          ],
+          "shinR": [
+            56,
+            0,
+            -10
+          ],
+          "footL": [
+            -14,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -14,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.24,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.5,
+        "note": "Deep position with both knees collapsed toward the midline",
+        "joints": {
+          "spine": [
+            -10,
+            0,
+            0
+          ],
+          "thighL": [
+            -96,
+            0,
+            -26
+          ],
+          "thighR": [
+            -96,
+            0,
+            26
+          ],
+          "shinL": [
+            102,
+            0,
+            16
+          ],
+          "shinR": [
+            102,
+            0,
+            -16
+          ],
+          "footL": [
+            -24,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -24,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.46,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.82,
+        "note": "Standing up with the knees still pinched together",
+        "joints": {
+          "spine": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -34,
+            0,
+            -20
+          ],
+          "thighR": [
+            -34,
+            0,
+            20
+          ],
+          "shinL": [
+            38,
+            0,
+            12
+          ],
+          "shinR": [
+            38,
+            0,
+            -12
+          ],
+          "footL": [
+            -8,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -8,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.16,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768959492175"
+}

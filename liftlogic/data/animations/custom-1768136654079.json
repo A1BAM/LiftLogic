@@ -1,0 +1,549 @@
+{
+  "displayName": "Abdominal Crunch",
+  "resolvedAs": "Seated machine abdominal crunch",
+  "equipment": "machine-crunch",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "abs"
+  ],
+  "loopSeconds": 3.0,
+  "keyframes": [
+    {
+      "phase": "start",
+      "t": 0.0,
+      "note": "Seated tall against the pad, spine upright",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          0,
+          0,
+          0
+        ],
+        "chest": [
+          0,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          -30,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -95,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -95,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.3,
+      "note": "Ribs beginning to curl down toward the hips",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -16,
+          0,
+          0
+        ],
+        "chest": [
+          -10,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          -30,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -95,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -95,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.5,
+      "note": "Fully curled: the gap between ribs and hips is at its shortest",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -34,
+          0,
+          0
+        ],
+        "chest": [
+          -20,
+          0,
+          0
+        ],
+        "neck": [
+          -8,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          -30,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -95,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -95,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    },
+    {
+      "phase": "lockout",
+      "t": 0.85,
+      "note": "Uncurling back to upright under control",
+      "joints": {
+        "thighL": [
+          -85,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -85,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          85,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          85,
+          -0.0,
+          -0.0
+        ],
+        "spine": [
+          -8,
+          0,
+          0
+        ],
+        "chest": [
+          -4,
+          0,
+          0
+        ],
+        "upperArmL": [
+          -30,
+          0.0,
+          0.0
+        ],
+        "upperArmR": [
+          -30,
+          -0.0,
+          -0.0
+        ],
+        "forearmL": [
+          -95,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -95,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.38,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "curl",
+      "anchor": "chest",
+      "dir": [
+        0,
+        -0.6,
+        1
+      ],
+      "phases": [
+        "start",
+        "mid"
+      ],
+      "cue": "Curl your ribcage down toward your belt buckle, shortening the front of your stomach"
+    },
+    {
+      "id": "hips",
+      "anchor": "hips",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Hips stay planted in the seat, the movement happens in your stomach not at your hips"
+    },
+    {
+      "id": "return",
+      "anchor": "chest",
+      "dir": [
+        0,
+        1,
+        -0.4
+      ],
+      "phases": [
+        "lockout"
+      ],
+      "cue": "Come back up slowly until your back is flat against the pad again"
+    }
+  ],
+  "mistake": {
+    "label": "Pulling with the arms",
+    "failJoints": [
+      "upperArmL",
+      "upperArmR",
+      "thighL",
+      "thighR"
+    ],
+    "cue": "You pull the handles with your arms and fold at the hips, so your stomach barely shortens. Let your ribs do the moving and keep your arms just resting on the pads.",
+    "keyframes": [
+      {
+        "phase": "start",
+        "t": 0.0,
+        "note": "Seated, gripping hard, ready to yank",
+        "joints": {
+          "thighL": [
+            -85,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -85,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -30,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -30,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -95,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -95,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.3,
+        "note": "Arms pulling and the whole torso folding at the hip instead of the waist",
+        "joints": {
+          "thighL": [
+            -108,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -108,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -4,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -58,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -58,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -120,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -120,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.5,
+        "note": "Deep fold at the hips with a flat, uncurled back",
+        "joints": {
+          "thighL": [
+            -120,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -120,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            -2,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -70,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -70,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -130,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -130,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      },
+      {
+        "phase": "lockout",
+        "t": 0.85,
+        "note": "Rocking back up using the hips",
+        "joints": {
+          "thighL": [
+            -95,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -95,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            85,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            85,
+            -0.0,
+            -0.0
+          ],
+          "spine": [
+            0,
+            0,
+            0
+          ],
+          "upperArmL": [
+            -40,
+            0.0,
+            0.0
+          ],
+          "upperArmR": [
+            -40,
+            -0.0,
+            -0.0
+          ],
+          "forearmL": [
+            -100,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -100,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.38,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1768136654079"
+}

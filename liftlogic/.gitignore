@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# This project uses pnpm; a stray npm lockfile would drift from pnpm-lock.yaml
+package-lock.json

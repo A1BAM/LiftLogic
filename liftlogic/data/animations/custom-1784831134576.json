@@ -1,0 +1,525 @@
+{
+  "displayName": "Incline Chest Dumbbells",
+  "resolvedAs": "Incline dumbbell bench press, about 30 degrees",
+  "equipment": "bench-incline",
+  "defaultCamera": "side",
+  "targetMuscles": [
+    "chest",
+    "front-shoulders",
+    "triceps"
+  ],
+  "loopSeconds": 3.2,
+  "keyframes": [
+    {
+      "phase": "lockout",
+      "t": 0.0,
+      "note": "Arms straight above the upper chest, dumbbells just short of touching",
+      "joints": {
+        "thighL": [
+          -38,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -38,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          68,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          68,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -86,
+          0,
+          14
+        ],
+        "upperArmR": [
+          -86,
+          0,
+          -14
+        ],
+        "forearmL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -4,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.28,
+        0
+      ],
+      "rootRotation": [
+        -60,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "mid",
+      "t": 0.28,
+      "note": "Lowering, elbows opening to about 45 degrees from the ribs",
+      "joints": {
+        "thighL": [
+          -38,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -38,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          68,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          68,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -60,
+          0,
+          36
+        ],
+        "upperArmR": [
+          -60,
+          0,
+          -36
+        ],
+        "forearmL": [
+          -46,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -46,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.28,
+        0
+      ],
+      "rootRotation": [
+        -60,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "bottom",
+      "t": 0.5,
+      "note": "Dumbbells level with the upper chest, forearms vertical",
+      "joints": {
+        "thighL": [
+          -38,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -38,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          68,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          68,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -38,
+          0,
+          50
+        ],
+        "upperArmR": [
+          -38,
+          0,
+          -50
+        ],
+        "forearmL": [
+          -84,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -84,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.28,
+        0
+      ],
+      "rootRotation": [
+        -60,
+        0,
+        0
+      ]
+    },
+    {
+      "phase": "start",
+      "t": 0.8,
+      "note": "Pressing up and slightly together",
+      "joints": {
+        "thighL": [
+          -38,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -38,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          68,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          68,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          -68,
+          0,
+          28
+        ],
+        "upperArmR": [
+          -68,
+          0,
+          -28
+        ],
+        "forearmL": [
+          -32,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -32,
+          -0.0,
+          -0.0
+        ]
+      },
+      "rootOffset": [
+        0,
+        -0.28,
+        0
+      ],
+      "rootRotation": [
+        -60,
+        0,
+        0
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "id": "press",
+      "anchor": "handR",
+      "dir": [
+        0,
+        0,
+        1
+      ],
+      "phases": [
+        "bottom",
+        "start"
+      ],
+      "cue": "Press the dumbbells up over your collarbones and slightly toward each other"
+    },
+    {
+      "id": "elbow",
+      "anchor": "elbowR",
+      "dir": [
+        0,
+        -1,
+        -0.4
+      ],
+      "phases": [
+        "lockout",
+        "mid"
+      ],
+      "cue": "Elbows point down toward your hips at about 45 degrees, not flat out toward the walls"
+    },
+    {
+      "id": "depth",
+      "anchor": "handL",
+      "dir": [
+        0,
+        0,
+        -1
+      ],
+      "phases": [
+        "mid",
+        "bottom"
+      ],
+      "cue": "Lower until the dumbbells are level with the top of your chest, about a fist above it"
+    }
+  ],
+  "mistake": {
+    "label": "Elbows flared out flat",
+    "failJoints": [
+      "upperArmL",
+      "upperArmR"
+    ],
+    "cue": "Your elbows go straight out to the sides at shoulder height, which pinches the front of the shoulder. Point your elbows down toward your hips instead.",
+    "keyframes": [
+      {
+        "phase": "lockout",
+        "t": 0.0,
+        "note": "Locked out with elbows already wide",
+        "joints": {
+          "thighL": [
+            -38,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -38,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            68,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            68,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -86,
+            0,
+            28
+          ],
+          "upperArmR": [
+            -86,
+            0,
+            -28
+          ],
+          "forearmL": [
+            -4,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -4,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.28,
+          0
+        ],
+        "rootRotation": [
+          -60,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "mid",
+        "t": 0.28,
+        "note": "Elbows swinging out square to the body",
+        "joints": {
+          "thighL": [
+            -38,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -38,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            68,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            68,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -66,
+            0,
+            66
+          ],
+          "upperArmR": [
+            -66,
+            0,
+            -66
+          ],
+          "forearmL": [
+            -50,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -50,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.28,
+          0
+        ],
+        "rootRotation": [
+          -60,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "bottom",
+        "t": 0.5,
+        "note": "Deep bottom with the upper arms at 90 degrees from the ribs",
+        "joints": {
+          "thighL": [
+            -38,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -38,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            68,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            68,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -52,
+            0,
+            92
+          ],
+          "upperArmR": [
+            -52,
+            0,
+            -92
+          ],
+          "forearmL": [
+            -96,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -96,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.28,
+          0
+        ],
+        "rootRotation": [
+          -60,
+          0,
+          0
+        ]
+      },
+      {
+        "phase": "start",
+        "t": 0.8,
+        "note": "Pressing up from the flared bottom",
+        "joints": {
+          "thighL": [
+            -38,
+            0.0,
+            0.0
+          ],
+          "thighR": [
+            -38,
+            -0.0,
+            -0.0
+          ],
+          "shinL": [
+            68,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            68,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -70,
+            0,
+            62
+          ],
+          "upperArmR": [
+            -70,
+            0,
+            -62
+          ],
+          "forearmL": [
+            -40,
+            0.0,
+            0.0
+          ],
+          "forearmR": [
+            -40,
+            -0.0,
+            -0.0
+          ]
+        },
+        "rootOffset": [
+          0,
+          -0.28,
+          0
+        ],
+        "rootRotation": [
+          -60,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "exerciseId": "custom-1784831134576"
+}
