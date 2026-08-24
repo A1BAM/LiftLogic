@@ -59,14 +59,30 @@ export function createScene(
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); // capped, per spec
   renderer.setClearColor(0x0f172a);
+  // Shadows are what make the muscle relief read as shape rather than texture.
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 60);
 
   scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.5));
-  const key = new THREE.DirectionalLight(0xffffff, 1.5);
-  key.position.set(2.5, 4, 3);
+  const key = new THREE.DirectionalLight(0xfff4e6, 2.2);
+  key.position.set(2.6, 4.2, 3.1);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far = 14;
+  key.shadow.camera.left = -2.4;
+  key.shadow.camera.right = 2.4;
+  key.shadow.camera.top = 3.2;
+  key.shadow.camera.bottom = -0.6;
+  key.shadow.bias = -0.0012;
   scene.add(key);
+  // Low fill from the front so the chest and arms are not lost in shadow.
+  const fill = new THREE.DirectionalLight(0xdbeafe, 0.55);
+  fill.position.set(-1.4, 1.2, 3.4);
+  scene.add(fill);
   const rim = new THREE.DirectionalLight(0x93c5fd, 0.6);
   rim.position.set(-3, 2, -2.5);
   scene.add(rim);
@@ -75,6 +91,7 @@ export function createScene(
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 1 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
   scene.add(floor);
   const grid = new THREE.GridHelper(6, 12, 0x334155, 0x243044);
   grid.position.y = 0.002;
@@ -85,8 +102,78 @@ export function createScene(
   figure.add(rig.root);
   scene.add(figure);
 
+  rig.setHandPose(anim.handPose ?? 'grip');
+
   const equipment: EquipmentResult = buildEquipment(anim.equipment, rig);
   attachEquipment(equipment, rig, scene);
+  equipment.sceneObjects.forEach(o => o.traverse(c => {
+    const m = c as THREE.Mesh;
+    if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
+  }));
+  equipment.handObjects.forEach(({ object }) => object.traverse(c => {
+    const m = c as THREE.Mesh;
+    if (m.isMesh) { m.castShadow = true; }
+  }));
+
+  // Two-handed equipment spans the hands, so it is placed on the line between
+  // them each frame rather than parented to one hand.
+  const spanning = equipment.handObjects.filter(h => h.hand === 'both').map(h => h.object);
+  const spanA = new THREE.Vector3();
+  const spanB = new THREE.Vector3();
+  const spanMid = new THREE.Vector3();
+  const spanAxis = new THREE.Vector3();
+  const xAxis = new THREE.Vector3(1, 0, 0);
+
+  function updateSpanning() {
+    if (!spanning.length) return;
+    rig.anchors.handL.getWorldPosition(spanA);
+    rig.anchors.handR.getWorldPosition(spanB);
+    spanMid.addVectors(spanA, spanB).multiplyScalar(0.5);
+    spanAxis.subVectors(spanA, spanB);
+    if (spanAxis.lengthSq() < 1e-8) return;
+    spanAxis.normalize();
+    for (const obj of spanning) {
+      obj.position.copy(spanMid);
+      // The bar is modelled along its own X axis, so align that with the axis
+      // running from the right hand to the left.
+      obj.quaternion.setFromUnitVectors(xAxis, spanAxis);
+    }
+  }
+
+  // Live cable: redrawn each frame between the pulley and the hands, so it
+  // stays taut through the rep instead of being a static prop.
+  let cable: THREE.Mesh | null = null;
+  let cableGeo: THREE.CylinderGeometry | null = null;
+  let cableMat: THREE.MeshStandardMaterial | null = null;
+  if (equipment.cableFrom) {
+    cableGeo = new THREE.CylinderGeometry(0.007, 0.007, 1, 8);
+    cableMat = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.85 });
+    cable = new THREE.Mesh(cableGeo, cableMat);
+    cable.castShadow = true;
+    scene.add(cable);
+  }
+  const cableFrom = equipment.cableFrom;
+  const cableEnd = new THREE.Vector3();
+  const cableMid = new THREE.Vector3();
+  const cableDir = new THREE.Vector3();
+
+  function updateCable() {
+    if (!cable || !cableFrom) return;
+    // Attach to the midpoint between the hands, which is where a bar's
+    // clip sits.
+    rig.anchors.handR.getWorldPosition(cableEnd);
+    const left = new THREE.Vector3();
+    rig.anchors.handL.getWorldPosition(left);
+    cableEnd.lerp(left, 0.5).add(new THREE.Vector3(0, 0.05, 0));
+
+    cableDir.subVectors(cableEnd, cableFrom);
+    const len = cableDir.length();
+    if (len < 1e-4) return;
+    cableMid.copy(cableFrom).addScaledVector(cableDir, 0.5);
+    cable.position.copy(cableMid);
+    cable.scale.set(1, len, 1);
+    cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), cableDir.normalize());
+  }
 
   // --- arrows ------------------------------------------------------------
   // Parented to the scene rather than to the joint, so an arrow keeps pointing
@@ -268,6 +355,8 @@ export function createScene(
     last = now;
     if (playing) progress = (progress + dt / anim.loopSeconds) % 1;
     const phase = applyPose(progress);
+    updateSpanning();
+    updateCable();
     updateArrows(phase, dt);
     controls.update();
     renderer.render(scene, camera);
@@ -307,6 +396,7 @@ export function createScene(
       rig.dispose();
       equipment.dispose();
       floorGeo.dispose(); floorMat.dispose();
+      cableGeo?.dispose(); cableMat?.dispose();
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
       arrows.forEach(a => a.obj.traverse(o => {

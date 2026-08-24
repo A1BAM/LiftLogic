@@ -18,6 +18,12 @@ export interface EquipmentResult {
   sceneObjects: THREE.Object3D[];
   /** Added under a hand joint so it tracks the hands. */
   handObjects: Array<{ hand: 'handL' | 'handR' | 'both'; object: THREE.Object3D }>;
+  /**
+   * World-space point a cable leaves from (a pulley). When set, the scene
+   * redraws a cable between it and the hands every frame, so the cable stays
+   * attached through the whole rep instead of being a fixed prop.
+   */
+  cableFrom?: THREE.Vector3;
   dispose: () => void;
 }
 
@@ -37,6 +43,10 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 
   const sceneObjects: THREE.Object3D[] = [];
   const handObjects: EquipmentResult['handObjects'] = [];
+  const result: EquipmentResult = {
+    sceneObjects, handObjects,
+    dispose: () => owned.forEach(o => o.dispose())
+  };
 
   /** A barbell shaft with plates, lying across both hands. */
   const barbell = (len = 1.5, plateR = 0.21) => {
@@ -148,9 +158,87 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
     }
 
-    case 'cable-high':
-      sceneObjects.push(cableStack(-0.85, 1.55));
+    case 'cable-high': {
+      const machine = new THREE.Group();
+      // Single column set off to the lifter's right with the pulley on a reach
+      // arm overhead, which is how these stations are actually laid out and
+      // keeps the front view of the lifter clear.
+      const TX = -0.72, TZ = 0.42;
+
+      for (const dx of [-0.13, 0.13]) {
+        const post = box(0.07, 2.32, 0.07, ACCENT);
+        post.position.set(TX + dx, 1.16, TZ);
+        machine.add(post);
+      }
+      const base = box(0.46, 0.07, 0.66, DARK);
+      base.position.set(TX, 0.035, TZ);
+      machine.add(base);
+
+      for (const dx of [-0.055, 0.055]) {
+        const rod = cyl(0.011, 1.95, STEEL, 10);
+        rod.position.set(TX + dx, 1.0, TZ);
+        machine.add(rod);
+      }
+
+      const SELECTED = 6;
+      for (let i = 0; i < 14; i++) {
+        const plate = box(0.235, 0.052, 0.30, i < SELECTED ? 0x6b7688 : DARK);
+        plate.position.set(TX, 0.11 + i * 0.058 + (i < SELECTED ? 0.34 : 0), TZ);
+        machine.add(plate);
+      }
+      const pin = cyl(0.011, 0.16, 0x9aa3b2, 10);
+      pin.rotation.x = Math.PI / 2;
+      pin.position.set(TX, 0.11 + (SELECTED - 1) * 0.058 + 0.34, TZ - 0.18);
+      machine.add(pin);
+
+      // Reach arm from the column across to above the lifter.
+      const arm = box(Math.abs(TX) + 0.12, 0.085, 0.10, ACCENT);
+      arm.position.set(TX / 2 + 0.05, 2.30, TZ - 0.10);
+      machine.add(arm);
+
+      const PULLEY = new THREE.Vector3(0.02, 2.17, TZ - 0.14);
+      const wheel = cyl(0.062, 0.026, 0x9aa3b2, 20);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.copy(PULLEY);
+      machine.add(wheel);
+      for (const dx of [-0.025, 0.025]) {
+        const cheek = box(0.011, 0.14, 0.14, ACCENT);
+        cheek.position.set(PULLEY.x + dx, PULLEY.y + 0.03, PULLEY.z);
+        machine.add(cheek);
+      }
+
+      // Fixed cable runs: up the column, then along the arm to the pulley.
+      const riser = cyl(0.007, 1.64, 0x14171c, 6);
+      riser.position.set(TX, 1.30, TZ - 0.04);
+      machine.add(riser);
+      const topRun = cyl(0.007, Math.abs(TX) + 0.04, 0x14171c, 6);
+      topRun.rotation.z = Math.PI / 2;
+      topRun.position.set(TX / 2 + 0.01, 2.245, TZ - 0.12);
+      machine.add(topRun);
+
+      sceneObjects.push(machine);
+      result.cableFrom = PULLEY;
+
+      const bar = new THREE.Group();
+      const shaft = cyl(0.026, 0.56, 0x3a4250, 16);
+      shaft.rotation.z = Math.PI / 2;
+      bar.add(shaft);
+      for (const sgn of [-1, 1]) {
+        const grip = cyl(0.032, 0.17, 0x191d24, 16);
+        grip.rotation.z = Math.PI / 2;
+        grip.position.x = sgn * 0.185;
+        bar.add(grip);
+        const endCap = cyl(0.036, 0.018, 0xaab3c2, 14);
+        endCap.rotation.z = Math.PI / 2;
+        endCap.position.x = sgn * 0.275;
+        bar.add(endCap);
+      }
+      const bracket = box(0.036, 0.058, 0.026, 0xaab3c2);
+      bracket.position.y = 0.042;
+      bar.add(bracket);
+      handObjects.push({ hand: 'both', object: bar });
       break;
+    }
 
     case 'cable-low':
       sceneObjects.push(cableStack(-0.95, 0.35));
@@ -263,11 +351,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
   }
 
-  return {
-    sceneObjects,
-    handObjects,
-    dispose: () => owned.forEach(o => o.dispose())
-  };
+  return result;
 }
 
 /** Attaches hand-held equipment onto the rig's hand joints. */
@@ -275,9 +359,9 @@ export function attachEquipment(result: EquipmentResult, rig: Rig, sceneRoot: TH
   result.sceneObjects.forEach(o => sceneRoot.add(o));
   for (const { hand, object } of result.handObjects) {
     if (hand === 'both') {
-      // A bar spans both hands: parent to the right hand and let the left
-      // hand's keyframes keep it level. Good enough for a form cue.
-      rig.joints.handR.add(object);
+      // A bar spans both hands, so it cannot be a child of either one. The
+      // scene positions it on the line between them every frame instead.
+      sceneRoot.add(object);
     } else {
       rig.joints[hand].add(object);
     }

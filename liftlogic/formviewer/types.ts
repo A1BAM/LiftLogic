@@ -97,6 +97,8 @@ export interface AnimationFile {
   /** Side view is the default for most lifts: that is where form breaks show. */
   defaultCamera: 'front' | 'side' | '45';
   targetMuscles: MuscleTag[];
+  /** How the hands are shaped. Defaults to 'grip'; most lifts hold something. */
+  handPose?: 'grip' | 'open' | 'fist';
   /** Seconds for one full loop of the rep. */
   loopSeconds: number;
   keyframes: Keyframe[];
