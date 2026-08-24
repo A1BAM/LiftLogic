@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AVAILABLE_ANIMATION_IDS, hasAnimation, loadAnimation } from './loader';
+import { EQUIPMENT_KINDS } from './types';
 import type { AnimationFile, Keyframe } from './types';
 
 /**
@@ -18,11 +19,7 @@ const ANCHORS = new Set([
   'handL','handR','kneeL','kneeR','footL','footR'
 ]);
 const PHASES = new Set(['start','mid','bottom','lockout']);
-const EQUIPMENT = new Set([
-  'none','barbell','dumbbells','bench-flat','bench-incline','cable-high','cable-low',
-  'cable-crossover','smith-machine','machine-seated','machine-lateral','machine-crunch',
-  'hack-squat','leg-extension','ham-curl-seated','calf-seated','pullup-bar'
-]);
+const EQUIPMENT = new Set<string>(EQUIPMENT_KINDS);
 
 // Vague cues the viewer is explicitly meant to avoid, and jargon that should
 // be said in plain words instead.

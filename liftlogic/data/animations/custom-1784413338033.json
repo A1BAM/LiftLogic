@@ -48,12 +48,12 @@
       "note": "Bar passing the forehead as the head leans back out of its path",
       "joints": {
         "spine": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          10,
+          -10,
           0,
           0
         ],
@@ -127,7 +127,7 @@
           0
         ],
         "neck": [
-          6,
+          -6,
           0,
           0
         ],
@@ -242,7 +242,7 @@
         "note": "Bar swinging out forward, torso leaning back to counterbalance",
         "joints": {
           "spine": [
-            22,
+            -22,
             0,
             0
           ],
@@ -274,7 +274,7 @@
         "note": "Locked out with the bar in front and the back arched",
         "joints": {
           "spine": [
-            30,
+            -30,
             0,
             0
           ],
@@ -306,7 +306,7 @@
         "note": "Dropping the bar back down in front",
         "joints": {
           "spine": [
-            14,
+            -14,
             0,
             0
           ],

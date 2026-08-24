@@ -206,7 +206,7 @@
         "note": "Hips thrust forward and torso leans back to launch the weight",
         "joints": {
           "spine": [
-            14,
+            -14,
             0,
             0
           ],
@@ -243,7 +243,7 @@
         "note": "Top reached with the back arched",
         "joints": {
           "spine": [
-            18,
+            -18,
             0,
             0
           ],
@@ -275,7 +275,7 @@
         "note": "Dropping the weight rather than lowering it",
         "joints": {
           "spine": [
-            6,
+            -6,
             0,
             0
           ],

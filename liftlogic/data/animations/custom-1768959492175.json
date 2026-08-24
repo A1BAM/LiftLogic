@@ -77,7 +77,7 @@
       "note": "Descending, hips and knees bending together, knees tracking over the toes",
       "joints": {
         "spine": [
-          -4,
+          4,
           0,
           0
         ],
@@ -144,7 +144,7 @@
       "note": "Thighs just past parallel, heels still flat, knees over the second toe",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
@@ -211,7 +211,7 @@
       "note": "Driving back up through the whole foot to straight knees",
       "joints": {
         "spine": [
-          -2,
+          2,
           0,
           0
         ],
@@ -375,7 +375,7 @@
         "note": "Knees already drifting inward as the hips drop",
         "joints": {
           "spine": [
-            -4,
+            4,
             0,
             0
           ],
@@ -422,7 +422,7 @@
         "note": "Deep position with both knees collapsed toward the midline",
         "joints": {
           "spine": [
-            -10,
+            10,
             0,
             0
           ],
@@ -469,7 +469,7 @@
         "note": "Standing up with the knees still pinched together",
         "joints": {
           "spine": [
-            -4,
+            4,
             0,
             0
           ],

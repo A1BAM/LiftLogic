@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildRig, type Rig, type JointName, type MuscleTag } from './rig';
+import { buildRig, RIG_DIMENSIONS, type Rig, type JointName, type MuscleTag } from './rig';
 import { buildEquipment, attachEquipment, type EquipmentResult } from './equipment';
 import type { AnimationFile, ArrowSpec, Keyframe, Phase } from './types';
 
@@ -28,7 +28,6 @@ export interface SceneHandle {
 
 const ARROW_COLORS = ['#38bdf8', '#fbbf24', '#a78bfa'];
 const FAIL_COLOR = new THREE.Color('#ef4444');
-const MUSCLE_COLOR = new THREE.Color('#dc2626');
 
 const deg = THREE.MathUtils.degToRad;
 /** Smooth in/out so the loop does not snap at keyframe boundaries. */
@@ -61,7 +60,7 @@ export function createScene(
   renderer.setClearColor(0x0f172a);
   // Shadows are what make the muscle relief read as shape rather than texture.
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 60);
@@ -98,8 +97,17 @@ export function createScene(
   scene.add(grid);
 
   const rig: Rig = buildRig();
+  // The figure rotates about its HIPS, not its feet. Lying a body down by
+  // rotating about the floor would swing it away from the bench entirely;
+  // pivoting at the hips means rootRotation tips the body where it stands and
+  // rootOffset then places the hips on the pad.
+  const HIP_Y = RIG_DIMENSIONS.hipY;
   const figure = new THREE.Group();
-  figure.add(rig.root);
+  const body = new THREE.Group();
+  body.position.y = -HIP_Y;
+  body.add(rig.root);
+  figure.add(body);
+  figure.position.y = HIP_Y;
   scene.add(figure);
 
   rig.setHandPose(anim.handPose ?? 'grip');
@@ -197,26 +205,37 @@ export function createScene(
     return { spec, obj: g, anchor: rig.anchors[spec.anchor], color, opacity: 0 };
   });
 
-  // --- material bookkeeping for the red tints ----------------------------
-  const baseColors = new Map<THREE.Material, THREE.Color>();
-  const rememberColor = (m: THREE.Material) => {
-    const mm = m as THREE.MeshStandardMaterial;
-    if (mm.color && !baseColors.has(m)) baseColors.set(m, mm.color.clone());
-  };
+  // --- red marking -------------------------------------------------------
+  // Muscle highlighting shows dedicated patches. The mistake mode still tints
+  // a limb, so those meshes get their own material copy first: the body shares
+  // one material, and tinting it would redden the whole figure.
+  const ownedMats: THREE.Material[] = [];
+  const originalOf = new Map<THREE.Mesh, THREE.Material>();
+
   const jointMeshes = (name: JointName): THREE.Mesh[] => {
     const out: THREE.Mesh[] = [];
-    rig.joints[name].children.forEach(c => { if ((c as THREE.Mesh).isMesh) out.push(c as THREE.Mesh); });
+    rig.joints[name].children.forEach(c => {
+      const m = c as THREE.Mesh;
+      // Highlight patches are not part of the limb's own surface.
+      if (m.isMesh && m.visible) out.push(m);
+    });
     return out;
   };
-  const tint = (meshes: THREE.Mesh[], color: THREE.Color | null) => {
+
+  const markFail = (meshes: THREE.Mesh[]) => {
     for (const mesh of meshes) {
-      const m = mesh.material as THREE.MeshStandardMaterial;
-      rememberColor(m);
-      m.color.copy(color ?? baseColors.get(m)!);
+      if (!originalOf.has(mesh)) {
+        originalOf.set(mesh, mesh.material as THREE.Material);
+        const copy = (mesh.material as THREE.MeshStandardMaterial).clone();
+        copy.color.copy(FAIL_COLOR);
+        ownedMats.push(copy);
+        mesh.material = copy;
+      }
     }
   };
-  const clearTints = () => {
-    baseColors.forEach((c, m) => { (m as THREE.MeshStandardMaterial).color.copy(c); });
+  const clearFail = () => {
+    originalOf.forEach((mat, mesh) => { mesh.material = mat; });
+    originalOf.clear();
   };
 
   // --- state -------------------------------------------------------------
@@ -279,7 +298,8 @@ export function createScene(
     const offA = a.rootOffset ?? [0, 0, 0];
     const offB = b.rootOffset ?? [0, 0, 0];
     const [ox, oy, oz] = lerpTriple(offA, offB, k);
-    figure.position.set(ox, oy, oz);
+    // rootOffset moves the hips relative to where they stand.
+    figure.position.set(ox, HIP_Y + oy, oz);
 
     const rotA = a.rootRotation ?? [0, 0, 0];
     const rotB = b.rootRotation ?? [0, 0, 0];
@@ -338,14 +358,18 @@ export function createScene(
   }
 
   function updateTints() {
-    clearTints();
+    // Show only the patches for this lift's target muscles.
+    for (const meshes of Object.values(rig.muscleHighlights)) {
+      for (const m of meshes) m.visible = false;
+    }
     if (muscleHighlight) {
-      for (const m of anim.targetMuscles as MuscleTag[]) {
-        (rig.muscleMeshes[m] || []).forEach(mesh => tint([mesh], MUSCLE_COLOR));
+      for (const tag of anim.targetMuscles as MuscleTag[]) {
+        for (const m of rig.muscleHighlights[tag] || []) m.visible = true;
       }
     }
+    clearFail();
     if (mistakeMode) {
-      for (const j of anim.mistake.failJoints) tint(jointMeshes(j), FAIL_COLOR);
+      for (const j of anim.mistake.failJoints) markFail(jointMeshes(j));
     }
   }
 
@@ -397,6 +421,7 @@ export function createScene(
       equipment.dispose();
       floorGeo.dispose(); floorMat.dispose();
       cableGeo?.dispose(); cableMat?.dispose();
+      ownedMats.forEach(m => m.dispose());
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
       arrows.forEach(a => a.obj.traverse(o => {
