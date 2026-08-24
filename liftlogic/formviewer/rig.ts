@@ -1,15 +1,25 @@
 import * as THREE from 'three';
+import {
+  latheLimb, belly, roundedBox, offset, loft,
+  SKIN, SKIN_SHADE, HAIR, SHORTS, SHOE, SHOE_SOLE
+} from './anatomy';
 
 /**
- * Procedural human figure. No external model files: every part is a primitive
- * (capsule limbs, box feet, sphere head) parented into a bone hierarchy so a
- * rotation on a parent joint carries the whole limb with it.
+ * Procedural human figure. No external model files: every part is generated
+ * from primitives and assembled into a bone hierarchy, so a rotation on a
+ * parent joint carries the whole limb with it.
  *
  *   hips > spine > chest > neck > head
- *   chest > upperArm[LR] > forearm[LR] > hand[LR]
+ *   chest > upperArm[LR] > forearm[LR] > hand[LR] > finger segments
  *   hips  > thigh[LR]    > shin[LR]    > foot[LR]
  *
- * Rest pose is standing upright, arms hanging at the sides, palms inward.
+ * Limbs are lathe-turned from a profile so they taper and swell like real
+ * limbs, with ellipsoid muscle bellies (deltoid, biceps, triceps, forearm
+ * extensors, quads, hamstrings, calves) laid over the top. That detail is the
+ * point of the viewer: on a triceps pushdown you need to see the back of the
+ * upper arm change shape as the elbow opens.
+ *
+ * Rest pose is standing upright, arms hanging at the sides.
  * The figure faces +Z, up is +Y, and its own left is +X.
  *
  * Every segment hangs along local -Y from its joint origin, which fixes the
@@ -29,139 +39,301 @@ export type JointName =
   | 'thighL' | 'shinL' | 'footL'
   | 'thighR' | 'shinR' | 'footR';
 
-/** Muscle tags used by the "highlight target muscles" toggle. */
 export type MuscleTag =
   | 'chest' | 'front-shoulders' | 'side-shoulders' | 'rear-shoulders'
   | 'back' | 'biceps' | 'triceps' | 'abs'
   | 'quads' | 'hamstrings' | 'glutes' | 'calves';
 
-// Segment lengths in metres for a ~1.75 m figure.
-const L = {
-  spine: 0.22, chest: 0.20, neck: 0.07, headR: 0.115,
-  upperArm: 0.30, forearm: 0.26, hand: 0.09,
-  thigh: 0.44, shin: 0.42, foot: 0.26,
-  shoulderX: 0.19, hipX: 0.10, hipY: 0.92
-};
+/** How tightly the fingers curl. Most lifts hold something. */
+export type HandPose = 'grip' | 'open' | 'fist';
 
-const SKIN = 0x9aa7bd;
-const SKIN_DARK = 0x7d8ba3;
+const L = {
+  spine: 0.22, chest: 0.21, neck: 0.08, headR: 0.105,
+  upperArm: 0.30, forearm: 0.26, palm: 0.10,
+  thigh: 0.45, shin: 0.42, foot: 0.27,
+  shoulderX: 0.168, hipX: 0.10, hipY: 0.92
+};
 
 export interface Rig {
   root: THREE.Group;
   joints: Record<JointName, THREE.Object3D>;
-  /** Anchor points arrows attach to; world position is read each frame. */
   anchors: Record<string, THREE.Object3D>;
-  /** Meshes grouped by muscle so they can be tinted for the muscle toggle. */
   muscleMeshes: Record<MuscleTag, THREE.Mesh[]>;
+  setHandPose: (pose: HandPose) => void;
   dispose: () => void;
 }
 
-const disposables: Array<THREE.BufferGeometry | THREE.Material> = [];
-
-function mat(color: number): THREE.MeshStandardMaterial {
-  const m = new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.05 });
-  disposables.push(m);
-  return m;
-}
-
-/** A capsule of `len` hanging from the joint origin along -Y. */
-function segment(len: number, radius: number, color = SKIN): THREE.Mesh {
-  const cyl = Math.max(0.001, len - radius * 2);
-  const geo = new THREE.CapsuleGeometry(radius, cyl, 6, 12);
-  disposables.push(geo);
-  const mesh = new THREE.Mesh(geo, mat(color));
-  mesh.position.y = -len / 2;
-  mesh.castShadow = true;
-  return mesh;
-}
-
-/** A joint group positioned at `y` (and optional x) relative to its parent. */
-function joint(parent: THREE.Object3D, name: string, x = 0, y = 0, z = 0): THREE.Group {
-  const g = new THREE.Group();
-  g.name = name;
-  g.position.set(x, y, z);
-  parent.add(g);
-  return g;
-}
-
 export function buildRig(): Rig {
-  disposables.length = 0;
+  const owned: Array<THREE.BufferGeometry | THREE.Material> = [];
+  const G = <T extends THREE.BufferGeometry>(g: T): T => { owned.push(g); return g; };
+  const M = (color: number, extra: THREE.MeshStandardMaterialParameters = {}) => {
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.02, ...extra });
+    owned.push(m);
+    return m;
+  };
+
+  const skin = M(SKIN);
+  const skinShade = M(SKIN_SHADE);
+  const hairMat = M(HAIR, { roughness: 0.85 });
+  const shortsMat = M(SHORTS, { roughness: 0.9 });
+  const shoeMat = M(SHOE, { roughness: 0.8 });
+  const soleMat = M(SHOE_SOLE, { roughness: 0.7 });
+
+  const mesh = (g: THREE.BufferGeometry, m: THREE.Material) => {
+    const me = new THREE.Mesh(G(g), m);
+    me.castShadow = true;
+    me.receiveShadow = true;
+    return me;
+  };
+
+  const joint = (parent: THREE.Object3D, name: string, x = 0, y = 0, z = 0) => {
+    const g = new THREE.Group();
+    g.name = name;
+    g.position.set(x, y, z);
+    parent.add(g);
+    return g;
+  };
 
   const root = new THREE.Group();
   root.name = 'root';
 
-  // --- torso -------------------------------------------------------------
+  // ── pelvis and torso ───────────────────────────────────────────────────
   const hips = joint(root, 'hips', 0, L.hipY, 0);
-  const pelvis = segment(0.16, 0.10, SKIN_DARK);
-  pelvis.position.y = -0.02;
+  const pelvis = mesh(loft([
+    { y: 0.055, w: 0.126, d: 0.098 },
+    { y: -0.01, w: 0.143, d: 0.114, z: -0.014 },
+    { y: -0.07, w: 0.142, d: 0.122, z: -0.026 },
+    { y: -0.13, w: 0.133, d: 0.110, z: -0.018 },
+    { y: -0.18, w: 0.122, d: 0.094, z: -0.004 }
+  ], 24, 20), shortsMat);
   hips.add(pelvis);
+  const glutes = pelvis; // shape comes from the pelvis loft's rearward sections
 
-  // Spine and chest are drawn upward from the hips, so they use +Y offsets
-  // for their children while the capsule itself is flipped.
   const spine = joint(hips, 'spine', 0, 0, 0);
-  const spineMesh = segment(L.spine, 0.105);
-  spineMesh.position.y = L.spine / 2;
-  spine.add(spineMesh);
+  // Abdomen and lower back as a single lofted form: widest at the base of the
+  // ribs, pinched at the waist. Muscle relief is a gentle change of section,
+  // not a ball stuck on the front.
+  const waist = mesh(loft([
+    { y: -0.02, w: 0.126, d: 0.100 },
+    { y: 0.06, w: 0.110, d: 0.091 },
+    { y: 0.14, w: 0.116, d: 0.097 },
+    { y: L.spine + 0.03, w: 0.141, d: 0.107 }
+  ], 28, 34), skin);
+  spine.add(waist);
+  // Faint abdominal segmentation, sunk mostly inside the silhouette so it
+  // reads as relief rather than as beads on a string.
+  const absMeshes: THREE.Mesh[] = [];
+  for (let row = 0; row < 3; row++) {
+    for (const sx of [-1, 1]) {
+      const ab = mesh(
+        offset(belly(0.028, 0.020, 0.008, 12), sx * 0.029, 0.058 + row * 0.048, 0.082),
+        skin
+      );
+      spine.add(ab);
+      absMeshes.push(ab);
+    }
+  }
 
   const chest = joint(spine, 'chest', 0, L.spine, 0);
-  const chestMesh = segment(L.chest, 0.125);
-  chestMesh.position.y = L.chest / 2;
-  chest.add(chestMesh);
+  // Ribcage: broad across, shallow front to back, tapering into the shoulders.
+  const ribcage = mesh(loft([
+    { y: 0.00, w: 0.140, d: 0.106 },
+    { y: 0.05, w: 0.163, d: 0.117 },
+    { y: 0.11, w: 0.172, d: 0.119 },
+    { y: 0.17, w: 0.164, d: 0.110 },
+    { y: L.chest, w: 0.140, d: 0.094 }
+  ], 28, 34), skin);
+  chest.add(ribcage);
+  // Pectorals: wide and flat, tucked against the ribcage surface.
+  const pecL = mesh(offset(belly(0.062, 0.034, 0.013, 18), 0.050, L.chest * 0.62, 0.078), skin);
+  const pecR = mesh(offset(belly(0.062, 0.034, 0.013, 18), -0.050, L.chest * 0.62, 0.078), skin);
+  chest.add(pecL, pecR);
+  // The lat flare is carried by the ribcage loft's own section, so there is no
+  // separate lat mesh to read as a lump. These stay as tint targets only.
+  const latL = ribcage;
+  const latR = ribcage;
+  // Trapezius sloping from the neck out to the shoulders.
+  const traps = mesh(offset(belly(0.118, 0.034, 0.050, 18), 0, L.chest * 0.93, -0.026), skin);
+  chest.add(traps);
 
   const neck = joint(chest, 'neck', 0, L.chest, 0);
-  const neckMesh = segment(L.neck, 0.045);
-  neckMesh.position.y = L.neck / 2;
+  const neckMesh = mesh(loft([
+    { y: 0.00, w: 0.062, d: 0.060, z: -0.006 },
+    { y: 0.04, w: 0.052, d: 0.052, z: -0.002 },
+    { y: L.neck + 0.02, w: 0.049, d: 0.050, z: 0.004 }
+  ], 18, 12), skin);
   neck.add(neckMesh);
 
+  // ── head ───────────────────────────────────────────────────────────────
   const head = joint(neck, 'head', 0, L.neck, 0);
-  const headGeo = new THREE.SphereGeometry(L.headR, 20, 16);
-  disposables.push(headGeo);
-  const headMesh = new THREE.Mesh(headGeo, mat(SKIN));
-  headMesh.position.y = L.headR * 0.9;
-  head.add(headMesh);
-
-  // Nose marker so the figure's facing direction is unambiguous (+Z is front).
-  const noseGeo = new THREE.SphereGeometry(0.028, 8, 8);
-  disposables.push(noseGeo);
-  const nose = new THREE.Mesh(noseGeo, mat(SKIN_DARK));
-  nose.position.set(0, L.headR * 0.85, L.headR * 0.92);
+  const cranium = mesh(loft([
+    { y: 0.015, w: 0.052, d: 0.058, z: 0.006 },
+    { y: 0.055, w: 0.072, d: 0.082, z: 0.010 },
+    { y: 0.105, w: 0.086, d: 0.098, z: 0.004 },
+    { y: 0.165, w: 0.092, d: 0.100, z: -0.004 },
+    { y: 0.215, w: 0.080, d: 0.086, z: -0.010 },
+    { y: 0.245, w: 0.045, d: 0.048, z: -0.012 }
+  ], 24, 22), skin);
+  head.add(cranium);
+  const brow = mesh(offset(belly(0.070, 0.014, 0.022, 14), 0, 0.152, 0.082), skinShade);
+  head.add(brow);
+  const nose = mesh(offset(belly(0.018, 0.030, 0.026, 12), 0, 0.120, 0.098), skin);
   head.add(nose);
+  for (const sx of [-1, 1]) {
+    const eye = mesh(offset(belly(0.014, 0.011, 0.008, 12), sx * 0.034, 0.138, 0.084), M(0x2a2622));
+    head.add(eye);
+    const ear = mesh(offset(belly(0.010, 0.026, 0.019, 12), sx * 0.090, 0.135, -0.004), skin);
+    head.add(ear);
+  }
+  // Hair as a close cap over the back and top of the skull only.
+  const hair = mesh(loft([
+    { y: 0.115, w: 0.090, d: 0.101, z: -0.016 },
+    { y: 0.170, w: 0.095, d: 0.103, z: -0.010 },
+    { y: 0.222, w: 0.082, d: 0.088, z: -0.014 },
+    { y: 0.248, w: 0.046, d: 0.050, z: -0.016 }
+  ], 22, 14), hairMat);
+  head.add(hair);
 
-  // --- arms --------------------------------------------------------------
+  // ── arms ───────────────────────────────────────────────────────────────
   const arms: Record<string, THREE.Group> = {};
+  const delts: THREE.Mesh[] = [];
+  const bis: THREE.Mesh[] = [];
+  const tris: THREE.Mesh[] = [];
+  const fingerJoints: THREE.Object3D[] = [];
+
   for (const side of ['L', 'R'] as const) {
-    const sx = side === 'L' ? 1 : -1; // figure faces +Z, so its left is +X
-    const upper = joint(chest, `upperArm${side}`, sx * L.shoulderX, L.chest * 0.92, 0);
-    upper.add(segment(L.upperArm, 0.058));
+    const sx = side === 'L' ? 1 : -1;
+    const upper = joint(chest, `upperArm${side}`, sx * L.shoulderX, L.chest * 0.80, 0);
+
+    // Upper arm: thick at the shoulder, narrowing into the elbow.
+    upper.add(mesh(loft([
+      { y: 0.00, w: 0.050, d: 0.054 },
+      { y: -0.05, w: 0.052, d: 0.060, z: -0.004 },
+      { y: -0.14, w: 0.047, d: 0.056, z: -0.006 },
+      { y: -0.23, w: 0.039, d: 0.043, z: -0.002 },
+      { y: -L.upperArm, w: 0.034, d: 0.036 }
+    ], 22, 20), skin));
+
+    // Deltoid cap over the shoulder joint.
+    const delt = mesh(offset(belly(0.062, 0.078, 0.062, 20), -sx * 0.006, -0.030, -0.002), skin);
+    upper.add(delt); delts.push(delt);
+
+    // Biceps on the front, triceps larger on the back. On a pushdown the
+    // triceps is the thing being watched, so it gets a distinct long head
+    // running down the back of the arm plus a lateral head near the shoulder.
+    const bi = mesh(offset(belly(0.030, 0.066, 0.024, 16), 0, -0.118, 0.030), skin);
+    upper.add(bi); bis.push(bi);
+
+    const triLong = mesh(offset(belly(0.034, 0.088, 0.030, 16), -sx * 0.006, -0.128, -0.034), skin);
+    const triLat = mesh(offset(belly(0.024, 0.050, 0.022, 14), sx * 0.026, -0.086, -0.028), skin);
+    upper.add(triLong, triLat); tris.push(triLong, triLat);
+
+    // Elbow.
+    const elbow = mesh(belly(0.032, 0.028, 0.033, 14), skinShade);
+    elbow.position.y = -L.upperArm;
+    upper.add(elbow);
 
     const fore = joint(upper, `forearm${side}`, 0, -L.upperArm, 0);
-    fore.add(segment(L.forearm, 0.048));
+    // Forearm: broad just below the elbow, tapering hard into the wrist.
+    fore.add(mesh(loft([
+      { y: 0.00, w: 0.038, d: 0.040 },
+      { y: -0.05, w: 0.045, d: 0.046, z: 0.004 },
+      { y: -0.12, w: 0.039, d: 0.040 },
+      { y: -0.20, w: 0.029, d: 0.032 },
+      { y: -L.forearm, w: 0.024, d: 0.029 }
+    ], 22, 20), skin));
+    // Extensor mass on the outside of the upper forearm.
+    fore.add(mesh(offset(belly(0.020, 0.046, 0.018, 14), sx * 0.020, -0.072, 0.016), skin));
 
+    // ── hand: palm, four fingers of three segments, opposed thumb ────────
     const hand = joint(fore, `hand${side}`, 0, -L.forearm, 0);
-    hand.add(segment(L.hand, 0.045, SKIN_DARK));
+    hand.add(mesh(offset(roundedBox(0.078, 0.092, 0.036, 0.5), 0, -0.046, 0), skin));
+    // Heel of the thumb.
+    hand.add(mesh(offset(belly(0.022, 0.03, 0.018, 12), sx * 0.028, -0.038, 0.008), skin));
+
+    const fingerLen = [0.030, 0.026, 0.021];
+    for (let f = 0; f < 4; f++) {
+      // Index nearest the thumb, little finger furthest out.
+      const spread = (f - 1.5) * 0.021;
+      const scale = f === 3 ? 0.82 : f === 0 ? 0.95 : 1;
+      let parent: THREE.Object3D = hand;
+      let originY = -0.092;
+      for (let seg = 0; seg < 3; seg++) {
+        const j = joint(parent, `f${side}${f}${seg}`, seg === 0 ? -sx * spread : 0, originY, 0);
+        const len = fingerLen[seg] * scale;
+        j.add(mesh(latheLimb(len, [
+          { t: 0, r: 0.0115 * scale }, { t: 0.6, r: 0.0105 * scale }, { t: 1, r: 0.0095 * scale }
+        ], 10, 8), skin));
+        fingerJoints.push(j);
+        parent = j;
+        originY = -len;
+      }
+    }
+    // Thumb: rooted at the side of the palm and rotated across it.
+    let thumbParent: THREE.Object3D = hand;
+    let thumbY = -0.03;
+    for (let seg = 0; seg < 2; seg++) {
+      const j = joint(thumbParent, `t${side}${seg}`, seg === 0 ? sx * 0.036 : 0, thumbY, seg === 0 ? 0.012 : 0);
+      if (seg === 0) j.rotation.z = sx * 0.55;
+      const len = seg === 0 ? 0.030 : 0.024;
+      j.add(mesh(latheLimb(len, [{ t: 0, r: 0.0135 }, { t: 1, r: 0.0105 }], 10, 8), skin));
+      fingerJoints.push(j);
+      thumbParent = j;
+      thumbY = -len;
+    }
 
     arms[`upperArm${side}`] = upper;
     arms[`forearm${side}`] = fore;
     arms[`hand${side}`] = hand;
   }
 
-  // --- legs --------------------------------------------------------------
+  // ── legs ───────────────────────────────────────────────────────────────
   const legs: Record<string, THREE.Group> = {};
+  const quads: THREE.Mesh[] = [];
+  const hams: THREE.Mesh[] = [];
+  const calves: THREE.Mesh[] = [];
+
   for (const side of ['L', 'R'] as const) {
     const sx = side === 'L' ? 1 : -1;
-    const thigh = joint(hips, `thigh${side}`, sx * L.hipX, -0.06, 0);
-    thigh.add(segment(L.thigh, 0.082));
+    const thigh = joint(hips, `thigh${side}`, sx * L.hipX, -0.055, 0);
+    thigh.add(mesh(loft([
+      { y: 0.00, w: 0.084, d: 0.088 },
+      { y: -0.10, w: 0.082, d: 0.090, z: 0.004 },
+      { y: -0.24, w: 0.070, d: 0.078 },
+      { y: -0.38, w: 0.056, d: 0.060 },
+      { y: -L.thigh, w: 0.050, d: 0.052 }
+    ], 22, 22), skin));
+    const quad = mesh(offset(belly(0.044, 0.130, 0.022, 16), 0, -0.20, 0.056), skin);
+    const ham = mesh(offset(belly(0.040, 0.115, 0.020, 16), 0, -0.17, -0.058), skin);
+    thigh.add(quad, ham); quads.push(quad); hams.push(ham);
+    // Shorts covering the top of the thigh.
+    thigh.add(mesh(offset(belly(0.098, 0.115, 0.095, 18), 0, -0.075, 0), shortsMat));
+
+    const knee = mesh(offset(belly(0.045, 0.036, 0.044, 14), 0, 0.004, 0.006), skin);
+    knee.position.y = -L.thigh;
+    thigh.add(knee);
 
     const shin = joint(thigh, `shin${side}`, 0, -L.thigh, 0);
-    shin.add(segment(L.shin, 0.062));
+    shin.add(mesh(loft([
+      { y: 0.00, w: 0.048, d: 0.050 },
+      { y: -0.08, w: 0.050, d: 0.058, z: -0.008 },
+      { y: -0.20, w: 0.040, d: 0.046, z: -0.006 },
+      { y: -0.34, w: 0.028, d: 0.032 },
+      { y: -L.shin, w: 0.026, d: 0.030 }
+    ], 22, 22), skin));
+    const calf = mesh(offset(belly(0.038, 0.078, 0.028, 16), 0, -0.112, -0.040), skin);
+    shin.add(calf); calves.push(calf);
 
     const foot = joint(shin, `foot${side}`, 0, -L.shin, 0);
-    const footGeo = new THREE.BoxGeometry(0.10, 0.06, L.foot);
-    disposables.push(footGeo);
-    const footMesh = new THREE.Mesh(footGeo, mat(SKIN_DARK));
-    // Foot sits below the ankle and points forward (+Z).
-    footMesh.position.set(0, -0.03, L.foot * 0.28);
-    foot.add(footMesh);
+    foot.add(mesh(loft([
+      { y: 0.010, w: 0.046, d: 0.050, z: -0.030 },
+      { y: -0.018, w: 0.052, d: 0.090, z: 0.020 },
+      { y: -0.044, w: 0.050, d: 0.115, z: 0.048 },
+      { y: -0.060, w: 0.042, d: 0.100, z: 0.055 }
+    ], 20, 18), shoeMat));
+    foot.add(mesh(offset(roundedBox(0.106, 0.022, L.foot * 0.94, 0.3), 0, -0.070, L.foot * 0.20), soleMat));
+    // Ankle collar so the shoe meets the leg cleanly.
+    foot.add(mesh(offset(belly(0.045, 0.038, 0.045, 14), 0, -0.006, -0.012), shoeMat));
 
     legs[`thigh${side}`] = thigh;
     legs[`shin${side}`] = shin;
@@ -176,52 +348,61 @@ export function buildRig(): Rig {
     thighR: legs.thighR, shinR: legs.shinR, footR: legs.footR
   } as Record<JointName, THREE.Object3D>;
 
-  // Arrow anchors. Most map straight onto a joint; a few sit at a segment's
-  // far end (elbow, knee, ankle) which is where a cue usually points from.
-  const anchor = (parent: THREE.Object3D, name: string, y: number) => {
+  const anchor = (parent: THREE.Object3D, name: string, y: number, z = 0) => {
     const a = new THREE.Object3D();
     a.name = name;
-    a.position.y = y;
+    a.position.set(0, y, z);
     parent.add(a);
     return a;
   };
   const anchors: Record<string, THREE.Object3D> = {
     hips: anchor(hips, 'a_hips', 0),
-    chest: anchor(chest, 'a_chest', L.chest * 0.6),
-    head: anchor(head, 'a_head', L.headR),
-    shoulderL: anchor(arms.upperArmL, 'a_shoulderL', 0),
-    shoulderR: anchor(arms.upperArmR, 'a_shoulderR', 0),
+    chest: anchor(chest, 'a_chest', L.chest * 0.6, 0.1),
+    head: anchor(head, 'a_head', L.headR * 1.9),
+    shoulderL: anchor(arms.upperArmL, 'a_shoulderL', -0.02),
+    shoulderR: anchor(arms.upperArmR, 'a_shoulderR', -0.02),
     elbowL: anchor(arms.forearmL, 'a_elbowL', 0),
     elbowR: anchor(arms.forearmR, 'a_elbowR', 0),
-    handL: anchor(arms.handL, 'a_handL', -L.hand * 0.5),
-    handR: anchor(arms.handR, 'a_handR', -L.hand * 0.5),
+    handL: anchor(arms.handL, 'a_handL', -0.05),
+    handR: anchor(arms.handR, 'a_handR', -0.05),
     kneeL: anchor(legs.shinL, 'a_kneeL', 0),
     kneeR: anchor(legs.shinR, 'a_kneeR', 0),
-    footL: anchor(legs.footL, 'a_footL', 0),
-    footR: anchor(legs.footR, 'a_footR', 0)
+    footL: anchor(legs.footL, 'a_footL', -0.03, 0.06),
+    footR: anchor(legs.footR, 'a_footR', -0.03, 0.06)
   };
 
   const muscleMeshes: Record<MuscleTag, THREE.Mesh[]> = {
-    chest: [chestMesh],
-    'front-shoulders': [arms.upperArmL.children[0] as THREE.Mesh, arms.upperArmR.children[0] as THREE.Mesh],
-    'side-shoulders': [arms.upperArmL.children[0] as THREE.Mesh, arms.upperArmR.children[0] as THREE.Mesh],
-    'rear-shoulders': [arms.upperArmL.children[0] as THREE.Mesh, arms.upperArmR.children[0] as THREE.Mesh],
-    back: [chestMesh, spineMesh],
-    biceps: [arms.upperArmL.children[0] as THREE.Mesh, arms.upperArmR.children[0] as THREE.Mesh],
-    triceps: [arms.upperArmL.children[0] as THREE.Mesh, arms.upperArmR.children[0] as THREE.Mesh],
-    abs: [spineMesh],
-    quads: [legs.thighL.children[0] as THREE.Mesh, legs.thighR.children[0] as THREE.Mesh],
-    hamstrings: [legs.thighL.children[0] as THREE.Mesh, legs.thighR.children[0] as THREE.Mesh],
-    glutes: [pelvis],
-    calves: [legs.shinL.children[0] as THREE.Mesh, legs.shinR.children[0] as THREE.Mesh]
+    chest: [pecL, pecR],
+    'front-shoulders': delts,
+    'side-shoulders': delts,
+    'rear-shoulders': delts,
+    back: [latL, latR, traps],
+    biceps: bis,
+    triceps: tris,
+    abs: absMeshes,
+    quads,
+    hamstrings: hams,
+    glutes: [glutes],
+    calves
   };
 
-  const owned = [...disposables];
+  // Fingers curl by rotating each segment a little further than the last.
+  const setHandPose = (pose: HandPose) => {
+    const curl = pose === 'fist' ? 1 : pose === 'grip' ? 0.62 : 0.06;
+    for (const j of fingerJoints) {
+      const isThumb = j.name.startsWith('t');
+      const seg = Number(j.name.slice(-1));
+      const base = isThumb ? 0.5 : 0.95;
+      // Elbow-style flexion for fingers is -x: they close toward the palm side.
+      j.rotation.x = -curl * base * (seg === 0 ? 1 : 0.85);
+    }
+  };
+  setHandPose('grip');
+
   return {
-    root, joints, anchors, muscleMeshes,
-    dispose: () => owned.forEach(d => d.dispose())
+    root, joints, anchors, muscleMeshes, setHandPose,
+    dispose: () => owned.forEach(o => o.dispose())
   };
 }
 
-/** Segment lengths, exported so equipment can be sized against the figure. */
 export const RIG_DIMENSIONS = L;

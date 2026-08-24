@@ -1,35 +1,174 @@
 {
+  "exerciseId": "TRICEP_PUSHDOWN",
   "displayName": "Tricep Pulldown",
-  "resolvedAs": "Cable tricep pushdown, standing",
+  "resolvedAs": "Cable tricep pushdown with a straight bar, standing",
   "equipment": "cable-high",
   "defaultCamera": "side",
   "targetMuscles": [
     "triceps"
   ],
-  "loopSeconds": 2.6,
+  "handPose": "grip",
+  "loopSeconds": 3.4,
   "keyframes": [
     {
       "phase": "start",
       "t": 0.0,
-      "note": "Top: elbows bent just past 90, forearms angled up, upper arms pinned at the ribs",
+      "note": "Top of the rep: elbows bent past a right angle with the bar close to the chest, upper arms hanging vertical against the ribs",
       "joints": {
-        "upperArmL": [
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
           6,
           0.0,
           0.0
         ],
-        "upperArmR": [
+        "shinR": [
           6,
           -0.0,
           -0.0
         ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          4,
+          0,
+          3
+        ],
+        "upperArmR": [
+          4,
+          0,
+          -3
+        ],
         "forearmL": [
-          -100,
+          -122,
           0.0,
           0.0
         ],
         "forearmR": [
-          -100,
+          -122,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          -8,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          -8,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "start",
+      "t": 0.12,
+      "note": "Beginning to press: elbows still pinned, the triceps takes the load before anything moves",
+      "joints": {
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          4,
+          0,
+          3
+        ],
+        "upperArmR": [
+          4,
+          0,
+          -3
+        ],
+        "forearmL": [
+          -112,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -112,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          -6,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          -6,
           -0.0,
           -0.0
         ]
@@ -38,25 +177,80 @@
     {
       "phase": "mid",
       "t": 0.3,
-      "note": "Halfway down: elbows opening, upper arms have not moved",
+      "note": "Halfway down, forearms about 45 degrees: upper arms have not travelled forward at all",
       "joints": {
-        "upperArmL": [
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
           6,
           0.0,
           0.0
         ],
-        "upperArmR": [
+        "shinR": [
           6,
           -0.0,
           -0.0
         ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          5,
+          0,
+          3
+        ],
+        "upperArmR": [
+          5,
+          0,
+          -3
+        ],
         "forearmL": [
-          -55,
+          -62,
           0.0,
           0.0
         ],
         "forearmR": [
-          -55,
+          -62,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          -3,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          -3,
           -0.0,
           -0.0
         ]
@@ -64,26 +258,81 @@
     },
     {
       "phase": "bottom",
-      "t": 0.55,
-      "note": "Arms fully straight, hands beside the thighs",
+      "t": 0.48,
+      "note": "Arms straight, bar at the front of the thighs, wrists flat in line with the forearms",
       "joints": {
-        "upperArmL": [
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
           6,
           0.0,
           0.0
         ],
-        "upperArmR": [
+        "shinR": [
           6,
           -0.0,
           -0.0
         ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          6,
+          0,
+          3
+        ],
+        "upperArmR": [
+          6,
+          0,
+          -3
+        ],
         "forearmL": [
-          -4,
+          -6,
           0.0,
           0.0
         ],
         "forearmR": [
-          -4,
+          -6,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          0,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          0,
           -0.0,
           -0.0
         ]
@@ -91,18 +340,63 @@
     },
     {
       "phase": "lockout",
-      "t": 0.7,
-      "note": "Brief squeeze with arms straight",
+      "t": 0.58,
+      "note": "Squeeze: elbows fully locked, shoulders still pulled down away from the ears",
       "joints": {
-        "upperArmL": [
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          3,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
           6,
           0.0,
           0.0
         ],
-        "upperArmR": [
+        "shinR": [
           6,
           -0.0,
           -0.0
+        ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          7,
+          0,
+          3
+        ],
+        "upperArmR": [
+          7,
+          0,
+          -3
         ],
         "forearmL": [
           0,
@@ -111,6 +405,98 @@
         ],
         "forearmR": [
           0,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          2,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          2,
+          -0.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "phase": "mid",
+      "t": 0.8,
+      "note": "Letting the bar rise under control, the elbow bending back up while the upper arm stays put",
+      "joints": {
+        "spine": [
+          -6,
+          0,
+          0
+        ],
+        "chest": [
+          2,
+          0,
+          0
+        ],
+        "neck": [
+          -4,
+          0,
+          0
+        ],
+        "thighL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "thighR": [
+          -4,
+          -0.0,
+          -0.0
+        ],
+        "shinL": [
+          6,
+          0.0,
+          0.0
+        ],
+        "shinR": [
+          6,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -2,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -2,
+          -0.0,
+          -0.0
+        ],
+        "upperArmL": [
+          5,
+          0,
+          3
+        ],
+        "upperArmR": [
+          5,
+          0,
+          -3
+        ],
+        "forearmL": [
+          -68,
+          0.0,
+          0.0
+        ],
+        "forearmR": [
+          -68,
+          -0.0,
+          -0.0
+        ],
+        "handL": [
+          -4,
+          0.0,
+          0.0
+        ],
+        "handR": [
+          -4,
           -0.0,
           -0.0
         ]
@@ -130,6 +516,7 @@
         "start",
         "mid"
       ],
+      "length": 0.3,
       "cue": "Push the bar down toward the tops of your thighs until your arms are completely straight"
     },
     {
@@ -137,7 +524,7 @@
       "anchor": "elbowR",
       "dir": [
         0,
-        -0.3,
+        -0.25,
         -1
       ],
       "phases": [
@@ -145,7 +532,8 @@
         "mid",
         "bottom"
       ],
-      "cue": "Elbows stay pinned against your ribs and point back toward your hips, not forward toward the wall"
+      "length": 0.26,
+      "cue": "Elbows stay pinned against your ribs and point back toward your hips, not forward toward the machine"
     },
     {
       "id": "shoulder",
@@ -159,7 +547,8 @@
         "bottom",
         "lockout"
       ],
-      "cue": "Shoulders stay pulled down away from your ears the whole way"
+      "length": 0.24,
+      "cue": "Shoulders stay pulled down away from your ears the whole way through"
     }
   ],
   "mistake": {
@@ -168,30 +557,75 @@
       "upperArmL",
       "upperArmR"
     ],
-    "cue": "Your elbows swing forward away from your ribs, so your chest and shoulders push the weight instead of your triceps. Keep your upper arms locked against your sides.",
+    "cue": "Your elbows swing forward away from your ribs, so your chest and shoulders push the weight down instead of your triceps. Pin your upper arms against your sides and let only the elbow open.",
     "keyframes": [
       {
         "phase": "start",
         "t": 0.0,
-        "note": "Top, elbows already ahead of the ribs",
+        "note": "Top, elbows already ahead of the ribs and the shoulders rounded forward",
         "joints": {
-          "upperArmL": [
-            -35,
+          "spine": [
+            -14,
+            0,
+            0
+          ],
+          "chest": [
+            -8,
+            0,
+            0
+          ],
+          "neck": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -4,
             0.0,
             0.0
           ],
-          "upperArmR": [
-            -35,
+          "thighR": [
+            -4,
             -0.0,
             -0.0
           ],
+          "shinL": [
+            6,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            6,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -2,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -2,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -34,
+            0,
+            6
+          ],
+          "upperArmR": [
+            -34,
+            0,
+            -6
+          ],
           "forearmL": [
-            -95,
+            -92,
             0.0,
             0.0
           ],
           "forearmR": [
-            -95,
+            -92,
             -0.0,
             -0.0
           ]
@@ -200,25 +634,70 @@
       {
         "phase": "mid",
         "t": 0.3,
-        "note": "Elbows swinging further forward as the weight drops",
+        "note": "Elbows swinging further forward as the bar drops, the shoulder doing the work",
         "joints": {
-          "upperArmL": [
-            -50,
+          "spine": [
+            -18,
+            0,
+            0
+          ],
+          "chest": [
+            -12,
+            0,
+            0
+          ],
+          "neck": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -4,
             0.0,
             0.0
           ],
-          "upperArmR": [
-            -50,
+          "thighR": [
+            -4,
             -0.0,
             -0.0
           ],
+          "shinL": [
+            6,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            6,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -2,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -2,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -52,
+            0,
+            8
+          ],
+          "upperArmR": [
+            -52,
+            0,
+            -8
+          ],
           "forearmL": [
-            -55,
+            -54,
             0.0,
             0.0
           ],
           "forearmR": [
-            -55,
+            -54,
             -0.0,
             -0.0
           ]
@@ -226,59 +705,148 @@
       },
       {
         "phase": "bottom",
-        "t": 0.55,
-        "note": "Bottom reached by shoulder swing, not elbow extension",
+        "t": 0.5,
+        "note": "Bottom reached by leaning and swinging rather than by straightening the elbow",
         "joints": {
-          "upperArmL": [
-            -42,
+          "spine": [
+            -22,
+            0,
+            0
+          ],
+          "chest": [
+            -14,
+            0,
+            0
+          ],
+          "neck": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -4,
             0.0,
             0.0
           ],
-          "upperArmR": [
-            -42,
+          "thighR": [
+            -4,
             -0.0,
             -0.0
           ],
+          "shinL": [
+            6,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            6,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -2,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -2,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -44,
+            0,
+            8
+          ],
+          "upperArmR": [
+            -44,
+            0,
+            -8
+          ],
           "forearmL": [
-            -10,
+            -12,
             0.0,
             0.0
           ],
           "forearmR": [
-            -10,
+            -12,
             -0.0,
             -0.0
           ]
         }
       },
       {
-        "phase": "lockout",
-        "t": 0.7,
-        "note": "Shoulders rounded forward",
+        "phase": "mid",
+        "t": 0.8,
+        "note": "Bar rising again with the upper arms still floating forward",
         "joints": {
-          "upperArmL": [
-            -38,
+          "spine": [
+            -16,
+            0,
+            0
+          ],
+          "chest": [
+            -10,
+            0,
+            0
+          ],
+          "neck": [
+            -4,
+            0,
+            0
+          ],
+          "thighL": [
+            -4,
             0.0,
             0.0
           ],
-          "upperArmR": [
-            -38,
+          "thighR": [
+            -4,
             -0.0,
             -0.0
           ],
+          "shinL": [
+            6,
+            0.0,
+            0.0
+          ],
+          "shinR": [
+            6,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -2,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -2,
+            -0.0,
+            -0.0
+          ],
+          "upperArmL": [
+            -40,
+            0,
+            7
+          ],
+          "upperArmR": [
+            -40,
+            0,
+            -7
+          ],
           "forearmL": [
-            -6,
+            -58,
             0.0,
             0.0
           ],
           "forearmR": [
-            -6,
+            -58,
             -0.0,
             -0.0
           ]
         }
       }
     ]
-  },
-  "exerciseId": "TRICEP_PUSHDOWN"
+  }
 }
