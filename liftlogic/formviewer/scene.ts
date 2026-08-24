@@ -96,6 +96,7 @@ export function createScene(
   grid.position.y = 0.002;
   scene.add(grid);
 
+  const owned: Array<THREE.BufferGeometry | THREE.Material> = [];
   const rig: Rig = buildRig();
   // The figure rotates about its HIPS, not its feet. Lying a body down by
   // rotating about the floor would swing it away from the bench entirely;
@@ -148,41 +149,6 @@ export function createScene(
     }
   }
 
-  // Live cable: redrawn each frame between the pulley and the hands, so it
-  // stays taut through the rep instead of being a static prop.
-  let cable: THREE.Mesh | null = null;
-  let cableGeo: THREE.CylinderGeometry | null = null;
-  let cableMat: THREE.MeshStandardMaterial | null = null;
-  if (equipment.cableFrom) {
-    cableGeo = new THREE.CylinderGeometry(0.007, 0.007, 1, 8);
-    cableMat = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.85 });
-    cable = new THREE.Mesh(cableGeo, cableMat);
-    cable.castShadow = true;
-    scene.add(cable);
-  }
-  const cableFrom = equipment.cableFrom;
-  const cableEnd = new THREE.Vector3();
-  const cableMid = new THREE.Vector3();
-  const cableDir = new THREE.Vector3();
-
-  function updateCable() {
-    if (!cable || !cableFrom) return;
-    // Attach to the midpoint between the hands, which is where a bar's
-    // clip sits.
-    rig.anchors.handR.getWorldPosition(cableEnd);
-    const left = new THREE.Vector3();
-    rig.anchors.handL.getWorldPosition(left);
-    cableEnd.lerp(left, 0.5).add(new THREE.Vector3(0, 0.05, 0));
-
-    cableDir.subVectors(cableEnd, cableFrom);
-    const len = cableDir.length();
-    if (len < 1e-4) return;
-    cableMid.copy(cableFrom).addScaledVector(cableDir, 0.5);
-    cable.position.copy(cableMid);
-    cable.scale.set(1, len, 1);
-    cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), cableDir.normalize());
-  }
-
   // --- arrows ------------------------------------------------------------
   // Parented to the scene rather than to the joint, so an arrow keeps pointing
   // the way the body part should travel instead of spinning with the limb. Its
@@ -204,6 +170,44 @@ export function createScene(
     scene.add(g);
     return { spec, obj: g, anchor: rig.anchors[spec.anchor], color, opacity: 0 };
   });
+
+  // Live cables: redrawn each frame from each pulley to the hand it feeds, so
+  // they stay taut through the rep instead of being static props.
+  const cableGeo = new THREE.CylinderGeometry(0.007, 0.007, 1, 8);
+  const cableMat = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.85 });
+  const cables = (equipment.cables ?? []).map(spec => {
+    const mesh = new THREE.Mesh(cableGeo, cableMat);
+    mesh.castShadow = true;
+    scene.add(mesh);
+    return { spec, mesh };
+  });
+  if (cables.length) { owned.push(cableGeo, cableMat); }
+
+  const cableEnd = new THREE.Vector3();
+  const cableOther = new THREE.Vector3();
+  const cableMid = new THREE.Vector3();
+  const cableDir = new THREE.Vector3();
+  const upUnit = new THREE.Vector3(0, 1, 0);
+
+  function updateCables() {
+    for (const { spec, mesh } of cables) {
+      if (spec.to === 'both') {
+        // A bar's cable clips to the middle of it, just above the hands.
+        rig.anchors.handR.getWorldPosition(cableEnd);
+        rig.anchors.handL.getWorldPosition(cableOther);
+        cableEnd.lerp(cableOther, 0.5).y += 0.05;
+      } else {
+        rig.anchors[spec.to].getWorldPosition(cableEnd);
+      }
+      cableDir.subVectors(cableEnd, spec.from);
+      const len = cableDir.length();
+      if (len < 1e-4) continue;
+      cableMid.copy(spec.from).addScaledVector(cableDir, 0.5);
+      mesh.position.copy(cableMid);
+      mesh.scale.set(1, len, 1);
+      mesh.quaternion.setFromUnitVectors(upUnit, cableDir.normalize());
+    }
+  }
 
   // --- red marking -------------------------------------------------------
   // Muscle highlighting shows dedicated patches. The mistake mode still tints
@@ -380,7 +384,7 @@ export function createScene(
     if (playing) progress = (progress + dt / anim.loopSeconds) % 1;
     const phase = applyPose(progress);
     updateSpanning();
-    updateCable();
+    updateCables();
     updateArrows(phase, dt);
     controls.update();
     renderer.render(scene, camera);
@@ -420,8 +424,8 @@ export function createScene(
       rig.dispose();
       equipment.dispose();
       floorGeo.dispose(); floorMat.dispose();
-      cableGeo?.dispose(); cableMat?.dispose();
       ownedMats.forEach(m => m.dispose());
+      owned.forEach(o => o.dispose());
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
       arrows.forEach(a => a.obj.traverse(o => {

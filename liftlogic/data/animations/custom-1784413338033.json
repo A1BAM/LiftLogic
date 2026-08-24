@@ -13,7 +13,7 @@
     {
       "phase": "start",
       "t": 0.0,
-      "note": "Bar racked on the front shoulders, elbows under the bar, forearms vertical",
+      "note": "Bar racked on the front shoulders, elbows under and slightly in front of the bar",
       "joints": {
         "spine": [
           0,
@@ -21,22 +21,22 @@
           0
         ],
         "upperArmL": [
-          -18,
+          -26,
           0,
-          26
+          44
         ],
         "upperArmR": [
-          -18,
+          -26,
           0,
-          -26
+          -44
         ],
         "forearmL": [
-          -118,
+          -122,
           0.0,
           0.0
         ],
         "forearmR": [
-          -118,
+          -122,
           -0.0,
           -0.0
         ]
@@ -45,7 +45,7 @@
     {
       "phase": "mid",
       "t": 0.28,
-      "note": "Bar passing the forehead as the head leans back out of its path",
+      "note": "Bar passing the forehead close to the face, elbows travelling out to the sides",
       "joints": {
         "spine": [
           -2,
@@ -58,22 +58,22 @@
           0
         ],
         "upperArmL": [
-          -80,
+          -96,
           0,
-          20
+          62
         ],
         "upperArmR": [
-          -80,
+          -96,
           0,
-          -20
+          -62
         ],
         "forearmL": [
-          -66,
+          -62,
           0.0,
           0.0
         ],
         "forearmR": [
-          -66,
+          -62,
           -0.0,
           -0.0
         ]
@@ -95,22 +95,22 @@
           0
         ],
         "upperArmL": [
-          -172,
+          -176,
           0,
-          10
+          14
         ],
         "upperArmR": [
-          -172,
+          -176,
           0,
-          -10
+          -14
         ],
         "forearmL": [
-          -4,
+          -2,
           0.0,
           0.0
         ],
         "forearmR": [
-          -4,
+          -2,
           -0.0,
           -0.0
         ]
@@ -119,7 +119,7 @@
     {
       "phase": "bottom",
       "t": 0.85,
-      "note": "Lowering the bar back to the shoulders along the same line",
+      "note": "Lowering the bar back to the shoulders down the same line",
       "joints": {
         "spine": [
           0,
@@ -132,22 +132,22 @@
           0
         ],
         "upperArmL": [
-          -70,
+          -84,
           0,
-          22
+          56
         ],
         "upperArmR": [
-          -70,
+          -84,
           0,
-          -22
+          -56
         ],
         "forearmL": [
-          -74,
+          -78,
           0.0,
           0.0
         ],
         "forearmR": [
-          -74,
+          -78,
           -0.0,
           -0.0
         ]

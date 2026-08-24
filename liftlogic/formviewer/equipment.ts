@@ -24,11 +24,11 @@ export interface EquipmentResult {
    */
   jointObjects: Array<{ joint: JointName; object: THREE.Object3D }>;
   /**
-   * World-space point a cable leaves from (a pulley). When set, the scene
-   * redraws a cable between it and the hands every frame, so the cable stays
-   * attached through the whole rep instead of being a fixed prop.
+   * Cables to redraw every frame, each running from a pulley to a hand (or to
+   * the midpoint between them, for a bar). Keeping them live means a cable
+   * stays attached through the rep instead of being a fixed prop.
    */
-  cableFrom?: THREE.Vector3;
+  cables?: Array<{ from: THREE.Vector3; to: 'handL' | 'handR' | 'both' }>;
   dispose: () => void;
 }
 
@@ -98,7 +98,16 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
   };
 
   /** Weight stack tower; `handleY` is where the cable ends. */
-  const cableStack = (z: number, handleY: number) => {
+  /** Face of the tower the fixed cable run sits on, in the stack's own space. */
+  const STACK_CABLE_Z = 0.16;
+
+  /**
+   * A weight stack with its fixed run of cable. Returns the world point where
+   * that run ends, so a live cable can start exactly there: hardcoding the
+   * point separately left the two sections terminating on opposite faces of
+   * the tower with a visible gap between them.
+   */
+  const cableStack = (z: number, handleY: number, x = 0) => {
     const g = new THREE.Group();
     const tower = box(0.30, 1.85, 0.30, ACCENT);
     tower.position.set(0, 0.92, 0);
@@ -109,10 +118,10 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       g.add(plate);
     }
     const cable = cyl(0.006, Math.max(0.05, 1.85 - handleY), 0x1b1f26, 6);
-    cable.position.set(0, handleY + (1.85 - handleY) / 2, 0.16);
+    cable.position.set(0, handleY + (1.85 - handleY) / 2, STACK_CABLE_Z);
     g.add(cable);
-    g.position.z = z;
-    return g;
+    g.position.set(x, 0, z);
+    return { group: g, cableEnd: new THREE.Vector3(x, handleY, z + STACK_CABLE_Z) };
   };
 
   const seatFrame = (backAngle = 8, seatDepth = 0.62, seatCentreZ = 0.12) => {
@@ -245,7 +254,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       machine.add(topRun);
 
       sceneObjects.push(machine);
-      result.cableFrom = PULLEY;
+      result.cables = [{ from: PULLEY, to: 'both' }];
 
       const bar = new THREE.Group();
       const shaft = cyl(0.026, 0.56, 0x3a4250, 16);
@@ -306,7 +315,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       wheel.position.copy(PULLEY);
       g.add(wheel);
       sceneObjects.push(g);
-      result.cableFrom = PULLEY;
+      result.cables = [{ from: PULLEY, to: 'both' }];
 
       // Wide grip bar.
       const bar = new THREE.Group();
@@ -323,15 +332,24 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
     }
 
-    case 'cable-low':
-      sceneObjects.push(cableStack(-0.95, 0.35));
+    case 'cable-low': {
+      const stack = cableStack(-0.95, 0.35);
+      sceneObjects.push(stack.group);
+      result.cables = [{ from: stack.cableEnd, to: 'both' }];
       break;
+    }
 
     case 'cable-crossover': {
-      // Two towers, figure standing between them.
-      const left = cableStack(0, 1.6); left.position.x = -1.15;
-      const right = cableStack(0, 1.6); right.position.x = 1.15;
-      sceneObjects.push(left, right);
+      // Two towers with the lifter between them, close enough to stay in
+      // frame, and a live cable from each pulley to the matching hand.
+      const X = 0.92, PY = 1.62;
+      const left = cableStack(0, PY, -X);
+      const right = cableStack(0, PY, X);
+      sceneObjects.push(left.group, right.group);
+      result.cables = [
+        { from: left.cableEnd, to: 'handR' },
+        { from: right.cableEnd, to: 'handL' }
+      ];
       break;
     }
 
@@ -350,44 +368,65 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
     }
 
-    case 'machine-seated':
-      sceneObjects.push(seatFrame(10), cableStack(-0.95, 0.95));
+    case 'machine-seated': {
+      // You face the stack on a seated row, so it belongs in front, with a
+      // handle in the hands and a cable running back to the pulley.
+      sceneObjects.push(seatFrame(10));
+      const tower = cableStack(1.25, 0.62);
+      sceneObjects.push(tower.group);
+      result.cables = [{ from: tower.cableEnd, to: 'both' }];
+
+      const handle = new THREE.Group();
+      const grip = cyl(0.022, 0.34, 0x2b3038, 14);
+      grip.rotation.z = Math.PI / 2;
+      handle.add(grip);
+      for (const sgn of [-1, 1]) {
+        const pad = cyl(0.028, 0.12, 0x191d24, 12);
+        pad.rotation.z = Math.PI / 2;
+        pad.position.x = sgn * 0.11;
+        handle.add(pad);
+      }
+      handObjects.push({ hand: 'both', object: handle });
       break;
+    }
 
     case 'machine-lateral': {
-      const g = seatFrame(6);
-      // Pads the outer forearms press against.
-      for (const s of [-1, 1]) {
-        const armPad = box(0.10, 0.26, 0.16, PAD);
-        armPad.position.set(s * 0.34, 1.02, 0.05);
-        g.add(armPad);
+      sceneObjects.push(seatFrame(6));
+      // Pads ride the upper arms, as the machine's levers do. Left fixed, the
+      // arms swept up and out of them.
+      for (const side of ['upperArmL', 'upperArmR'] as const) {
+        const armPad = box(0.09, 0.22, 0.14, PAD);
+        armPad.position.set(side === 'upperArmL' ? 0.075 : -0.075, -0.15, 0.02);
+        jointObjects.push({ joint: side, object: armPad });
       }
-      sceneObjects.push(g);
       break;
     }
 
     case 'machine-crunch': {
       const g = seatFrame(4);
-      const chestPad = box(0.42, 0.18, 0.12, PAD);
-      chestPad.position.set(0, 1.00, 0.16);
-      g.add(chestPad);
+      // Pad and arm rests ride the chest, which is what the machine's linkage
+      // does; fixed, the head curled straight through them.
+      const chestPad = box(0.42, 0.16, 0.11, PAD);
+      chestPad.position.set(0, 0.16, 0.15);
+      jointObjects.push({ joint: 'chest', object: chestPad });
       for (const dx of [-0.16, 0.16]) {
-        const armRest = box(0.07, 0.07, 0.34, ACCENT);
-        armRest.position.set(dx, 1.05, 0.34);
-        g.add(armRest);
+        const armRest = box(0.07, 0.07, 0.30, ACCENT);
+        armRest.position.set(dx, 0.20, 0.30);
+        jointObjects.push({ joint: 'chest', object: armRest });
       }
-      sceneObjects.push(g, cableStack(-0.95, 1.20));
+      sceneObjects.push(g, cableStack(-0.95, 1.20).group);
       break;
     }
 
     case 'hack-squat': {
       const g = new THREE.Group();
-      const backPad = box(0.42, 1.10, 0.10, PAD);
-      backPad.rotation.x = THREE.MathUtils.degToRad(-35);
-      backPad.position.set(0, 0.85, -0.30);
-      g.add(backPad);
-      const platform = box(0.70, 0.06, 0.50, ACCENT);
-      platform.position.set(0, 0.03, 0.22);
+      // Parented to the spine so it rides down with the lifter, as the sled
+      // does. Fixed, the back slid off the pad at the bottom of every rep.
+      const backPad = box(0.42, 1.00, 0.09, PAD);
+      backPad.position.set(0, 0.40, -0.16);
+      jointObjects.push({ joint: 'spine', object: backPad });
+      const platform = box(0.76, 0.06, 0.58, ACCENT);
+      platform.position.set(0, 0.03, 0.38);
       g.add(platform);
       for (const x of [-0.55, 0.55]) {
         const rail = cyl(0.03, 2.0, STEEL);
@@ -415,7 +454,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       const g = seatFrame(14);
       // Pad clamped across the thighs, just above them.
       const thighPad = box(0.42, 0.09, 0.26, PAD);
-      thighPad.position.set(0, 0.62, 0.30);
+      thighPad.position.set(0, 0.575, 0.30);
       g.add(thighPad);
       sceneObjects.push(g);
       for (const side of ['shinL', 'shinR'] as const) {
@@ -430,11 +469,11 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
     case 'calf-seated': {
       const g = seatFrame(6, 0.46, 0.04);
       const kneePad = box(0.42, 0.11, 0.22, PAD);
-      kneePad.position.set(0, 0.63, 0.42);
+      kneePad.position.set(0, 0.575, 0.38);
       g.add(kneePad);
       // Block under the balls of the feet, with the heels free to drop.
       const block = box(0.46, 0.12, 0.16, ACCENT);
-      block.position.set(0, 0.06, 0.52);
+      block.position.set(0, 0.06, 0.46);
       g.add(block);
       sceneObjects.push(g);
       break;

@@ -15,7 +15,7 @@
       "note": "Standing tall on the platform, back flat against the pad, knees straight",
       "joints": {
         "spine": [
-          0,
+          -26,
           0,
           0
         ],
@@ -68,6 +68,11 @@
           -30,
           -0.0,
           -0.0
+        ],
+        "chest": [
+          -4,
+          0,
+          0
         ]
       }
     },
@@ -77,7 +82,7 @@
       "note": "Descending, hips and knees bending together, knees tracking over the toes",
       "joints": {
         "spine": [
-          4,
+          -26,
           0,
           0
         ],
@@ -130,6 +135,11 @@
           -30,
           -0.0,
           -0.0
+        ],
+        "chest": [
+          -4,
+          0,
+          0
         ]
       },
       "rootOffset": [
@@ -144,7 +154,7 @@
       "note": "Thighs just past parallel, heels still flat, knees over the second toe",
       "joints": {
         "spine": [
-          6,
+          -26,
           0,
           0
         ],
@@ -197,6 +207,11 @@
           -30,
           -0.0,
           -0.0
+        ],
+        "chest": [
+          -4,
+          0,
+          0
         ]
       },
       "rootOffset": [
@@ -211,7 +226,7 @@
       "note": "Driving back up through the whole foot to straight knees",
       "joints": {
         "spine": [
-          2,
+          -26,
           0,
           0
         ],
@@ -264,6 +279,11 @@
           -30,
           -0.0,
           -0.0
+        ],
+        "chest": [
+          -4,
+          0,
+          0
         ]
       },
       "rootOffset": [
@@ -333,7 +353,7 @@
         "note": "Standing, feet set",
         "joints": {
           "spine": [
-            0,
+            -26,
             0,
             0
           ],
@@ -366,6 +386,11 @@
             0,
             -0.0,
             -0.0
+          ],
+          "chest": [
+            -4,
+            0,
+            0
           ]
         }
       },
@@ -375,7 +400,7 @@
         "note": "Knees already drifting inward as the hips drop",
         "joints": {
           "spine": [
-            4,
+            -26,
             0,
             0
           ],
@@ -408,6 +433,11 @@
             -14,
             -0.0,
             -0.0
+          ],
+          "chest": [
+            -4,
+            0,
+            0
           ]
         },
         "rootOffset": [
@@ -422,7 +452,7 @@
         "note": "Deep position with both knees collapsed toward the midline",
         "joints": {
           "spine": [
-            10,
+            -26,
             0,
             0
           ],
@@ -455,6 +485,11 @@
             -24,
             -0.0,
             -0.0
+          ],
+          "chest": [
+            -4,
+            0,
+            0
           ]
         },
         "rootOffset": [
@@ -469,7 +504,7 @@
         "note": "Standing up with the knees still pinched together",
         "joints": {
           "spine": [
-            4,
+            -26,
             0,
             0
           ],
@@ -502,6 +537,11 @@
             -8,
             -0.0,
             -0.0
+          ],
+          "chest": [
+            -4,
+            0,
+            0
           ]
         },
         "rootOffset": [
