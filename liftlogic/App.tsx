@@ -11,7 +11,7 @@ import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
 
 const FormViewerModal = lazy(() => import('./components/FormViewerModal'));
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff, Trophy } from 'lucide-react';
+import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { workoutService } from './services/workoutService';
 import { authService } from './services/authService';
@@ -272,22 +272,6 @@ const App: React.FC = () => {
 
   const archivedExercises = useMemo(() => allExercises.filter(ex => ex.isArchived), [allExercises]);
 
-  const progressStats = useMemo(() => {
-    if (!workoutDay || displayedExercises.length === 0) {
-      return { completed: 0, total: 0, percent: 0 };
-    }
-    let completed = 0;
-    displayedExercises.forEach(ex => {
-      const todaysLogs = getTodaysLogs(ex.id);
-      const totalSets = todaysLogs.reduce((acc, log) => acc + (log.sets || 1), 0);
-      if (totalSets >= 3) {
-        completed++;
-      }
-    });
-    const total = displayedExercises.length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-    return { completed, total, percent };
-  }, [workoutDay, displayedExercises, getTodaysLogs]);
 
   // --- RENDERING ---
 
@@ -510,48 +494,6 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-md mx-auto p-4 animate-in slide-in-from-right-4 fade-in duration-300">
         <div className="space-y-6">
-          {workoutDay && displayedExercises.length > 0 && (
-            <div
-              className="bg-slate-800 border border-slate-700/60 rounded-xl p-4 shadow-md flex items-center gap-4 animate-in fade-in duration-300"
-              role="region"
-              aria-label="Today's Workout Progress"
-            >
-              <div className="bg-blue-600/10 p-2.5 rounded-full text-blue-400 shrink-0">
-                <Trophy size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Today's Progress
-                  </span>
-                  <span className="text-sm font-bold text-blue-400 font-mono">
-                    {progressStats.completed} / {progressStats.total} Exercises
-                  </span>
-                </div>
-                <div
-                  className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800/80"
-                  role="progressbar"
-                  aria-valuenow={progressStats.percent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`${progressStats.percent}% of exercises completed today`}
-                >
-                  <div
-                    className="bg-blue-500 h-full transition-all duration-500 ease-out rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]"
-                    style={{ width: `${progressStats.percent}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1.5 italic leading-none">
-                  {progressStats.percent === 100
-                    ? "🎉 Workout complete! Amazing work!"
-                    : progressStats.completed === 0
-                      ? "Let's go! Start your first exercise below."
-                      : "Keep pushing, you're doing great!"}
-                </p>
-              </div>
-            </div>
-          )}
-
           {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }) => {
             return (
               <ExerciseCard

@@ -106,17 +106,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     [sessions, todayStart]
   );
 
-  const targetSets = 3;
-
-  const totalSetsToday = useMemo(() => {
-    if (!todaySession) return 0;
-    let total = 0;
-    for (let i = 0; i < todaySession.logs.length; i++) {
-      total += todaySession.logs[i].sets || 1;
-    }
-    return total;
-  }, [todaySession]);
-
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
     // Set Logic: All days now default to 3 sets
@@ -258,24 +247,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
               {exercise.muscleGroup}
             </span>
-            {todaySession && (
-              <div
-                className="flex items-center gap-1"
-                role="img"
-                aria-label={`Progress: ${totalSetsToday} of ${targetSets} sets completed`}
-              >
-                {[...Array(targetSets)].map((_, i) => (
-                  <span
-                    key={i}
-                    className={`w-2.5 h-2.5 rounded-full border transition-all duration-300 ${
-                      i < totalSetsToday
-                        ? "bg-green-500 border-green-400 shadow-sm shadow-green-500/50"
-                        : "bg-slate-700 border-slate-600"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
