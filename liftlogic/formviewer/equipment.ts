@@ -98,7 +98,16 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
   };
 
   /** Weight stack tower; `handleY` is where the cable ends. */
-  const cableStack = (z: number, handleY: number) => {
+  /** Face of the tower the fixed cable run sits on, in the stack's own space. */
+  const STACK_CABLE_Z = 0.16;
+
+  /**
+   * A weight stack with its fixed run of cable. Returns the world point where
+   * that run ends, so a live cable can start exactly there: hardcoding the
+   * point separately left the two sections terminating on opposite faces of
+   * the tower with a visible gap between them.
+   */
+  const cableStack = (z: number, handleY: number, x = 0) => {
     const g = new THREE.Group();
     const tower = box(0.30, 1.85, 0.30, ACCENT);
     tower.position.set(0, 0.92, 0);
@@ -109,10 +118,10 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       g.add(plate);
     }
     const cable = cyl(0.006, Math.max(0.05, 1.85 - handleY), 0x1b1f26, 6);
-    cable.position.set(0, handleY + (1.85 - handleY) / 2, 0.16);
+    cable.position.set(0, handleY + (1.85 - handleY) / 2, STACK_CABLE_Z);
     g.add(cable);
-    g.position.z = z;
-    return g;
+    g.position.set(x, 0, z);
+    return { group: g, cableEnd: new THREE.Vector3(x, handleY, z + STACK_CABLE_Z) };
   };
 
   const seatFrame = (backAngle = 8, seatDepth = 0.62, seatCentreZ = 0.12) => {
@@ -323,20 +332,23 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
     }
 
-    case 'cable-low':
-      sceneObjects.push(cableStack(-0.95, 0.35));
+    case 'cable-low': {
+      const stack = cableStack(-0.95, 0.35);
+      sceneObjects.push(stack.group);
+      result.cables = [{ from: stack.cableEnd, to: 'both' }];
       break;
+    }
 
     case 'cable-crossover': {
       // Two towers with the lifter between them, close enough to stay in
       // frame, and a live cable from each pulley to the matching hand.
       const X = 0.92, PY = 1.62;
-      const left = cableStack(0, PY); left.position.x = -X;
-      const right = cableStack(0, PY); right.position.x = X;
-      sceneObjects.push(left, right);
+      const left = cableStack(0, PY, -X);
+      const right = cableStack(0, PY, X);
+      sceneObjects.push(left.group, right.group);
       result.cables = [
-        { from: new THREE.Vector3(-X, PY, 0.14), to: 'handR' },
-        { from: new THREE.Vector3(X, PY, 0.14), to: 'handL' }
+        { from: left.cableEnd, to: 'handR' },
+        { from: right.cableEnd, to: 'handL' }
       ];
       break;
     }
@@ -361,8 +373,8 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       // handle in the hands and a cable running back to the pulley.
       sceneObjects.push(seatFrame(10));
       const tower = cableStack(1.25, 0.62);
-      sceneObjects.push(tower);
-      result.cables = [{ from: new THREE.Vector3(0, 0.62, 1.10), to: 'both' }];
+      sceneObjects.push(tower.group);
+      result.cables = [{ from: tower.cableEnd, to: 'both' }];
 
       const handle = new THREE.Group();
       const grip = cyl(0.022, 0.34, 0x2b3038, 14);
@@ -402,7 +414,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
         armRest.position.set(dx, 0.20, 0.30);
         jointObjects.push({ joint: 'chest', object: armRest });
       }
-      sceneObjects.push(g, cableStack(-0.95, 1.20));
+      sceneObjects.push(g, cableStack(-0.95, 1.20).group);
       break;
     }
 
