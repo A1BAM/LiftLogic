@@ -13,53 +13,63 @@
     {
       "phase": "lockout",
       "t": 0.0,
-      "note": "Arms straight above the upper chest, dumbbells just short of touching",
+      "note": "Arms straight above the collarbones, dumbbells just short of touching",
       "joints": {
         "thighL": [
-          -38,
+          25,
           0.0,
           0.0
         ],
         "thighR": [
-          -38,
+          25,
           -0.0,
           -0.0
         ],
         "shinL": [
-          68,
+          111,
           0.0,
           0.0
         ],
         "shinR": [
-          68,
+          111,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -45,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -45,
           -0.0,
           -0.0
         ],
         "upperArmL": [
-          -86,
+          -88,
           0,
-          14
+          12
         ],
         "upperArmR": [
-          -86,
+          -88,
           0,
-          -14
+          -12
         ],
         "forearmL": [
-          -4,
+          -3,
           0.0,
           0.0
         ],
         "forearmR": [
-          -4,
+          -3,
           -0.0,
           -0.0
         ]
       },
       "rootOffset": [
         0,
-        -0.28,
-        0
+        -0.42000000000000004,
+        0.2
       ],
       "rootRotation": [
         -60,
@@ -73,34 +83,44 @@
       "note": "Lowering, elbows opening to about 45 degrees from the ribs",
       "joints": {
         "thighL": [
-          -38,
+          25,
           0.0,
           0.0
         ],
         "thighR": [
-          -38,
+          25,
           -0.0,
           -0.0
         ],
         "shinL": [
-          68,
+          111,
           0.0,
           0.0
         ],
         "shinR": [
-          68,
+          111,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -45,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -45,
           -0.0,
           -0.0
         ],
         "upperArmL": [
-          -60,
+          -62,
           0,
-          36
+          32
         ],
         "upperArmR": [
-          -60,
+          -62,
           0,
-          -36
+          -32
         ],
         "forearmL": [
           -46,
@@ -115,8 +135,8 @@
       },
       "rootOffset": [
         0,
-        -0.28,
-        0
+        -0.42000000000000004,
+        0.2
       ],
       "rootRotation": [
         -60,
@@ -127,37 +147,47 @@
     {
       "phase": "bottom",
       "t": 0.5,
-      "note": "Dumbbells level with the upper chest, forearms vertical",
+      "note": "Dumbbells level with the upper chest, forearms straight up and down",
       "joints": {
         "thighL": [
-          -38,
+          25,
           0.0,
           0.0
         ],
         "thighR": [
-          -38,
+          25,
           -0.0,
           -0.0
         ],
         "shinL": [
-          68,
+          111,
           0.0,
           0.0
         ],
         "shinR": [
-          68,
+          111,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -45,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -45,
           -0.0,
           -0.0
         ],
         "upperArmL": [
-          -38,
+          -42,
           0,
-          50
+          48
         ],
         "upperArmR": [
-          -38,
+          -42,
           0,
-          -50
+          -48
         ],
         "forearmL": [
           -84,
@@ -172,8 +202,8 @@
       },
       "rootOffset": [
         0,
-        -0.28,
-        0
+        -0.42000000000000004,
+        0.2
       ],
       "rootRotation": [
         -60,
@@ -184,37 +214,47 @@
     {
       "phase": "start",
       "t": 0.8,
-      "note": "Pressing up and slightly together",
+      "note": "Pressing back up and slightly together",
       "joints": {
         "thighL": [
-          -38,
+          25,
           0.0,
           0.0
         ],
         "thighR": [
-          -38,
+          25,
           -0.0,
           -0.0
         ],
         "shinL": [
-          68,
+          111,
           0.0,
           0.0
         ],
         "shinR": [
-          68,
+          111,
+          -0.0,
+          -0.0
+        ],
+        "footL": [
+          -45,
+          0.0,
+          0.0
+        ],
+        "footR": [
+          -45,
           -0.0,
           -0.0
         ],
         "upperArmL": [
-          -68,
+          -70,
           0,
-          28
+          26
         ],
         "upperArmR": [
-          -68,
+          -70,
           0,
-          -28
+          -26
         ],
         "forearmL": [
           -32,
@@ -229,8 +269,8 @@
       },
       "rootOffset": [
         0,
-        -0.28,
-        0
+        -0.42000000000000004,
+        0.2
       ],
       "rootRotation": [
         -60,
@@ -294,53 +334,63 @@
       {
         "phase": "lockout",
         "t": 0.0,
-        "note": "Locked out with elbows already wide",
+        "note": "Locked out with the elbows already turned out",
         "joints": {
           "thighL": [
-            -38,
+            25,
             0.0,
             0.0
           ],
           "thighR": [
-            -38,
+            25,
             -0.0,
             -0.0
           ],
           "shinL": [
-            68,
+            111,
             0.0,
             0.0
           ],
           "shinR": [
-            68,
+            111,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -45,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -45,
             -0.0,
             -0.0
           ],
           "upperArmL": [
-            -86,
+            -88,
             0,
-            28
+            26
           ],
           "upperArmR": [
-            -86,
+            -88,
             0,
-            -28
+            -26
           ],
           "forearmL": [
-            -4,
+            -3,
             0.0,
             0.0
           ],
           "forearmR": [
-            -4,
+            -3,
             -0.0,
             -0.0
           ]
         },
         "rootOffset": [
           0,
-          -0.28,
-          0
+          -0.42000000000000004,
+          0.2
         ],
         "rootRotation": [
           -60,
@@ -351,53 +401,63 @@
       {
         "phase": "mid",
         "t": 0.28,
-        "note": "Elbows swinging out square to the body",
+        "note": "Elbows swinging square to the body",
         "joints": {
           "thighL": [
-            -38,
+            25,
             0.0,
             0.0
           ],
           "thighR": [
-            -38,
+            25,
             -0.0,
             -0.0
           ],
           "shinL": [
-            68,
+            111,
             0.0,
             0.0
           ],
           "shinR": [
-            68,
+            111,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -45,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -45,
             -0.0,
             -0.0
           ],
           "upperArmL": [
             -66,
             0,
-            66
+            64
           ],
           "upperArmR": [
             -66,
             0,
-            -66
+            -64
           ],
           "forearmL": [
-            -50,
+            -48,
             0.0,
             0.0
           ],
           "forearmR": [
-            -50,
+            -48,
             -0.0,
             -0.0
           ]
         },
         "rootOffset": [
           0,
-          -0.28,
-          0
+          -0.42000000000000004,
+          0.2
         ],
         "rootRotation": [
           -60,
@@ -408,53 +468,63 @@
       {
         "phase": "bottom",
         "t": 0.5,
-        "note": "Deep bottom with the upper arms at 90 degrees from the ribs",
+        "note": "Deep bottom with the upper arms flat out at shoulder height",
         "joints": {
           "thighL": [
-            -38,
+            25,
             0.0,
             0.0
           ],
           "thighR": [
-            -38,
+            25,
             -0.0,
             -0.0
           ],
           "shinL": [
-            68,
+            111,
             0.0,
             0.0
           ],
           "shinR": [
-            68,
+            111,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -45,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -45,
             -0.0,
             -0.0
           ],
           "upperArmL": [
             -52,
             0,
-            92
+            90
           ],
           "upperArmR": [
             -52,
             0,
-            -92
+            -90
           ],
           "forearmL": [
-            -96,
+            -94,
             0.0,
             0.0
           ],
           "forearmR": [
-            -96,
+            -94,
             -0.0,
             -0.0
           ]
         },
         "rootOffset": [
           0,
-          -0.28,
-          0
+          -0.42000000000000004,
+          0.2
         ],
         "rootRotation": [
           -60,
@@ -468,50 +538,60 @@
         "note": "Pressing up from the flared bottom",
         "joints": {
           "thighL": [
-            -38,
+            25,
             0.0,
             0.0
           ],
           "thighR": [
-            -38,
+            25,
             -0.0,
             -0.0
           ],
           "shinL": [
-            68,
+            111,
             0.0,
             0.0
           ],
           "shinR": [
-            68,
+            111,
+            -0.0,
+            -0.0
+          ],
+          "footL": [
+            -45,
+            0.0,
+            0.0
+          ],
+          "footR": [
+            -45,
             -0.0,
             -0.0
           ],
           "upperArmL": [
             -70,
             0,
-            62
+            60
           ],
           "upperArmR": [
             -70,
             0,
-            -62
+            -60
           ],
           "forearmL": [
-            -40,
+            -38,
             0.0,
             0.0
           ],
           "forearmR": [
-            -40,
+            -38,
             -0.0,
             -0.0
           ]
         },
         "rootOffset": [
           0,
-          -0.28,
-          0
+          -0.42000000000000004,
+          0.2
         ],
         "rootRotation": [
           -60,

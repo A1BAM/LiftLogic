@@ -1,7 +1,7 @@
 {
   "displayName": "Lat Pulldown (Cable)",
   "resolvedAs": "Seated cable lat pulldown to the chest",
-  "equipment": "cable-high",
+  "equipment": "lat-pulldown",
   "defaultCamera": "front",
   "targetMuscles": [
     "back",
@@ -35,7 +35,7 @@
           -0.0
         ],
         "spine": [
-          -4,
+          4,
           0,
           0
         ],
@@ -92,7 +92,7 @@
           -0.0
         ],
         "spine": [
-          -8,
+          8,
           0,
           0
         ],
@@ -149,12 +149,12 @@
           -0.0
         ],
         "spine": [
-          -12,
+          12,
           0,
           0
         ],
         "chest": [
-          6,
+          -6,
           0,
           0
         ],
@@ -211,7 +211,7 @@
           -0.0
         ],
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
@@ -320,7 +320,7 @@
             -0.0
           ],
           "spine": [
-            6,
+            -6,
             0,
             0
           ],
@@ -377,7 +377,7 @@
             -0.0
           ],
           "spine": [
-            26,
+            -26,
             0,
             0
           ],
@@ -434,7 +434,7 @@
             -0.0
           ],
           "spine": [
-            44,
+            -44,
             0,
             0
           ],
@@ -491,7 +491,7 @@
             -0.0
           ],
           "spine": [
-            14,
+            -14,
             0,
             0
           ],

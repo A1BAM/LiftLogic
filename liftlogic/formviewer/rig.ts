@@ -58,7 +58,13 @@ export interface Rig {
   root: THREE.Group;
   joints: Record<JointName, THREE.Object3D>;
   anchors: Record<string, THREE.Object3D>;
-  muscleMeshes: Record<MuscleTag, THREE.Mesh[]>;
+  /**
+   * Red patches sitting just proud of each muscle, hidden until the highlight
+   * toggle turns them on. Kept as their own meshes rather than tinting the
+   * body: the body shares one material, so tinting it reddened the whole
+   * figure, and a patch shows exactly which muscle is working.
+   */
+  muscleHighlights: Record<MuscleTag, THREE.Mesh[]>;
   setHandPose: (pose: HandPose) => void;
   dispose: () => void;
 }
@@ -94,6 +100,30 @@ export function buildRig(): Rig {
     return g;
   };
 
+  const highlightMat = new THREE.MeshStandardMaterial({
+    color: 0xe11d2f, roughness: 0.45, emissive: 0x3b0008, emissiveIntensity: 0.6
+  });
+  owned.push(highlightMat);
+
+  const highlights: Record<MuscleTag, THREE.Mesh[]> = {
+    chest: [], 'front-shoulders': [], 'side-shoulders': [], 'rear-shoulders': [],
+    back: [], biceps: [], triceps: [], abs: [],
+    quads: [], hamstrings: [], glutes: [], calves: []
+  };
+  /** Adds a red patch over a muscle, sized just proud of the body surface. */
+  const patch = (
+    parent: THREE.Object3D, tag: MuscleTag,
+    rx: number, ry: number, rz: number,
+    x: number, y: number, z: number
+  ) => {
+    const m = new THREE.Mesh(G(belly(rx, ry, rz, 16)), highlightMat);
+    m.position.set(x, y, z);
+    m.visible = false;
+    parent.add(m);
+    highlights[tag].push(m);
+    return m;
+  };
+
   const root = new THREE.Group();
   root.name = 'root';
 
@@ -107,7 +137,7 @@ export function buildRig(): Rig {
     { y: -0.18, w: 0.122, d: 0.094, z: -0.004 }
   ], 24, 20), shortsMat);
   hips.add(pelvis);
-  const glutes = pelvis; // shape comes from the pelvis loft's rearward sections
+  patch(hips, 'glutes', 0.108, 0.062, 0.040, 0, -0.072, -0.078);
 
   const spine = joint(hips, 'spine', 0, 0, 0);
   // Abdomen and lower back as a single lofted form: widest at the base of the
@@ -131,6 +161,7 @@ export function buildRig(): Rig {
       );
       spine.add(ab);
       absMeshes.push(ab);
+      patch(spine, 'abs', 0.030, 0.022, 0.010, sx * 0.029, 0.058 + row * 0.048, 0.084);
     }
   }
 
@@ -148,6 +179,11 @@ export function buildRig(): Rig {
   const pecL = mesh(offset(belly(0.062, 0.034, 0.013, 18), 0.050, L.chest * 0.62, 0.078), skin);
   const pecR = mesh(offset(belly(0.062, 0.034, 0.013, 18), -0.050, L.chest * 0.62, 0.078), skin);
   chest.add(pecL, pecR);
+  patch(chest, 'chest', 0.068, 0.040, 0.020, 0.050, L.chest * 0.62, 0.080);
+  patch(chest, 'chest', 0.068, 0.040, 0.020, -0.050, L.chest * 0.62, 0.080);
+  // Lats: a flare down each side of the ribcage.
+  patch(chest, 'back', 0.030, 0.090, 0.048, 0.150, L.chest * 0.34, -0.012);
+  patch(chest, 'back', 0.030, 0.090, 0.048, -0.150, L.chest * 0.34, -0.012);
   // The lat flare is carried by the ribcage loft's own section, so there is no
   // separate lat mesh to read as a lump. These stay as tint targets only.
   const latL = ribcage;
@@ -217,16 +253,22 @@ export function buildRig(): Rig {
     // Deltoid cap over the shoulder joint.
     const delt = mesh(offset(belly(0.062, 0.078, 0.062, 20), -sx * 0.006, -0.030, -0.002), skin);
     upper.add(delt); delts.push(delt);
+    for (const tag of ['front-shoulders', 'side-shoulders', 'rear-shoulders'] as const) {
+      patch(upper, tag, 0.064, 0.080, 0.064, -sx * 0.006, -0.030, -0.002);
+    }
 
     // Biceps on the front, triceps larger on the back. On a pushdown the
     // triceps is the thing being watched, so it gets a distinct long head
     // running down the back of the arm plus a lateral head near the shoulder.
     const bi = mesh(offset(belly(0.030, 0.066, 0.024, 16), 0, -0.118, 0.030), skin);
     upper.add(bi); bis.push(bi);
+    patch(upper, 'biceps', 0.032, 0.068, 0.026, 0, -0.118, 0.031);
 
     const triLong = mesh(offset(belly(0.034, 0.088, 0.030, 16), -sx * 0.006, -0.128, -0.034), skin);
     const triLat = mesh(offset(belly(0.024, 0.050, 0.022, 14), sx * 0.026, -0.086, -0.028), skin);
     upper.add(triLong, triLat); tris.push(triLong, triLat);
+    patch(upper, 'triceps', 0.036, 0.090, 0.032, -sx * 0.006, -0.128, -0.036);
+    patch(upper, 'triceps', 0.026, 0.052, 0.024, sx * 0.026, -0.086, -0.030);
 
     // Elbow.
     const elbow = mesh(belly(0.032, 0.028, 0.033, 14), skinShade);
@@ -306,6 +348,8 @@ export function buildRig(): Rig {
     const quad = mesh(offset(belly(0.044, 0.130, 0.022, 16), 0, -0.20, 0.056), skin);
     const ham = mesh(offset(belly(0.040, 0.115, 0.020, 16), 0, -0.17, -0.058), skin);
     thigh.add(quad, ham); quads.push(quad); hams.push(ham);
+    patch(thigh, 'quads', 0.046, 0.132, 0.024, 0, -0.20, 0.058);
+    patch(thigh, 'hamstrings', 0.042, 0.117, 0.022, 0, -0.17, -0.060);
     // Shorts covering the top of the thigh.
     thigh.add(mesh(offset(belly(0.098, 0.115, 0.095, 18), 0, -0.075, 0), shortsMat));
 
@@ -323,6 +367,7 @@ export function buildRig(): Rig {
     ], 22, 22), skin));
     const calf = mesh(offset(belly(0.038, 0.078, 0.028, 16), 0, -0.112, -0.040), skin);
     shin.add(calf); calves.push(calf);
+    patch(shin, 'calves', 0.040, 0.080, 0.030, 0, -0.112, -0.042);
 
     const foot = joint(shin, `foot${side}`, 0, -L.shin, 0);
     foot.add(mesh(loft([
@@ -371,21 +416,6 @@ export function buildRig(): Rig {
     footR: anchor(legs.footR, 'a_footR', -0.03, 0.06)
   };
 
-  const muscleMeshes: Record<MuscleTag, THREE.Mesh[]> = {
-    chest: [pecL, pecR],
-    'front-shoulders': delts,
-    'side-shoulders': delts,
-    'rear-shoulders': delts,
-    back: [latL, latR, traps],
-    biceps: bis,
-    triceps: tris,
-    abs: absMeshes,
-    quads,
-    hamstrings: hams,
-    glutes: [glutes],
-    calves
-  };
-
   // Fingers curl by rotating each segment a little further than the last.
   const setHandPose = (pose: HandPose) => {
     const curl = pose === 'fist' ? 1 : pose === 'grip' ? 0.62 : 0.06;
@@ -400,7 +430,7 @@ export function buildRig(): Rig {
   setHandPose('grip');
 
   return {
-    root, joints, anchors, muscleMeshes, setHandPose,
+    root, joints, anchors, muscleHighlights: highlights, setHandPose,
     dispose: () => owned.forEach(o => o.dispose())
   };
 }

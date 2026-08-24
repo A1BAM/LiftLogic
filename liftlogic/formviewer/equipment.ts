@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { EquipmentKind } from './types';
-import type { Rig } from './rig';
+import type { Rig, JointName } from './rig';
 
 /**
  * Equipment built from primitives and either parented to the hands (so it
@@ -18,6 +18,11 @@ export interface EquipmentResult {
   sceneObjects: THREE.Object3D[];
   /** Added under a hand joint so it tracks the hands. */
   handObjects: Array<{ hand: 'handL' | 'handR' | 'both'; object: THREE.Object3D }>;
+  /**
+   * Pads parented to whichever limb they press against, so a shin roller stays
+   * on the shins through the rep instead of hanging in mid air.
+   */
+  jointObjects: Array<{ joint: JointName; object: THREE.Object3D }>;
   /**
    * World-space point a cable leaves from (a pulley). When set, the scene
    * redraws a cable between it and the hands every frame, so the cable stays
@@ -43,13 +48,14 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 
   const sceneObjects: THREE.Object3D[] = [];
   const handObjects: EquipmentResult['handObjects'] = [];
+  const jointObjects: EquipmentResult['jointObjects'] = [];
   const result: EquipmentResult = {
-    sceneObjects, handObjects,
+    sceneObjects, handObjects, jointObjects,
     dispose: () => owned.forEach(o => o.dispose())
   };
 
   /** A barbell shaft with plates, lying across both hands. */
-  const barbell = (len = 1.5, plateR = 0.21) => {
+  const barbell = (len = 1.3, plateR = 0.15) => {
     const g = new THREE.Group();
     const shaft = cyl(0.016, len, STEEL);
     shaft.rotation.z = Math.PI / 2; // along X, spanning the hands
@@ -79,13 +85,13 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 
   const benchPad = (angleDeg: number) => {
     const g = new THREE.Group();
-    const pad = box(0.34, 0.09, 1.15, PAD);
+    const pad = box(0.32, 0.085, 1.20, PAD);
     pad.rotation.x = THREE.MathUtils.degToRad(angleDeg);
-    pad.position.set(0, 0.44, 0);
+    pad.position.set(0, 0.40, 0);
     g.add(pad);
-    for (const z of [-0.45, 0.45]) {
-      const leg = box(0.30, 0.42, 0.07, ACCENT);
-      leg.position.set(0, 0.21, z);
+    for (const z of [-0.46, 0.46]) {
+      const leg = box(0.26, 0.36, 0.06, ACCENT);
+      leg.position.set(0, 0.18, z);
       g.add(leg);
     }
     return g;
@@ -109,18 +115,22 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
     return g;
   };
 
-  const seatFrame = (backAngle = 8) => {
+  const seatFrame = (backAngle = 8, seatDepth = 0.62, seatCentreZ = 0.12) => {
     const g = new THREE.Group();
-    const seat = box(0.40, 0.08, 0.40, PAD);
-    seat.position.set(0, 0.46, 0);
+    // Top of the pad at 0.50 puts the figure's hips (0.54) on the seat.
+    const seat = box(0.38, 0.09, seatDepth, PAD);
+    seat.position.set(0, 0.455, seatCentreZ);
     g.add(seat);
-    const back = box(0.40, 0.70, 0.08, PAD);
+    const back = box(0.38, 0.62, 0.09, PAD);
     back.rotation.x = THREE.MathUtils.degToRad(-backAngle);
-    back.position.set(0, 0.82, -0.22);
+    back.position.set(0, 0.80, seatCentreZ - seatDepth / 2 - 0.02);
     g.add(back);
-    const post = box(0.16, 0.46, 0.16, ACCENT);
-    post.position.set(0, 0.23, 0);
+    const post = box(0.18, 0.42, 0.18, ACCENT);
+    post.position.set(0, 0.21, seatCentreZ);
     g.add(post);
+    const foot = box(0.44, 0.06, 0.52, DARK);
+    foot.position.set(0, 0.03, seatCentreZ);
+    g.add(foot);
     return g;
   };
 
@@ -140,21 +150,39 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       handObjects.push({ hand: 'handR', object: dumbbell() });
       break;
 
-    case 'bench-incline':
-      sceneObjects.push(benchPad(-30));
+    case 'bench-incline': {
+      // A seat to sit on plus a back pad rising behind it. The old version
+      // tilted the wrong way, which made it a decline bench.
+      const g = new THREE.Group();
+      const seat = box(0.34, 0.09, 0.42, PAD);
+      seat.position.set(0, 0.45, 0.20);
+      g.add(seat);
+      const back = box(0.34, 0.09, 0.86, PAD);
+      back.rotation.x = THREE.MathUtils.degToRad(30); // head end raised
+      back.position.set(0, 0.66, -0.32);
+      g.add(back);
+      for (const [z, h] of [[0.34, 0.41], [-0.62, 0.62]] as const) {
+        const leg = box(0.28, h, 0.07, ACCENT);
+        leg.position.set(0, h / 2, z);
+        g.add(leg);
+      }
+      sceneObjects.push(g);
       handObjects.push({ hand: 'handL', object: dumbbell() });
       handObjects.push({ hand: 'handR', object: dumbbell() });
       break;
+    }
 
     case 'smith-machine': {
+      // Short uprights set well back, so they read as a Smith machine without
+      // standing between the camera and the lifter.
       const frame = new THREE.Group();
-      for (const x of [-0.85, 0.85]) {
-        const rail = cyl(0.03, 2.3, STEEL);
-        rail.position.set(x, 1.15, -0.15);
+      for (const x of [-0.62, 0.62]) {
+        const rail = cyl(0.022, 1.5, STEEL, 10);
+        rail.position.set(x, 0.75, -0.62);
         frame.add(rail);
       }
       sceneObjects.push(frame, benchPad(0));
-      handObjects.push({ hand: 'both', object: barbell(1.7, 0.22) });
+      handObjects.push({ hand: 'both', object: barbell(1.3, 0.15) });
       break;
     }
 
@@ -240,6 +268,61 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
       break;
     }
 
+    case 'lat-pulldown': {
+      // Seated station: a seat with a thigh pad under a high pulley, so the
+      // lifter is anchored rather than sitting in mid air.
+      const g = new THREE.Group();
+      const seat = box(0.38, 0.09, 0.42, PAD);
+      seat.position.set(0, 0.455, 0.06);
+      g.add(seat);
+      const post = box(0.18, 0.42, 0.18, ACCENT);
+      post.position.set(0, 0.21, 0.06);
+      g.add(post);
+      const foot = box(0.42, 0.06, 0.62, DARK);
+      foot.position.set(0, 0.03, 0.10);
+      g.add(foot);
+      // Pad clamped over the thighs to stop the lifter being pulled upward.
+      const thighPad = box(0.40, 0.10, 0.24, PAD);
+      thighPad.position.set(0, 0.58, 0.32);
+      g.add(thighPad);
+      for (const dx of [-0.15, 0.15]) {
+        const upright = box(0.06, 0.30, 0.06, ACCENT);
+        upright.position.set(dx, 0.50, 0.32);
+        g.add(upright);
+      }
+      // Frame carrying the pulley overhead and slightly in front.
+      for (const dx of [-0.30, 0.30]) {
+        const post2 = box(0.07, 2.25, 0.07, ACCENT);
+        post2.position.set(dx, 1.12, -0.52);
+        g.add(post2);
+      }
+      const top = box(0.70, 0.08, 0.80, ACCENT);
+      top.position.set(0, 2.22, -0.22);
+      g.add(top);
+
+      const PULLEY = new THREE.Vector3(0, 2.12, 0.10);
+      const wheel = cyl(0.06, 0.026, 0x9aa3b2, 18);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.copy(PULLEY);
+      g.add(wheel);
+      sceneObjects.push(g);
+      result.cableFrom = PULLEY;
+
+      // Wide grip bar.
+      const bar = new THREE.Group();
+      const shaft = cyl(0.024, 1.00, 0x3a4250, 14);
+      shaft.rotation.z = Math.PI / 2;
+      bar.add(shaft);
+      for (const sgn of [-1, 1]) {
+        const grip = cyl(0.030, 0.18, 0x191d24, 14);
+        grip.rotation.z = Math.PI / 2;
+        grip.position.x = sgn * 0.36;
+        bar.add(grip);
+      }
+      handObjects.push({ hand: 'both', object: bar });
+      break;
+    }
+
     case 'cable-low':
       sceneObjects.push(cableStack(-0.95, 0.35));
       break;
@@ -285,9 +368,14 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 
     case 'machine-crunch': {
       const g = seatFrame(4);
-      const chestPad = box(0.44, 0.16, 0.14, PAD);
-      chestPad.position.set(0, 1.16, 0.20);
+      const chestPad = box(0.42, 0.18, 0.12, PAD);
+      chestPad.position.set(0, 1.00, 0.16);
       g.add(chestPad);
+      for (const dx of [-0.16, 0.16]) {
+        const armRest = box(0.07, 0.07, 0.34, ACCENT);
+        armRest.position.set(dx, 1.05, 0.34);
+        g.add(armRest);
+      }
       sceneObjects.push(g, cableStack(-0.95, 1.20));
       break;
     }
@@ -312,36 +400,42 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
     }
 
     case 'leg-extension': {
-      const g = seatFrame(12);
-      const shinPad = cyl(0.055, 0.34, PAD);
-      shinPad.rotation.z = Math.PI / 2;
-      shinPad.position.set(0, 0.18, 0.44);
-      g.add(shinPad);
-      sceneObjects.push(g);
+      sceneObjects.push(seatFrame(12));
+      // Parented to the shins so it stays against them as the knee opens.
+      for (const side of ['shinL', 'shinR'] as const) {
+        const roller = cyl(0.055, 0.16, PAD, 14);
+        roller.rotation.z = Math.PI / 2;
+        roller.position.set(0, -0.34, 0.075);
+        jointObjects.push({ joint: side, object: roller });
+      }
       break;
     }
 
     case 'ham-curl-seated': {
       const g = seatFrame(14);
-      const thighPad = box(0.40, 0.10, 0.24, PAD);
-      thighPad.position.set(0, 0.70, 0.28);
+      // Pad clamped across the thighs, just above them.
+      const thighPad = box(0.42, 0.09, 0.26, PAD);
+      thighPad.position.set(0, 0.62, 0.30);
       g.add(thighPad);
-      const ankleRoller = cyl(0.05, 0.34, PAD);
-      ankleRoller.rotation.z = Math.PI / 2;
-      ankleRoller.position.set(0, 0.14, 0.40);
-      g.add(ankleRoller);
       sceneObjects.push(g);
+      for (const side of ['shinL', 'shinR'] as const) {
+        const roller = cyl(0.052, 0.16, PAD, 14);
+        roller.rotation.z = Math.PI / 2;
+        roller.position.set(0, -0.36, -0.07); // behind the ankles
+        jointObjects.push({ joint: side, object: roller });
+      }
       break;
     }
 
     case 'calf-seated': {
-      const g = seatFrame(6);
-      const kneePad = box(0.40, 0.12, 0.20, PAD);
-      kneePad.position.set(0, 0.76, 0.30);
+      const g = seatFrame(6, 0.46, 0.04);
+      const kneePad = box(0.42, 0.11, 0.22, PAD);
+      kneePad.position.set(0, 0.63, 0.42);
       g.add(kneePad);
-      const footBlock = box(0.44, 0.10, 0.20, ACCENT);
-      footBlock.position.set(0, 0.05, 0.34);
-      g.add(footBlock);
+      // Block under the balls of the feet, with the heels free to drop.
+      const block = box(0.46, 0.12, 0.16, ACCENT);
+      block.position.set(0, 0.06, 0.52);
+      g.add(block);
       sceneObjects.push(g);
       break;
     }
@@ -357,6 +451,7 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 /** Attaches hand-held equipment onto the rig's hand joints. */
 export function attachEquipment(result: EquipmentResult, rig: Rig, sceneRoot: THREE.Object3D) {
   result.sceneObjects.forEach(o => sceneRoot.add(o));
+  for (const { joint, object } of result.jointObjects) rig.joints[joint].add(object);
   for (const { hand, object } of result.handObjects) {
     if (hand === 'both') {
       // A bar spans both hands, so it cannot be a child of either one. The

@@ -15,7 +15,7 @@
       "note": "Arms reaching forward and slightly up at the rope, shoulders stretched forward",
       "joints": {
         "spine": [
-          2,
+          -2,
           0,
           0
         ],
@@ -47,7 +47,7 @@
       "note": "Elbows opening outward and staying up at shoulder height",
       "joints": {
         "spine": [
-          2,
+          -2,
           0,
           0
         ],
@@ -79,12 +79,12 @@
       "note": "Hands beside the ears, elbows level with the shoulders, rope at the forehead",
       "joints": {
         "spine": [
-          2,
+          -2,
           0,
           0
         ],
         "chest": [
-          4,
+          -4,
           0,
           0
         ],
@@ -116,7 +116,7 @@
       "note": "Returning forward under control without letting the elbows drop",
       "joints": {
         "spine": [
-          2,
+          -2,
           0,
           0
         ],
@@ -200,7 +200,7 @@
         "note": "Reaching forward, elbows already low",
         "joints": {
           "spine": [
-            2,
+            -2,
             0,
             0
           ],
@@ -232,7 +232,7 @@
         "note": "Elbows dropping as the rope comes back",
         "joints": {
           "spine": [
-            4,
+            -4,
             0,
             0
           ],
@@ -264,7 +264,7 @@
         "note": "Rope pulled to the chest with elbows down by the ribs",
         "joints": {
           "spine": [
-            8,
+            -8,
             0,
             0
           ],
@@ -296,7 +296,7 @@
         "note": "Returning forward from the low position",
         "joints": {
           "spine": [
-            4,
+            -4,
             0,
             0
           ],

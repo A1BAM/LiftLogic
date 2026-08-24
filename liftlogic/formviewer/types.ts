@@ -19,24 +19,33 @@ export type AnchorName =
   | 'shoulderL' | 'shoulderR' | 'elbowL' | 'elbowR' | 'handL' | 'handR'
   | 'kneeL' | 'kneeR' | 'footL' | 'footR';
 
-export type EquipmentKind =
-  | 'none'
-  | 'barbell'
-  | 'dumbbells'
-  | 'bench-flat'
-  | 'bench-incline'
-  | 'cable-high'
-  | 'cable-low'
-  | 'cable-crossover'
-  | 'smith-machine'
-  | 'machine-seated'
-  | 'machine-lateral'
-  | 'machine-crunch'
-  | 'hack-squat'
-  | 'leg-extension'
-  | 'ham-curl-seated'
-  | 'calf-seated'
-  | 'pullup-bar';
+/**
+ * Every equipment rig the viewer can build. Exported as a runtime list so the
+ * type and the validation in animations.test.ts cannot drift apart: adding a
+ * kind here is all it takes for a file to be allowed to use it.
+ */
+export const EQUIPMENT_KINDS = [
+  'none',
+  'barbell',
+  'dumbbells',
+  'bench-flat',
+  'bench-incline',
+  'cable-high',
+  'lat-pulldown',
+  'cable-low',
+  'cable-crossover',
+  'smith-machine',
+  'machine-seated',
+  'machine-lateral',
+  'machine-crunch',
+  'hack-squat',
+  'leg-extension',
+  'ham-curl-seated',
+  'calf-seated',
+  'pullup-bar'
+] as const;
+
+export type EquipmentKind = typeof EQUIPMENT_KINDS[number];
 
 export interface Keyframe {
   /** Which point in the rep this is. */

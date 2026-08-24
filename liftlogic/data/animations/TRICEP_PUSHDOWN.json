@@ -16,17 +16,17 @@
       "note": "Top of the rep: elbows bent past a right angle with the bar close to the chest, upper arms hanging vertical against the ribs",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -98,17 +98,17 @@
       "note": "Beginning to press: elbows still pinned, the triceps takes the load before anything moves",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -180,17 +180,17 @@
       "note": "Halfway down, forearms about 45 degrees: upper arms have not travelled forward at all",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -262,17 +262,17 @@
       "note": "Arms straight, bar at the front of the thighs, wrists flat in line with the forearms",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -344,17 +344,17 @@
       "note": "Squeeze: elbows fully locked, shoulders still pulled down away from the ears",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          3,
+          -3,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -426,17 +426,17 @@
       "note": "Letting the bar rise under control, the elbow bending back up while the upper arm stays put",
       "joints": {
         "spine": [
-          -6,
+          6,
           0,
           0
         ],
         "chest": [
-          2,
+          -2,
           0,
           0
         ],
         "neck": [
-          -4,
+          4,
           0,
           0
         ],
@@ -565,17 +565,17 @@
         "note": "Top, elbows already ahead of the ribs and the shoulders rounded forward",
         "joints": {
           "spine": [
-            -14,
+            14,
             0,
             0
           ],
           "chest": [
-            -8,
+            8,
             0,
             0
           ],
           "neck": [
-            -4,
+            4,
             0,
             0
           ],
@@ -637,17 +637,17 @@
         "note": "Elbows swinging further forward as the bar drops, the shoulder doing the work",
         "joints": {
           "spine": [
-            -18,
+            18,
             0,
             0
           ],
           "chest": [
-            -12,
+            12,
             0,
             0
           ],
           "neck": [
-            -4,
+            4,
             0,
             0
           ],
@@ -709,17 +709,17 @@
         "note": "Bottom reached by leaning and swinging rather than by straightening the elbow",
         "joints": {
           "spine": [
-            -22,
+            22,
             0,
             0
           ],
           "chest": [
-            -14,
+            14,
             0,
             0
           ],
           "neck": [
-            -4,
+            4,
             0,
             0
           ],
@@ -781,17 +781,17 @@
         "note": "Bar rising again with the upper arms still floating forward",
         "joints": {
           "spine": [
-            -16,
+            16,
             0,
             0
           ],
           "chest": [
-            -10,
+            10,
             0,
             0
           ],
           "neck": [
-            -4,
+            4,
             0,
             0
           ],
