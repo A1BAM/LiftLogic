@@ -379,26 +379,28 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
     }
 
     case 'machine-lateral': {
-      const g = seatFrame(6);
-      // Pads the outer forearms press against.
-      for (const s of [-1, 1]) {
-        const armPad = box(0.10, 0.26, 0.16, PAD);
-        armPad.position.set(s * 0.34, 1.02, 0.05);
-        g.add(armPad);
+      sceneObjects.push(seatFrame(6));
+      // Pads ride the upper arms, as the machine's levers do. Left fixed, the
+      // arms swept up and out of them.
+      for (const side of ['upperArmL', 'upperArmR'] as const) {
+        const armPad = box(0.09, 0.22, 0.14, PAD);
+        armPad.position.set(side === 'upperArmL' ? 0.075 : -0.075, -0.15, 0.02);
+        jointObjects.push({ joint: side, object: armPad });
       }
-      sceneObjects.push(g);
       break;
     }
 
     case 'machine-crunch': {
       const g = seatFrame(4);
-      const chestPad = box(0.42, 0.18, 0.12, PAD);
-      chestPad.position.set(0, 1.00, 0.16);
-      g.add(chestPad);
+      // Pad and arm rests ride the chest, which is what the machine's linkage
+      // does; fixed, the head curled straight through them.
+      const chestPad = box(0.42, 0.16, 0.11, PAD);
+      chestPad.position.set(0, 0.16, 0.15);
+      jointObjects.push({ joint: 'chest', object: chestPad });
       for (const dx of [-0.16, 0.16]) {
-        const armRest = box(0.07, 0.07, 0.34, ACCENT);
-        armRest.position.set(dx, 1.05, 0.34);
-        g.add(armRest);
+        const armRest = box(0.07, 0.07, 0.30, ACCENT);
+        armRest.position.set(dx, 0.20, 0.30);
+        jointObjects.push({ joint: 'chest', object: armRest });
       }
       sceneObjects.push(g, cableStack(-0.95, 1.20));
       break;
@@ -406,12 +408,13 @@ export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
 
     case 'hack-squat': {
       const g = new THREE.Group();
-      const backPad = box(0.42, 1.10, 0.10, PAD);
-      backPad.rotation.x = THREE.MathUtils.degToRad(-26);
-      backPad.position.set(0, 0.80, -0.20);
-      g.add(backPad);
-      const platform = box(0.70, 0.06, 0.50, ACCENT);
-      platform.position.set(0, 0.03, 0.22);
+      // Parented to the spine so it rides down with the lifter, as the sled
+      // does. Fixed, the back slid off the pad at the bottom of every rep.
+      const backPad = box(0.42, 1.00, 0.09, PAD);
+      backPad.position.set(0, 0.40, -0.16);
+      jointObjects.push({ joint: 'spine', object: backPad });
+      const platform = box(0.76, 0.06, 0.58, ACCENT);
+      platform.position.set(0, 0.03, 0.38);
       g.add(platform);
       for (const x of [-0.55, 0.55]) {
         const rail = cyl(0.03, 2.0, STEEL);
