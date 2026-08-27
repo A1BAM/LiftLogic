@@ -54,6 +54,23 @@ describe('validateWorkoutLogs', () => {
     expect(() => validateWorkoutLogs(invalidLogs)).toThrow(/notes' is too long/);
   });
 
+  it('should throw if weight, reps, or sets exceed maximum bounds', () => {
+    const excessiveWeight = [
+      { id: '1', exerciseId: 'E1', timestamp: 12345, weight: 2001, reps: 10, sets: 3 }
+    ];
+    expect(() => validateWorkoutLogs(excessiveWeight)).toThrow(/invalid 'weight'/);
+
+    const excessiveReps = [
+      { id: '1', exerciseId: 'E1', timestamp: 12345, weight: 100, reps: 1001, sets: 3 }
+    ];
+    expect(() => validateWorkoutLogs(excessiveReps)).toThrow(/invalid 'reps'/);
+
+    const excessiveSets = [
+      { id: '1', exerciseId: 'E1', timestamp: 12345, weight: 100, reps: 10, sets: 101 }
+    ];
+    expect(() => validateWorkoutLogs(excessiveSets)).toThrow(/invalid 'sets'/);
+  });
+
   it('should accept an empty array', () => {
     expect(() => validateWorkoutLogs([])).not.toThrow();
     expect(validateWorkoutLogs([])).toEqual([]);

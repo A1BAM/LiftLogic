@@ -28,15 +28,15 @@ function validateWorkoutLogItem(item: unknown, i: number): void {
     throw new Error(`Invalid data: Item ${indexStr} has an invalid 'timestamp'.`);
   }
 
-  if (typeof obj.weight !== 'number' || isNaN(obj.weight) || obj.weight < 0) {
+  if (typeof obj.weight !== 'number' || isNaN(obj.weight) || obj.weight < 0 || obj.weight > 2000) {
     throw new Error(`Invalid data: Item ${indexStr} has an invalid 'weight'.`);
   }
 
-  if (typeof obj.reps !== 'number' || isNaN(obj.reps) || obj.reps < 0) {
+  if (typeof obj.reps !== 'number' || isNaN(obj.reps) || obj.reps < 0 || obj.reps > 1000) {
     throw new Error(`Invalid data: Item ${indexStr} has an invalid 'reps'.`);
   }
 
-  if (typeof obj.sets !== 'number' || isNaN(obj.sets) || obj.sets < 0) {
+  if (typeof obj.sets !== 'number' || isNaN(obj.sets) || obj.sets < 0 || obj.sets > 100) {
     throw new Error(`Invalid data: Item ${indexStr} has an invalid 'sets'.`);
   }
 
