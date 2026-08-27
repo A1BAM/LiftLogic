@@ -233,7 +233,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
                 disabled={!formModelReady}
                 title={formModelReady ? `Show ${exercise.name} form` : 'No model yet'}
                 aria-label={formModelReady ? `Show ${exercise.name} form` : `${exercise.name}: no model yet`}
-                className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
+                className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none ${
                   formModelReady
                     ? 'bg-slate-700/70 border-slate-600 text-blue-300 active:bg-slate-600'
                     : 'bg-slate-800/40 border-slate-700/60 text-slate-600 cursor-not-allowed'
@@ -303,9 +303,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         {handleArchiveClick && (
           <button
             onClick={handleArchiveClick}
-            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
-            title="Archive Exercise"
-            aria-label="Archive Exercise"
+            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
+            title={`Archive ${exercise.name}`}
+            aria-label={`Archive ${exercise.name}`}
           >
             <Archive size={20} />
           </button>
@@ -314,9 +314,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         {handleSwitchClick && (
           <button
             onClick={handleSwitchClick}
-            className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors"
-            title="Switch Exercise"
-            aria-label="Switch Exercise"
+            className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
+            title={`Switch ${exercise.name}`}
+            aria-label={`Switch ${exercise.name}`}
           >
             <ArrowRightLeft size={20} />
           </button>
@@ -324,15 +324,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
         <button 
           onClick={handleHistoryClick}
-          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
-          aria-label="View History"
+          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none"
+          title={`View ${exercise.name} history`}
+          aria-label={`View ${exercise.name} history`}
         >
           <History size={20} />
         </button>
 
         <button
           onClick={handleLogClick}
-          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none ${
             isCompletedToday
               ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
               : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20"

@@ -1,0 +1,3 @@
+## 2026-08-27 - Contextual ARIA Labels & Focus Visible Rings on Card Actions
+**Learning:** Icon-only action buttons inside list item cards (such as Archive, Switch, and History on ExerciseCard) need explicit dynamic ARIA labels containing the parent item name (e.g. `Archive ${exercise.name}`) rather than generic static strings ("Archive Exercise") to give screen readers proper contextual clarity. Additionally, combining `focus-visible:ring-2 focus-visible:ring-blue-500 focus:outline-none` provides clear visual feedback for keyboard users without causing focus outline noise during mouse clicks.
+**Action:** Always include item context in icon button ARIA labels and title tooltips within card components, and pair them with `focus-visible:ring-2`.
