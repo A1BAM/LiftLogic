@@ -46,7 +46,7 @@ export const ExerciseRow: React.FC<ExerciseRowProps> = ({
         className="flex-1 min-w-0 text-left"
       >
         <p className={`text-sm font-semibold truncate ${isComplete ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
-          {slot?.label ?? exercise.name}
+          {exercise.name}
         </p>
         {slot && (
           <p className="text-[11px] text-slate-500 truncate">

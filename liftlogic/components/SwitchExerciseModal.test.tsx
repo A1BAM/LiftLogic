@@ -44,10 +44,41 @@ describe('SwitchExerciseModal', () => {
 
     // Check available exercises render
     expect(screen.getByText('Bench Press')).toBeTruthy();
-    expect(screen.getByText(/Chest • Push/i)).toBeTruthy();
+    expect(screen.getByText(/Chest/i)).toBeTruthy();
 
-    // Check footer
-    expect(screen.getByText(/This will archive Push-ups and unarchive your selection./i)).toBeTruthy();
+    // The footer says what actually happens: the slot swaps, nothing is lost.
+    expect(
+      screen.getByText(/Swaps Push-ups out of this slot\. Both keep all their logged history\./i)
+    ).toBeTruthy();
+  });
+
+  it('marks an option that is currently parked, so the two are tellable apart', () => {
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={[
+          { ...mockAvailableExercises[0], isArchived: true } as any
+        ]}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/currently parked/i)).toBeTruthy();
+  });
+
+  it('does not mark an option that is already active', () => {
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={mockAvailableExercises as any}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />
+    );
+    // The old picker only ever listed archived exercises; an active variant
+    // must show up here too, unmarked.
+    expect(screen.getByText('Bench Press')).toBeTruthy();
+    expect(screen.queryByText(/currently parked/i)).toBeNull();
   });
 
   it('calls onSelect when an available exercise is clicked', async () => {
@@ -80,7 +111,8 @@ describe('SwitchExerciseModal', () => {
       />
     );
 
-    expect(screen.getByText('No archived exercises available to switch to.')).toBeTruthy();
+    // Isolation lifts have nothing similar to swap to.
+    expect(screen.getByText('No similar exercise set up for this slot.')).toBeTruthy();
   });
 
   it('calls onClose when close button, backdrop are clicked or Escape is pressed', async () => {

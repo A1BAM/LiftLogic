@@ -37,7 +37,7 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <ArrowRightLeft className="text-blue-500" size={20} />
-            Switch Exercise
+            Swap this lift
           </h2>
           <button
             onClick={onClose}
@@ -52,7 +52,7 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
           {availableExercises.length === 0 ? (
             <div className="text-center text-slate-500 py-12 flex flex-col items-center">
               <ArrowRightLeft size={48} className="opacity-20 mb-4" />
-              <p>No archived exercises available to switch to.</p>
+              <p>No similar exercise set up for this slot.</p>
             </div>
           ) : (
             availableExercises.map(ex => (
@@ -63,7 +63,10 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
               >
                 <div>
                   <h3 className="font-bold text-slate-300 group-hover:text-white">{ex.name}</h3>
-                  <p className="text-xs text-slate-500 uppercase font-bold">{ex.muscleGroup} • {ex.dayType}</p>
+                  <p className="text-xs text-slate-500 uppercase font-bold">
+                    {ex.muscleGroup}
+                    {ex.isArchived && <span className="text-slate-600 normal-case"> • currently parked</span>}
+                  </p>
                 </div>
                 <div className="p-2 bg-blue-900/20 text-blue-400 group-hover:bg-blue-600 group-hover:text-white rounded-lg border border-blue-900/50 transition-colors">
                   <ArrowRightLeft size={18} />
@@ -74,7 +77,9 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl text-center">
-           <p className="text-[10px] text-slate-500">This will archive {currentExercise.name} and unarchive your selection.</p>
+           <p className="text-[10px] text-slate-500">
+             Swaps {currentExercise.name} out of this slot. Both keep all their logged history.
+           </p>
         </div>
       </div>
     </div>

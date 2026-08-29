@@ -10,14 +10,14 @@ const NOW = new Date(2026, 7, 24, 12, 0, 0).getTime();
 const at = (daysAgo: number, hour: number) =>
   new Date(2026, 7, 24 - daysAgo, hour, 0, 0).getTime();
 
-const bench: ExerciseDef = {
-  id: 'custom-1768314623500', name: 'Smith Bench', muscleGroup: 'Chest',
-  defaultWeight: 115, increment: 5, targetReps: 10, dayType: 'PUSH'
+const press: ExerciseDef = {
+  id: 'custom-1784831134576', name: 'Incline Chest Dumbbells', muscleGroup: 'Chest',
+  defaultWeight: 55, increment: 5, targetReps: 10, dayType: 'PUSH'
 };
-const benchSlot = WORKOUT_PLAN.PUSH![0];
+const pressSlot = WORKOUT_PLAN.PUSH![0];
 
 const log = (ts: number, weight: number, reps: number, sets = 1): WorkoutLog =>
-  ({ id: `l-${ts}-${weight}-${reps}`, exerciseId: bench.id, timestamp: ts, weight, reps, sets });
+  ({ id: `l-${ts}-${weight}-${reps}`, exerciseId: press.id, timestamp: ts, weight, reps, sets });
 
 // A previous session, so the card has a reference to progress from.
 const history = [
@@ -31,9 +31,9 @@ describe('the current lift is unmistakable', () => {
   it('labels the current lift START HERE and shows its prescription', () => {
     render(
       <ExerciseCard
-        exercise={bench} exerciseLogs={history}
+        exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={benchSlot} isCurrent showWarmup
+        slot={pressSlot} isCurrent showWarmup
       />
     );
     expect(screen.getByText(/start here/i)).toBeInTheDocument();
@@ -44,9 +44,9 @@ describe('the current lift is unmistakable', () => {
   it('does not label a lift that is not the current one', () => {
     render(
       <ExerciseCard
-        exercise={bench} exerciseLogs={history}
+        exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={benchSlot} isCurrent={false}
+        slot={pressSlot} isCurrent={false}
       />
     );
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
@@ -55,9 +55,9 @@ describe('the current lift is unmistakable', () => {
   it('offers the warm-up at roughly half the working weight, and does not log it', () => {
     render(
       <ExerciseCard
-        exercise={bench} exerciseLogs={history}
+        exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={benchSlot} isCurrent showWarmup
+        slot={pressSlot} isCurrent showWarmup
       />
     );
     expect(screen.getByText(/5 min easy bike/i)).toBeInTheDocument();
@@ -72,9 +72,9 @@ describe('the current lift is unmistakable', () => {
   it('shows the warm-up on the first lift only', () => {
     render(
       <ExerciseCard
-        exercise={bench} exerciseLogs={history}
+        exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={benchSlot} isCurrent showWarmup={false}
+        slot={pressSlot} isCurrent showWarmup={false}
       />
     );
     expect(screen.queryByText(/5 min easy bike/i)).not.toBeInTheDocument();
@@ -89,20 +89,22 @@ describe('the upcoming exercises', () => {
     const onLogClick = vi.fn();
     render(
       <ExerciseRow
-        exercise={bench} slot={benchSlot} position={3}
+        exercise={press} slot={pressSlot} position={3}
         isComplete={false} onLogClick={onLogClick}
       />
     );
     expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText(/Bench Press or Dumbbell Press/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Bench Press or Dumbbell Press/));
-    expect(onLogClick).toHaveBeenCalledWith(bench);
+    // The row names the lift actually loaded, so after a swap it is obvious
+    // which variant is in the slot.
+    expect(screen.getByText('Incline Chest Dumbbells')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Incline Chest Dumbbells'));
+    expect(onLogClick).toHaveBeenCalledWith(press);
   });
 
   it('marks a finished exercise instead of numbering it', () => {
     render(
       <ExerciseRow
-        exercise={bench} slot={benchSlot} position={3}
+        exercise={press} slot={pressSlot} position={3}
         isComplete onLogClick={() => {}}
       />
     );
@@ -114,14 +116,14 @@ describe('advancing to the next lift', () => {
   const todayLog = (sets: number) => log(at(0, 10), 135, 8, sets);
 
   it('treats an exercise as done only at its prescribed set count', () => {
-    expect(isSlotComplete([todayLog(1), todayLog(1)], benchSlot)).toBe(false);
-    expect(isSlotComplete([todayLog(1), todayLog(1), todayLog(1)], benchSlot)).toBe(true);
+    expect(isSlotComplete([todayLog(1), todayLog(1)], pressSlot)).toBe(false);
+    expect(isSlotComplete([todayLog(1), todayLog(1), todayLog(1)], pressSlot)).toBe(true);
   });
 
   it('counts a corrupt set value as one set rather than none', () => {
     const broken = { ...todayLog(1), sets: 0 } as WorkoutLog;
     expect(countLoggedSets([broken, broken, broken])).toBe(3);
-    expect(isSlotComplete([broken, broken, broken], benchSlot)).toBe(true);
+    expect(isSlotComplete([broken, broken, broken], pressSlot)).toBe(true);
   });
 
   it('defaults to three sets when a day has no plan', () => {
