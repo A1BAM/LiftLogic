@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
+import { ExerciseRow } from './components/ExerciseRow';
+import { planExercisesForDay, isSlotComplete, WORKOUT_PLAN } from './workoutPlan';
 import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
@@ -134,7 +136,12 @@ const App: React.FC = () => {
       await addLog(selectedExercise.id, data.weight, data.reps);
       navigator.vibrate?.(50);
       // Start 90s rest timer
-      setRestEndTime(Date.now() + 90 * 1000);
+      // Rest comes from the plan: two minutes on the compounds, less on the
+      // isolation work. Falls back to 90s for days without a plan.
+      const restSeconds = plannedExercises.find(
+        p => p.exercise.id === selectedExercise?.id
+      )?.slot?.restSeconds ?? 90;
+      setRestEndTime(Date.now() + restSeconds * 1000);
     } catch (err) {
       alert("Failed to save to cloud.");
     }
@@ -254,7 +261,7 @@ const App: React.FC = () => {
 
   // Filter exercises based on selected day AND archive status
   // Optimization: Memoize filtering to prevent recalculation on every render (e.g., when timer ticks)
-  const displayedExercises = useMemo(() => allExercises.filter(
+  const activeForDay = useMemo(() => allExercises.filter(
     ex => {
       if (ex.isArchived) return false; // Hide archived
       if (workoutDay) return ex.dayType === workoutDay;
@@ -262,7 +269,33 @@ const App: React.FC = () => {
     }
   ), [allExercises, workoutDay]);
 
+  // Push and Pull run in a fixed order: compounds first while you are fresh,
+  // isolation last. planExercisesForDay also keeps a slot's unused alternative
+  // out of the list, so "Bench Press or Dumbbell Press" shows as one entry.
+  const plannedExercises = useMemo(
+    () => planExercisesForDay(workoutDay, activeForDay),
+    [workoutDay, activeForDay]
+  );
+  const displayedExercises = useMemo(
+    () => plannedExercises.map(p => p.exercise),
+    [plannedExercises]
+  );
+
   // Pre-compute and attach resolved logs directly to displayed exercises to avoid O(1) dictionary lookups inside JSX render loop
+  /**
+   * The lift to walk to next: the first one in the plan that is not finished.
+   * As each is completed the next takes over the top slot. Null once the day
+   * is done.
+   */
+  const currentIndex = useMemo(() => {
+    const idx = plannedExercises.findIndex(
+      ({ exercise, slot }) => !isSlotComplete(getTodaysLogs(exercise.id), slot)
+    );
+    return idx === -1 ? null : idx;
+  }, [plannedExercises, getTodaysLogs]);
+
+  const hasPlan = !!(workoutDay && WORKOUT_PLAN[workoutDay]);
+
   const displayedExercisesWithLogs = useMemo(() => {
     return displayedExercises.map(exercise => ({
       exercise,
@@ -494,7 +527,14 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-md mx-auto p-4 animate-in slide-in-from-right-4 fade-in duration-300">
         <div className="space-y-6">
-          {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }) => {
+          {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
+            const { slot } = plannedExercises[i];
+            // On a planned day only the current lift gets a full card; the rest
+            // are quiet rows underneath, so opening the app answers "what am I
+            // walking to" without reading a list.
+            const isCurrent = currentIndex === i;
+            if (hasPlan && !isCurrent) return null;
+
             return (
               <ExerciseCard
                 key={exercise.id}
@@ -505,9 +545,41 @@ const App: React.FC = () => {
                 onArchive={handleArchiveClick}
                 onSwitch={handleSwitchInit}
                 onFormClick={handleFormClick}
+                slot={slot}
+                isCurrent={isCurrent}
+                showWarmup={hasPlan && i === 0}
               />
             );
           })}
+
+          {hasPlan && (
+            <div className="space-y-2">
+              {currentIndex !== null && (
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 pt-1">
+                  Then
+                </p>
+              )}
+              {plannedExercises.map(({ exercise, slot, position }, i) => {
+                if (currentIndex === i) return null;
+                return (
+                  <ExerciseRow
+                    key={exercise.id}
+                    exercise={exercise}
+                    slot={slot}
+                    position={position}
+                    isComplete={isSlotComplete(getTodaysLogs(exercise.id), slot)}
+                    onLogClick={handleLogClick}
+                    onFormClick={handleFormClick}
+                  />
+                );
+              })}
+              {currentIndex === null && (
+                <p className="text-center text-sm text-green-400 font-bold py-3">
+                  All {plannedExercises.length} exercises done. Nice work.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Add Exercise Button */}
           <button
