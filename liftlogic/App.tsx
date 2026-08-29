@@ -3,7 +3,7 @@ import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
 import { ExerciseRow } from './components/ExerciseRow';
-import { planExercisesForDay, isSlotComplete, WORKOUT_PLAN } from './workoutPlan';
+import { planExercisesForDay, isSlotComplete, switchOptionsFor, WORKOUT_PLAN } from './workoutPlan';
 import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
@@ -458,7 +458,7 @@ const App: React.FC = () => {
         {activeModal === 'switch' && selectedExercise && (
         <SwitchExerciseModal
           currentExercise={selectedExercise}
-          availableExercises={archivedExercises}
+          availableExercises={switchOptionsFor(workoutDay, selectedExercise.id, allExercises)}
           onClose={() => {
             setActiveModal(null);
             setSelectedExercise(null);
@@ -543,7 +543,11 @@ const App: React.FC = () => {
                 onLogClick={handleLogClick}
                 onHistoryClick={handleHistoryClick}
                 onArchive={handleArchiveClick}
-                onSwitch={handleSwitchInit}
+                onSwitch={
+                  switchOptionsFor(workoutDay, exercise.id, allExercises).length > 0
+                    ? handleSwitchInit
+                    : undefined
+                }
                 onFormClick={handleFormClick}
                 slot={slot}
                 isCurrent={isCurrent}

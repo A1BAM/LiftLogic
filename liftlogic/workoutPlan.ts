@@ -30,13 +30,21 @@ export interface PlanSlot {
 export const WORKOUT_PLAN: Partial<Record<DayType, PlanSlot[]>> = {
   PUSH: [
     {
-      exerciseId: 'custom-1768314623500',            // Smith Bench
-      alternatives: ['custom-1784831134576'],        // Incline Chest Dumbbells
-      label: 'Bench Press or Dumbbell Press',
+      exerciseId: 'custom-1784831134576',            // Incline Chest Dumbbells
+      alternatives: [
+        'custom-1768314623500',                      // Smith Bench
+        'custom-1768314721281',                      // Smith Incline Bench
+        'CHEST_PRESS'                                // Chest Press Machine
+      ],
+      label: 'Dumbbell Press or Bench Press',
       sets: 3, reps: [6, 8], restSeconds: 120
     },
     {
       exerciseId: 'custom-1784413338033',            // Overhead Press
+      alternatives: [
+        'custom-1767381863458',                      // Machine Shoulder Press
+        'SHOULDER_PRESS'                             // Dumbbell Shoulder Press
+      ],
       label: 'Overhead Press (DB or machine)',
       sets: 3, reps: [8, 10], restSeconds: 120
     },
@@ -59,11 +67,13 @@ export const WORKOUT_PLAN: Partial<Record<DayType, PlanSlot[]>> = {
   PULL: [
     {
       exerciseId: 'custom-1774216069316',            // Lat Pulldown (Cable)
+      alternatives: ['LAT_PULLDOWN'],                // Lat Pulldown (machine)
       label: 'Lat Pulldown',
       sets: 3, reps: [8, 10], restSeconds: 120
     },
     {
       exerciseId: 'custom-1774215986619',            // Seated Row Machine (Cable)
+      alternatives: ['SEATED_ROW'],                  // Seated Row Machine
       label: 'Seated Row',
       sets: 3, reps: [8, 10], restSeconds: 120
     },
@@ -124,6 +134,40 @@ export function formatRest(slot: PlanSlot): string {
   return slot.restSeconds >= 120
     ? `${slot.restSeconds / 60} min rest`
     : `${slot.restSeconds} sec rest`;
+}
+
+/** The slot an exercise fills on a given day, if any. */
+export function slotFor(day: DayType | null, exerciseId: string): PlanSlot | undefined {
+  const plan = day ? WORKOUT_PLAN[day] : undefined;
+  return plan?.find(
+    s => s.exerciseId === exerciseId || (s.alternatives ?? []).includes(exerciseId)
+  );
+}
+
+/**
+ * The other lifts that can fill the same slot: the swaps that make sense for
+ * this exercise, not every exercise you have.
+ *
+ * Archived ones are included on purpose. Swapping is how a slot's variants are
+ * parked and brought back, so the one you want is usually the archived one;
+ * offering only archived exercises (the old behaviour) hid any variant that
+ * happened to still be active, which is why switching appeared broken.
+ *
+ * An exercise with no slot, or a slot with no alternatives, gets nothing back,
+ * so the UI can leave the switch control off entirely.
+ */
+export function switchOptionsFor(
+  day: DayType | null,
+  exerciseId: string,
+  all: ExerciseDef[]
+): ExerciseDef[] {
+  const slot = slotFor(day, exerciseId);
+  if (!slot) return [];
+  const byId = new Map(all.map(e => [e.id, e]));
+  return [slot.exerciseId, ...(slot.alternatives ?? [])]
+    .filter(id => id !== exerciseId)
+    .map(id => byId.get(id))
+    .filter((e): e is ExerciseDef => !!e);
 }
 
 export interface PlannedExercise {
