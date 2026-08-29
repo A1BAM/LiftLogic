@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
 import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft, PersonStanding } from 'lucide-react';
 import { hasAnimation } from '../formviewer/loader';
+import { PlanSlot, WARMUP, warmupWeight, formatReps, formatRest } from '../workoutPlan';
 
 const exerciseDateCache = new Map<number, string>();
 const INV_MS_PER_DAY = 1 / 86400000;
@@ -15,6 +16,12 @@ interface ExerciseCardProps {
   onSwitch?: (exercise: ExerciseDef) => void;
   /** Opens the 3D form guide. Omitted callers simply get no form button. */
   onFormClick?: (exercise: ExerciseDef) => void;
+  /** Prescription for this slot, when the day has a fixed plan. */
+  slot?: PlanSlot;
+  /** Marks this as the lift to walk to next. */
+  isCurrent?: boolean;
+  /** The warm-up belongs to the first exercise of the day only. */
+  showWarmup?: boolean;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
@@ -24,8 +31,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   onHistoryClick,
   onArchive,
   onSwitch,
-  onFormClick
+  onFormClick,
+  slot,
+  isCurrent = false,
+  showWarmup = false
 }) => {
+  // Ticked off in the session only. Deliberately not persisted: a warm-up is
+  // guidance for right now, not history worth keeping.
+  const [warmupDone, setWarmupDone] = useState<Record<string, boolean>>({});
+  const toggleWarmup = (key: string) =>
+    setWarmupDone(prev => ({ ...prev, [key]: !prev[key] }));
   const handleLogClick = () => onLogClick(exercise);
   const handleHistoryClick = () => onHistoryClick(exercise);
   const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
@@ -106,12 +121,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     [sessions, todayStart]
   );
 
+  // The plan drives sets and reps where it applies, so the card and the
+  // progression agree with what the day actually prescribes.
+  const targetSetsForSlot = slot?.sets ?? 3;
+  const targetRepsForSlot = slot ? slot.reps[1] : exercise.targetReps;
+
   const isCompletedToday = useMemo(() => {
     if (!todaySession) return false;
-    // Set Logic: All days now default to 3 sets
-    const targetSets = 3;
-    return countSets(todaySession.logs) >= targetSets;
-  }, [todaySession, exercise]);
+    return countSets(todaySession.logs) >= targetSetsForSlot;
+  }, [todaySession, targetSetsForSlot]);
 
   const referenceMaxWeight = useMemo(() => {
     if (!referenceSession) return 0;
@@ -128,7 +146,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     if (!referenceSession) {
       return {
         weight: exercise.defaultWeight,
-        reps: exercise.targetReps,
+        reps: targetRepsForSlot,
         reason: "Start light to build form."
       };
     }
@@ -142,21 +160,21 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     }, Infinity);
     
     // Rule 1: Volume
-    const targetSets = 3;
+    const targetSets = targetSetsForSlot;
     if (totalSets < targetSets) {
        return {
          weight: usedWeight,
-         reps: exercise.targetReps,
+         reps: targetRepsForSlot,
          reason: `Build Volume: Complete ${targetSets} sets.`
        };
     }
 
     // Rule 2: Overload
     let nextWeight = usedWeight + exercise.increment;
-    let nextReps = Math.max(6, exercise.targetReps - 4);
-    let reason = `Overload: All sets hit ${exercise.targetReps}+ reps!`;
+    let nextReps = Math.max(6, targetRepsForSlot - 4);
+    let reason = `Overload: All sets hit ${targetRepsForSlot}+ reps!`;
 
-    if (Number.isFinite(minReps) && minReps >= exercise.targetReps) {
+    if (Number.isFinite(minReps) && minReps >= targetRepsForSlot) {
       return {
         weight: nextWeight,
         reps: nextReps,
@@ -165,11 +183,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     } else {
       return {
         weight: usedWeight,
-        reps: exercise.targetReps,
-        reason: `Build Strength: Hit ${exercise.targetReps} reps on all sets.`
+        reps: targetRepsForSlot,
+        reason: `Build Strength: Hit ${targetRepsForSlot} reps on all sets.`
       };
     }
-  }, [referenceSession, exercise, referenceMaxWeight]);
+  }, [referenceSession, exercise, referenceMaxWeight, targetSetsForSlot, targetRepsForSlot]);
 
   const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
 
@@ -210,8 +228,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     <div 
       className={`relative rounded-xl p-5 mb-4 shadow-lg border transition-all duration-300 ${
         isCompletedToday
-          ? "bg-slate-900/40 border-green-500/50" 
-          : "bg-slate-800 border-slate-700"
+          ? "bg-slate-900/40 border-green-500/50"
+          : isCurrent
+            ? "bg-slate-800 border-blue-500 ring-2 ring-blue-500/40 shadow-blue-900/20"
+            : "bg-slate-800 border-slate-700"
       }`}
     >
       {isCompletedToday && (
@@ -219,6 +239,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           <CheckCircle2 size={16} />
           <span className="text-xs uppercase tracking-wider">Done</span>
         </div>
+      )}
+
+      {isCurrent && !isCompletedToday && (
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2">
+          Start here
+        </p>
       )}
 
       <div className="flex justify-between items-start mb-2 pr-20"> 
@@ -244,9 +270,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             )}
           </div>
           <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-            <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
-              {exercise.muscleGroup}
-            </span>
+            {slot ? (
+              <span className="text-xs font-bold text-blue-300 bg-blue-400/10 px-2 py-0.5 rounded">
+                {slot.sets} × {formatReps(slot)} · {formatRest(slot)}
+              </span>
+            ) : (
+              <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
+                {exercise.muscleGroup}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -291,6 +323,43 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           </div>
         </div>
       </div>
+
+      {/* Warm-up belongs to the first lift of the day only, and is never
+          logged: it is guidance for right now, not history. */}
+      {showWarmup && !isCompletedToday && (
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">
+            Before you start
+          </p>
+          {[
+            { key: 'cardio', text: WARMUP.cardioLabel },
+            {
+              key: 'set',
+              text: `1 warm-up set ≈ ${warmupWeight(recommendation.weight)} lbs (not logged)`
+            }
+          ].map(item => (
+            <button
+              key={item.key}
+              onClick={() => toggleWarmup(item.key)}
+              aria-pressed={!!warmupDone[item.key]}
+              className="flex items-center gap-2 w-full text-left py-1"
+            >
+              <span
+                className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                  warmupDone[item.key]
+                    ? 'bg-amber-500 border-amber-400'
+                    : 'border-amber-500/50'
+                }`}
+              >
+                {warmupDone[item.key] && <CheckCircle2 size={12} className="text-slate-900" />}
+              </span>
+              <span className={`text-xs ${warmupDone[item.key] ? 'text-slate-500 line-through' : 'text-amber-100/90'}`}>
+                {item.text}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className={`flex items-start gap-2 mt-3 p-2 rounded bg-slate-900/30 ${isCompletedToday ? 'hidden' : 'block'}`}>
         <Repeat size={14} className="text-slate-500 mt-0.5 min-w-[14px]" />
