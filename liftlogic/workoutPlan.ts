@@ -148,13 +148,12 @@ export function slotFor(day: DayType | null, exerciseId: string): PlanSlot | und
  * The other lifts that can fill the same slot: the swaps that make sense for
  * this exercise, not every exercise you have.
  *
- * Archived ones are included on purpose. Swapping is how a slot's variants are
- * parked and brought back, so the one you want is usually the archived one;
- * offering only archived exercises (the old behaviour) hid any variant that
- * happened to still be active, which is why switching appeared broken.
+ * Archived ones are left out. An archived exercise is meant to be gone from
+ * the app entirely — the archive list in the main menu is the one place it
+ * shows up, and restoring it there is what brings it back into circulation.
  *
- * An exercise with no slot, or a slot with no alternatives, gets nothing back,
- * so the UI can leave the switch control off entirely.
+ * An exercise with no slot, or a slot whose other lifts are all archived, gets
+ * nothing back, so the UI can leave the switch control off entirely.
  */
 export function switchOptionsFor(
   day: DayType | null,
@@ -167,7 +166,7 @@ export function switchOptionsFor(
   return [slot.exerciseId, ...(slot.alternatives ?? [])]
     .filter(id => id !== exerciseId)
     .map(id => byId.get(id))
-    .filter((e): e is ExerciseDef => !!e);
+    .filter((e): e is ExerciseDef => !!e && !e.isArchived);
 }
 
 export interface PlannedExercise {

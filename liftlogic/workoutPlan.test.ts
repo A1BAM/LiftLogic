@@ -110,14 +110,20 @@ describe('workout plan', () => {
     expect(switchOptionsFor(null, 'custom-1784831134576', all)).toEqual([]);
   });
 
-  it('offers an archived variant, which is the whole point of swapping', () => {
-    // The regression: the picker was fed archived exercises only, so a variant
-    // that happened to still be active never appeared.
+  it('never offers an archived variant', () => {
+    // Archiving takes a lift out of the app entirely; the archive list in the
+    // main menu is the only place it is meant to appear.
+    const parked = { ...ex('custom-1768314623500', 'PUSH'), isArchived: true };
+    const all = [ex('custom-1784831134576', 'PUSH'), parked, ex('CHEST_PRESS', 'PUSH')];
+    const options = switchOptionsFor('PUSH', 'custom-1784831134576', all);
+    expect(options.map(e => e.id)).toEqual(['CHEST_PRESS']);
+  });
+
+  it('offers no swap at all once every variant is archived', () => {
     const parked = { ...ex('custom-1768314623500', 'PUSH'), isArchived: true };
     const all = [ex('custom-1784831134576', 'PUSH'), parked];
-    const options = switchOptionsFor('PUSH', 'custom-1784831134576', all);
-    expect(options.map(e => e.id)).toEqual(['custom-1768314623500']);
-    expect(options[0].isArchived).toBe(true);
+    // With nothing to offer, the switch control is left off the card entirely.
+    expect(switchOptionsFor('PUSH', 'custom-1784831134576', all)).toEqual([]);
   });
 
   it('finds an exercise slot whether it is the primary or an alternative', () => {
