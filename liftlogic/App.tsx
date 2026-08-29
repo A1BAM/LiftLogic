@@ -455,18 +455,6 @@ const App: React.FC = () => {
           />
         )}
 
-        {activeModal === 'switch' && selectedExercise && (
-        <SwitchExerciseModal
-          currentExercise={selectedExercise}
-          availableExercises={switchOptionsFor(workoutDay, selectedExercise.id, allExercises)}
-          onClose={() => {
-            setActiveModal(null);
-            setSelectedExercise(null);
-          }}
-          onSelect={(replacementExercise) => handleSwitchExercise(selectedExercise, replacementExercise)}
-        />
-      )}
-
       {activeModal === 'archived' && (
           <ArchivedExercisesModal 
             exercises={archivedExercises}
@@ -649,6 +637,20 @@ const App: React.FC = () => {
           dayType={workoutDay}
           onClose={() => setActiveModal(null)}
           onSave={handleSaveNewExercise}
+        />
+      )}
+
+      {/* Belongs with the workout view: the switch control lives on the
+          exercise cards here, so the picker has to be mounted here too. */}
+      {activeModal === 'switch' && selectedExercise && (
+        <SwitchExerciseModal
+          currentExercise={selectedExercise}
+          availableExercises={switchOptionsFor(workoutDay, selectedExercise.id, allExercises)}
+          onClose={() => {
+            setActiveModal(null);
+            setSelectedExercise(null);
+          }}
+          onSelect={(replacementExercise) => handleSwitchExercise(selectedExercise, replacementExercise)}
         />
       )}
 
