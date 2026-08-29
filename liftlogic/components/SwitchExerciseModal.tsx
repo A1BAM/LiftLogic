@@ -73,17 +73,13 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
                 >
                   <div className="min-w-0">
                     <h3 className="font-bold text-slate-300 group-hover:text-white truncate">{ex.name}</h3>
-                    <p className="text-xs text-slate-500 uppercase font-bold">
-                      {ex.muscleGroup}
-                      {ex.isArchived && <span className="text-slate-600 normal-case"> • currently parked</span>}
-                    </p>
+                    <p className="text-xs text-slate-500 uppercase font-bold">{ex.muscleGroup}</p>
                   </div>
                   <div className="shrink-0 p-2 bg-blue-900/20 text-blue-400 group-hover:bg-blue-600 group-hover:text-white rounded-lg border border-blue-900/50 transition-colors">
                     <ArrowRightLeft size={18} />
                   </div>
                 </button>
-                {/* Already-parked options have nothing to archive. */}
-                {onArchive && !ex.isArchived && (
+                {onArchive && (
                   <button
                     onClick={() => onArchive(ex)}
                     className="shrink-0 self-stretch px-3 flex items-center text-slate-600 hover:text-amber-500 border-l border-slate-800 rounded-r-xl transition-colors"
@@ -99,7 +95,7 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl space-y-3">
-           {onArchive && !currentExercise.isArchived && (
+           {onArchive && (
              <button
                onClick={() => onArchive(currentExercise)}
                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-slate-800 text-sm font-semibold text-slate-400 hover:text-amber-500 hover:border-amber-900/50 transition-colors"

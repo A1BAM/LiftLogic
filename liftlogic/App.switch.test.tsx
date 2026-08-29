@@ -90,7 +90,7 @@ describe('switching from a workout day', () => {
     expect(screen.queryByText(/No similar exercise set up for this slot/i)).not.toBeInTheDocument();
   });
 
-  it('archives an option from the picker and stays open for another', async () => {
+  it('archives an option from the picker and drops it from the list', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await unlockAndOpenPush();
     fireEvent.click(screen.getByLabelText('Switch Exercise'));
@@ -98,9 +98,10 @@ describe('switching from a workout day', () => {
 
     fireEvent.click(screen.getByLabelText('Archive Smith Bench'));
 
-    // Parking the option it offers is not a reason to throw the picker away.
+    // Parking the option it offers is not a reason to throw the picker away,
+    // but the archived lift itself is gone from it.
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/currently parked/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Smith Bench')).not.toBeInTheDocument());
   });
 
   it('closes the picker when the lift it is about gets archived', async () => {

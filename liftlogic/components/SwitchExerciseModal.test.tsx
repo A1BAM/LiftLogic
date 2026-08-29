@@ -52,21 +52,7 @@ describe('SwitchExerciseModal', () => {
     ).toBeTruthy();
   });
 
-  it('marks an option that is currently parked, so the two are tellable apart', () => {
-    render(
-      <SwitchExerciseModal
-        currentExercise={mockCurrentExercise as any}
-        availableExercises={[
-          { ...mockAvailableExercises[0], isArchived: true } as any
-        ]}
-        onClose={vi.fn()}
-        onSelect={vi.fn()}
-      />
-    );
-    expect(screen.getByText(/currently parked/i)).toBeTruthy();
-  });
-
-  it('does not mark an option that is already active', () => {
+  it('lists an option plainly, with nothing about archiving', () => {
     render(
       <SwitchExerciseModal
         currentExercise={mockCurrentExercise as any}
@@ -75,10 +61,10 @@ describe('SwitchExerciseModal', () => {
         onSelect={vi.fn()}
       />
     );
-    // The old picker only ever listed archived exercises; an active variant
-    // must show up here too, unmarked.
+    // Archived lifts never reach this picker any more, so there is no parked
+    // state left to label.
     expect(screen.getByText('Bench Press')).toBeTruthy();
-    expect(screen.queryByText(/currently parked/i)).toBeNull();
+    expect(screen.queryByText(/parked/i)).toBeNull();
   });
 
   it('calls onSelect when an available exercise is clicked', async () => {
@@ -135,19 +121,6 @@ describe('SwitchExerciseModal', () => {
     await user.click(screen.getByLabelText('Archive Push-ups'));
 
     expect(onArchive).toHaveBeenCalledWith(mockCurrentExercise);
-  });
-
-  it('offers no archive control for an option that is already parked', () => {
-    render(
-      <SwitchExerciseModal
-        currentExercise={mockCurrentExercise as any}
-        availableExercises={[{ ...mockAvailableExercises[0], isArchived: true } as any]}
-        onClose={vi.fn()}
-        onSelect={vi.fn()}
-        onArchive={vi.fn()}
-      />
-    );
-    expect(screen.queryByLabelText('Archive Bench Press')).toBeNull();
   });
 
   it('leaves the archive controls off when archiving is not offered', () => {
