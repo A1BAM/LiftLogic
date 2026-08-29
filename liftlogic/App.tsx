@@ -195,9 +195,24 @@ const App: React.FC = () => {
     }
   }, [saveExercise]);
 
+  /**
+   * Archiving is offered wherever an exercise is shown — the card, the rows
+   * under it, and the swap picker (for the lift being swapped out as well as
+   * for the options) — so the one confirmation lives here rather than in each
+   * of them.
+   */
   const handleArchiveClick = useCallback(async (exercise: ExerciseDef) => {
+    if (!window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
+      return;
+    }
     navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: true };
+    // Archiving an option leaves the picker open so another can be chosen, but
+    // archiving the lift the picker is about leaves it with nothing to swap.
+    if (selectedExercise?.id === exercise.id) {
+      setActiveModal(null);
+      setSelectedExercise(null);
+    }
     try {
       navigator.vibrate?.(10);
       await saveExercise(updatedExercise);
@@ -205,7 +220,7 @@ const App: React.FC = () => {
     } catch (e) {
       logger.error("Failed to sync archive status", e);
     }
-  }, [saveExercise]);
+  }, [saveExercise, selectedExercise]);
 
   const handleSwitchExercise = useCallback(async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
     navigator.vibrate?.(10);
@@ -562,6 +577,7 @@ const App: React.FC = () => {
                     isComplete={isSlotComplete(getTodaysLogs(exercise.id), slot)}
                     onLogClick={handleLogClick}
                     onFormClick={handleFormClick}
+                    onArchive={handleArchiveClick}
                   />
                 );
               })}
@@ -651,6 +667,7 @@ const App: React.FC = () => {
             setSelectedExercise(null);
           }}
           onSelect={(replacementExercise) => handleSwitchExercise(selectedExercise, replacementExercise)}
+          onArchive={handleArchiveClick}
         />
       )}
 

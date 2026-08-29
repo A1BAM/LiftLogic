@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, ChevronRight, PersonStanding } from 'lucide-react';
+import { Archive, CheckCircle2, ChevronRight, PersonStanding } from 'lucide-react';
 import { ExerciseDef } from '../types';
 import { PlanSlot, formatReps, formatRest } from '../workoutPlan';
 import { hasAnimation } from '../formviewer/loader';
@@ -11,6 +11,8 @@ interface ExerciseRowProps {
   isComplete: boolean;
   onLogClick: (exercise: ExerciseDef) => void;
   onFormClick?: (exercise: ExerciseDef) => void;
+  /** Parking a lift should not require promoting it to the top card first. */
+  onArchive?: (exercise: ExerciseDef) => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface ExerciseRowProps {
  * They remain tappable, so a missed set can still be logged out of sequence.
  */
 export const ExerciseRow: React.FC<ExerciseRowProps> = ({
-  exercise, slot, position, isComplete, onLogClick, onFormClick
+  exercise, slot, position, isComplete, onLogClick, onFormClick, onArchive
 }) => {
   const formReady = hasAnimation(exercise.id);
 
@@ -68,6 +70,17 @@ export const ExerciseRow: React.FC<ExerciseRowProps> = ({
           }`}
         >
           <PersonStanding size={15} />
+        </button>
+      )}
+
+      {onArchive && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onArchive(exercise); }}
+          aria-label={`Archive ${exercise.name}`}
+          title={`Archive ${exercise.name}`}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md border border-slate-700 text-slate-500 hover:text-amber-500 hover:border-amber-900/50 transition-colors"
+        >
+          <Archive size={15} />
         </button>
       )}
 

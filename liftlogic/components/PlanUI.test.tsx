@@ -101,6 +101,28 @@ describe('the upcoming exercises', () => {
     expect(onLogClick).toHaveBeenCalledWith(press);
   });
 
+  it('archives an upcoming lift without promoting it to the top card first', () => {
+    const onArchive = vi.fn();
+    render(
+      <ExerciseRow
+        exercise={press} slot={pressSlot} position={3}
+        isComplete={false} onLogClick={() => {}} onArchive={onArchive}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Archive Incline Chest Dumbbells'));
+    expect(onArchive).toHaveBeenCalledWith(press);
+  });
+
+  it('leaves the archive control off when archiving is not offered', () => {
+    render(
+      <ExerciseRow
+        exercise={press} slot={pressSlot} position={3}
+        isComplete={false} onLogClick={() => {}}
+      />
+    );
+    expect(screen.queryByLabelText(/^Archive /)).not.toBeInTheDocument();
+  });
+
   it('marks a finished exercise instead of numbering it', () => {
     render(
       <ExerciseRow

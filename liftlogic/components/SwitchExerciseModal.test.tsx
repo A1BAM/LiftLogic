@@ -99,6 +99,69 @@ describe('SwitchExerciseModal', () => {
     expect(onSelect).toHaveBeenCalledWith(mockAvailableExercises[0]);
   });
 
+  it('archives an option from the picker without swapping to it', async () => {
+    const onArchive = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={mockAvailableExercises as any}
+        onClose={vi.fn()}
+        onSelect={onSelect}
+        onArchive={onArchive}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Archive Bench Press'));
+
+    expect(onArchive).toHaveBeenCalledWith(mockAvailableExercises[0]);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('archives the lift being swapped out', async () => {
+    const onArchive = vi.fn();
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={mockAvailableExercises as any}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onArchive={onArchive}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Archive Push-ups'));
+
+    expect(onArchive).toHaveBeenCalledWith(mockCurrentExercise);
+  });
+
+  it('offers no archive control for an option that is already parked', () => {
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={[{ ...mockAvailableExercises[0], isArchived: true } as any]}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onArchive={vi.fn()}
+      />
+    );
+    expect(screen.queryByLabelText('Archive Bench Press')).toBeNull();
+  });
+
+  it('leaves the archive controls off when archiving is not offered', () => {
+    render(
+      <SwitchExerciseModal
+        currentExercise={mockCurrentExercise as any}
+        availableExercises={mockAvailableExercises as any}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />
+    );
+    expect(screen.queryByLabelText(/^Archive /)).toBeNull();
+  });
+
   it('renders empty state when no available exercises are passed', () => {
     const onClose = vi.fn();
     const onSelect = vi.fn();
