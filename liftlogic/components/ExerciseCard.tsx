@@ -43,11 +43,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     setWarmupDone(prev => ({ ...prev, [key]: !prev[key] }));
   const handleLogClick = () => onLogClick(exercise);
   const handleHistoryClick = () => onHistoryClick(exercise);
+  // Confirmation lives with the handler in App, so archiving asks the same
+  // question wherever it is triggered from.
   const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
-      onArchive(exercise);
-    }
+    onArchive(exercise);
   } : undefined;
   const handleSwitchClick = onSwitch ? (e: React.MouseEvent) => {
     e.stopPropagation();

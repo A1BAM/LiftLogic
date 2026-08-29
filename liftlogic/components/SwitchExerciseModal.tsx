@@ -1,19 +1,26 @@
 import React, { useEffect } from 'react';
 import { ExerciseDef } from '../types';
-import { X, ArrowRightLeft } from 'lucide-react';
+import { X, ArrowRightLeft, Archive } from 'lucide-react';
 
 interface SwitchExerciseModalProps {
   currentExercise: ExerciseDef;
   availableExercises: ExerciseDef[];
   onClose: () => void;
   onSelect: (replacementExercise: ExerciseDef) => void;
+  /**
+   * Parks a lift without swapping to it. Offered for the lift being swapped
+   * out and for each option, so anything visible here can be archived from
+   * here rather than only from its card.
+   */
+  onArchive?: (exercise: ExerciseDef) => void;
 }
 
 export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
   currentExercise,
   availableExercises,
   onClose,
-  onSelect
+  onSelect,
+  onArchive
 }) => {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -56,28 +63,52 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
             </div>
           ) : (
             availableExercises.map(ex => (
-              <button
+              <div
                 key={ex.id}
-                onClick={() => onSelect(ex)}
-                className="w-full text-left bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center group hover:border-blue-500/50 transition-colors"
+                className="bg-slate-950 rounded-xl border border-slate-800 flex items-center group focus-within:border-blue-500/50 hover:border-blue-500/50 transition-colors"
               >
-                <div>
-                  <h3 className="font-bold text-slate-300 group-hover:text-white">{ex.name}</h3>
-                  <p className="text-xs text-slate-500 uppercase font-bold">
-                    {ex.muscleGroup}
-                    {ex.isArchived && <span className="text-slate-600 normal-case"> • currently parked</span>}
-                  </p>
-                </div>
-                <div className="p-2 bg-blue-900/20 text-blue-400 group-hover:bg-blue-600 group-hover:text-white rounded-lg border border-blue-900/50 transition-colors">
-                  <ArrowRightLeft size={18} />
-                </div>
-              </button>
+                <button
+                  onClick={() => onSelect(ex)}
+                  className="flex-1 min-w-0 text-left p-4 flex justify-between items-center gap-3"
+                >
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-300 group-hover:text-white truncate">{ex.name}</h3>
+                    <p className="text-xs text-slate-500 uppercase font-bold">
+                      {ex.muscleGroup}
+                      {ex.isArchived && <span className="text-slate-600 normal-case"> • currently parked</span>}
+                    </p>
+                  </div>
+                  <div className="shrink-0 p-2 bg-blue-900/20 text-blue-400 group-hover:bg-blue-600 group-hover:text-white rounded-lg border border-blue-900/50 transition-colors">
+                    <ArrowRightLeft size={18} />
+                  </div>
+                </button>
+                {/* Already-parked options have nothing to archive. */}
+                {onArchive && !ex.isArchived && (
+                  <button
+                    onClick={() => onArchive(ex)}
+                    className="shrink-0 self-stretch px-3 flex items-center text-slate-600 hover:text-amber-500 border-l border-slate-800 rounded-r-xl transition-colors"
+                    title={`Archive ${ex.name}`}
+                    aria-label={`Archive ${ex.name}`}
+                  >
+                    <Archive size={18} />
+                  </button>
+                )}
+              </div>
             ))
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl text-center">
-           <p className="text-[10px] text-slate-500">
+        <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl space-y-3">
+           {onArchive && !currentExercise.isArchived && (
+             <button
+               onClick={() => onArchive(currentExercise)}
+               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-slate-800 text-sm font-semibold text-slate-400 hover:text-amber-500 hover:border-amber-900/50 transition-colors"
+               aria-label={`Archive ${currentExercise.name}`}
+             >
+               <Archive size={16} /> Archive {currentExercise.name} instead
+             </button>
+           )}
+           <p className="text-[10px] text-slate-500 text-center">
              Swaps {currentExercise.name} out of this slot. Both keep all their logged history.
            </p>
         </div>

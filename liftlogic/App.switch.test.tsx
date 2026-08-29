@@ -67,7 +67,7 @@ describe('switching from a workout day', () => {
       subtle: { digest: async () => new Uint8Array(32).buffer }
     });
   });
-  afterEach(() => { vi.unstubAllGlobals(); cleanup(); });
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); cleanup(); });
 
   it('opens the picker while the workout is still open', async () => {
     await unlockAndOpenPush();
@@ -88,6 +88,30 @@ describe('switching from a workout day', () => {
 
     expect(screen.getByText('Smith Bench')).toBeInTheDocument();
     expect(screen.queryByText(/No similar exercise set up for this slot/i)).not.toBeInTheDocument();
+  });
+
+  it('archives an option from the picker and stays open for another', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await unlockAndOpenPush();
+    fireEvent.click(screen.getByLabelText('Switch Exercise'));
+    await screen.findByRole('dialog', {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByLabelText('Archive Smith Bench'));
+
+    // Parking the option it offers is not a reason to throw the picker away.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/currently parked/i)).toBeInTheDocument());
+  });
+
+  it('closes the picker when the lift it is about gets archived', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await unlockAndOpenPush();
+    fireEvent.click(screen.getByLabelText('Switch Exercise'));
+    await screen.findByRole('dialog', {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByLabelText('Archive Incline Chest Dumbbells'));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('closes back to the workout, not to the day list', async () => {
