@@ -15,8 +15,8 @@ export interface PlanSlot {
   exerciseId: string;
   /**
    * Interchangeable lifts for the same slot, e.g. "Bench Press or Dumbbell
-   * Press". Whichever is currently un-archived fills the slot; the others stay
-   * out of the day's list but keep their history and can be swapped in.
+   * Press". The one you last swapped to fills the slot; the others stay out of
+   * the day's list but keep their history and can be swapped back in.
    */
   alternatives?: string[];
   /** How the slot reads on the card, including any "or" wording. */
@@ -180,9 +180,11 @@ export interface PlannedExercise {
 /**
  * Orders a day's exercises by the plan.
  *
- * Each slot is filled by whichever of its exercises is currently active,
- * preferring the primary. Anything active on this day that no slot claims is
- * appended afterwards rather than vanishing, so an exercise added later is
+ * Each slot is filled by the lift you last swapped to, falling back to the
+ * primary and then to any other variant that is active. Swapping therefore
+ * does not have to archive anything: the variant you are not using simply
+ * waits in the slot's picker. Anything active on this day that no slot claims
+ * is appended afterwards rather than vanishing, so an exercise added later is
  * still reachable.
  */
 export function planExercisesForDay(
@@ -203,7 +205,8 @@ export function planExercisesForDay(
     // Every candidate is spoken for, so an unused alternative does not also
     // appear on its own further down the list.
     candidates.forEach(id => claimed.add(id));
-    const filledBy = candidates.find(id => byId.has(id));
+    const chosen = candidates.find(id => byId.get(id)?.isSlotChoice);
+    const filledBy = chosen ?? candidates.find(id => byId.has(id));
     if (filledBy) {
       ordered.push({ exercise: byId.get(filledBy)!, slot, position: ordered.length + 1 });
     }

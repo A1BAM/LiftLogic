@@ -46,9 +46,10 @@ describe('SwitchExerciseModal', () => {
     expect(screen.getByText('Bench Press')).toBeTruthy();
     expect(screen.getByText(/Chest/i)).toBeTruthy();
 
-    // The footer says what actually happens: the slot swaps, nothing is lost.
+    // The footer says what actually happens: the lift changes, nothing is
+    // archived behind your back.
     expect(
-      screen.getByText(/Swaps Push-ups out of this slot\. Both keep all their logged history\./i)
+      screen.getByText(/Push-ups stays\s+here ready to swap back, with all its history, unless you archive it/i)
     ).toBeTruthy();
   });
 

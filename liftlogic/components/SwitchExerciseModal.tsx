@@ -69,6 +69,7 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
               >
                 <button
                   onClick={() => onSelect(ex)}
+                  aria-label={`Swap to ${ex.name}`}
                   className="flex-1 min-w-0 text-left p-4 flex justify-between items-center gap-3"
                 >
                   <div className="min-w-0">
@@ -105,7 +106,8 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
              </button>
            )}
            <p className="text-[10px] text-slate-500 text-center">
-             Swaps {currentExercise.name} out of this slot. Both keep all their logged history.
+             Swapping only changes which lift you are doing. {currentExercise.name} stays
+             here ready to swap back, with all its history, unless you archive it.
            </p>
         </div>
       </div>
