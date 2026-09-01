@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 
 /**
  * Reproduces the reported switch bug end to end.
@@ -88,6 +88,24 @@ describe('switching from a workout day', () => {
 
     expect(screen.getByText('Smith Bench')).toBeInTheDocument();
     expect(screen.queryByText(/No similar exercise set up for this slot/i)).not.toBeInTheDocument();
+  });
+
+  it('swaps without archiving the lift it swapped away from', async () => {
+    await unlockAndOpenPush();
+    fireEvent.click(screen.getByLabelText('Switch Exercise'));
+    await screen.findByRole('dialog', {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByLabelText('Swap to Smith Bench'));
+
+    // The slot now holds the lift that was chosen.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await screen.findByText('Smith Bench', {}, { timeout: 5000 });
+
+    // And the old one is still in circulation: it is offered straight back,
+    // rather than having to be dug out of the archive first.
+    fireEvent.click(screen.getByLabelText('Switch Exercise'));
+    const picker = await screen.findByRole('dialog', {}, { timeout: 5000 });
+    expect(within(picker).getByText('Incline Chest Dumbbells')).toBeInTheDocument();
   });
 
   it('archives an option from the picker and drops it from the list', async () => {

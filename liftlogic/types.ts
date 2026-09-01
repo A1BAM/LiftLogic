@@ -19,6 +19,11 @@ export interface ExerciseDef {
   dayType: DayType;
   isCustom?: boolean;
   isArchived?: boolean;
+  /**
+   * Set on the lift you picked for its plan slot. Swapping moves it between
+   * the slot's variants so the choice sticks without archiving the other one.
+   */
+  isSlotChoice?: boolean;
 }
 
 export interface WorkoutLog {

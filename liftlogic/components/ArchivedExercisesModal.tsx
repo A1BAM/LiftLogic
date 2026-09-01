@@ -3,17 +3,27 @@ import { ExerciseDef } from '../types';
 import { X, RefreshCw, Trash2, Archive } from 'lucide-react';
 
 interface ArchivedExercisesModalProps {
+  /** The archived ones, which can be restored or deleted outright. */
   exercises: ExerciseDef[];
   onClose: () => void;
   onRestore: (exercise: ExerciseDef) => void;
   onDelete: (exerciseId: string) => void;
+  /**
+   * Everything still in circulation. Listed so that every exercise you have
+   * can be archived from one place, including the variants a day's plan keeps
+   * out of sight because another lift is filling their slot.
+   */
+  activeExercises?: ExerciseDef[];
+  onArchive?: (exercise: ExerciseDef) => void;
 }
 
-export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({ 
-  exercises, 
-  onClose, 
-  onRestore, 
-  onDelete 
+export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
+  exercises,
+  onClose,
+  onRestore,
+  onDelete,
+  activeExercises,
+  onArchive
 }) => {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -39,7 +49,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Archive className="text-amber-500" size={20} />
-            Archived Exercises
+            Your Exercises
           </h2>
           <button
             onClick={onClose}
@@ -52,6 +62,9 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
 
         {/* List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Archived
+          </h3>
           {exercises.length === 0 ? (
             <div className="text-center text-slate-500 py-12 flex flex-col items-center">
               <Archive size={48} className="opacity-20 mb-4" />
@@ -85,10 +98,40 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
               </div>
             ))
           )}
+
+          {onArchive && (
+            <>
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 pt-4">
+                In use
+              </h3>
+              {(activeExercises ?? []).length === 0 ? (
+                <p className="text-sm text-slate-500 py-4 text-center">No exercises in use.</p>
+              ) : (
+                (activeExercises ?? []).map(ex => (
+                  <div key={ex.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-300 truncate">{ex.name}</h3>
+                      <p className="text-xs text-slate-500 uppercase font-bold">{ex.muscleGroup} • {ex.dayType}</p>
+                    </div>
+                    <button
+                      onClick={() => onArchive(ex)}
+                      className="shrink-0 p-2 bg-slate-900 text-slate-500 hover:bg-amber-900/20 hover:text-amber-500 rounded-lg border border-slate-800 transition-colors"
+                      title={`Archive ${ex.name}`}
+                      aria-label={`Archive ${ex.name}`}
+                    >
+                      <Archive size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </>
+          )}
         </div>
-        
+
         <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl text-center">
-           <p className="text-[10px] text-slate-500">Restoring an exercise brings it back to your daily list.</p>
+           <p className="text-[10px] text-slate-500">
+             Archiving hides an exercise everywhere except this list. Restoring brings it back.
+           </p>
         </div>
       </div>
     </div>

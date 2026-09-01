@@ -222,15 +222,22 @@ const App: React.FC = () => {
     }
   }, [saveExercise, selectedExercise]);
 
+  /**
+   * Swapping only changes which variant fills the slot. It deliberately leaves
+   * both exercises active: archiving is a separate decision, so the one you
+   * swapped away from stays in the picker ready to swap back, instead of
+   * having to be dug out of the archive.
+   */
   const handleSwitchExercise = useCallback(async (currentExercise: ExerciseDef, replacementExercise: ExerciseDef) => {
     navigator.vibrate?.(10);
+    setActiveModal(null);
+    setSelectedExercise(null);
     try {
       await saveExercises([
-        { ...currentExercise, isArchived: true },
-        { ...replacementExercise, isArchived: false }
+        { ...currentExercise, isSlotChoice: false },
+        { ...replacementExercise, isSlotChoice: true, isArchived: false }
       ]);
       navigator.vibrate?.(50);
-      setActiveModal(null);
     } catch (e) {
       logger.error("Failed to sync switch status", e);
     }
@@ -319,6 +326,14 @@ const App: React.FC = () => {
   }, [displayedExercises, getLogsForExercise]);
 
   const archivedExercises = useMemo(() => allExercises.filter(ex => ex.isArchived), [allExercises]);
+
+  // Everything still in circulation, day by day, so the main-menu list can
+  // archive any exercise you have — including a slot's unused variant, which
+  // never appears on a workout screen.
+  const activeExercises = useMemo(
+    () => allExercises.filter(ex => !ex.isArchived),
+    [allExercises]
+  );
 
 
   // --- RENDERING ---
@@ -455,7 +470,7 @@ const App: React.FC = () => {
             onClick={() => setActiveModal('archived')}
             className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
           >
-            <Archive size={16} /> Archived Exercises
+            <Archive size={16} /> Your Exercises
           </button>
 
         </div>
@@ -476,6 +491,8 @@ const App: React.FC = () => {
             onClose={() => setActiveModal(null)}
             onRestore={handleRestoreExercise}
             onDelete={handleDeleteExercisePermanently}
+            activeExercises={activeExercises}
+            onArchive={handleArchiveClick}
           />
         )}
       </div>

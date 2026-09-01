@@ -84,6 +84,29 @@ describe('archiving from the workout screen', () => {
     }
   });
 
+  it('archives a lift the workout screen never shows, from the main menu', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App />);
+    fireEvent.change(screen.getByPlaceholderText('Enter password to unlock'), {
+      target: { value: 'pw' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /unlock app/i }));
+    await screen.findByText('Push Day', {}, { timeout: 5000 });
+
+    // Smith Bench shares slot 1 with the incline press, so it appears on no
+    // workout screen while the incline press fills the slot. The main-menu
+    // list is what makes it archivable at all.
+    fireEvent.click(screen.getByText('Your Exercises'));
+    const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 });
+    fireEvent.click(within(dialog).getByLabelText('Archive Smith Bench'));
+
+    await waitFor(() =>
+      expect(within(dialog).queryByLabelText('Archive Smith Bench')).not.toBeInTheDocument()
+    );
+    // It has moved to the archived half of the same list.
+    expect(within(dialog).getByLabelText('Restore Exercise')).toBeInTheDocument();
+  });
+
   it('removes an archived exercise from the day entirely', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await openPush();

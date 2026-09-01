@@ -36,6 +36,23 @@ describe('ArchivedExercisesModal', () => {
     cleanup();
   });
 
+  it('lists the exercises still in use so any of them can be archived', () => {
+    const onArchive = vi.fn();
+    const inUse = { ...mockExercises[0], id: 'ex3', name: 'Smith Bench', isArchived: false };
+    render(
+      <ArchivedExercisesModal
+        exercises={[]}
+        onClose={mockOnClose}
+        onRestore={mockOnRestore}
+        onDelete={mockOnDelete}
+        activeExercises={[inUse]}
+        onArchive={onArchive}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Archive Smith Bench'));
+    expect(onArchive).toHaveBeenCalledWith(inUse);
+  });
+
   it('renders "No archived exercises." when exercises array is empty', () => {
     render(
       <ArchivedExercisesModal

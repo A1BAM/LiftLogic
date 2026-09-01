@@ -85,6 +85,24 @@ describe('workout plan', () => {
     expect(planned[5].slot).toBeUndefined();
   });
 
+  it('fills a slot with the variant that was swapped in, not the primary', () => {
+    // Swapping marks the choice instead of archiving the other lift, so the
+    // plan has to honour that mark even though the primary is still active.
+    const all = [
+      { ...ex('custom-1784831134576', 'PUSH') },
+      { ...ex('custom-1768314623500', 'PUSH'), isSlotChoice: true }
+    ];
+    const planned = planExercisesForDay('PUSH', all);
+    expect(planned[0].exercise.id).toBe('custom-1768314623500');
+    // And the lift it replaced is not listed twice further down.
+    expect(planned.filter(p => p.exercise.id === 'custom-1784831134576')).toHaveLength(0);
+  });
+
+  it('falls back to the primary when nothing has been swapped', () => {
+    const all = [ex('custom-1784831134576', 'PUSH'), ex('custom-1768314623500', 'PUSH')];
+    expect(planExercisesForDay('PUSH', all)[0].exercise.id).toBe('custom-1784831134576');
+  });
+
   it('leaves unplanned days in their existing order', () => {
     const legs = [ex('a', 'LEGS'), ex('b', 'LEGS')];
     const planned = planExercisesForDay('LEGS', legs);
