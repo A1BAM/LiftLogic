@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
-import { X, Trash2, Edit2, Layers } from 'lucide-react';
+import { Trash2, Edit2, Layers } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface HistoryModalProps {
   exercise: ExerciseDef;
@@ -22,38 +23,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   onDelete,
   onEdit
 }) => {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 max-h-[90vh] flex flex-col shadow-2xl"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white">{exercise.name} History</h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
+    <Modal onClose={onClose} title={`${exercise.name} History`}>
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
           {/* Logs List */}
           <div className="space-y-3">
@@ -113,7 +84,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
