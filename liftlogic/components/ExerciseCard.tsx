@@ -4,9 +4,6 @@ import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat,
 import { hasAnimation } from '../formviewer/loader';
 import { PlanSlot, WARMUP, warmupWeight, formatReps, formatRest } from '../workoutPlan';
 
-const exerciseDateCache = new Map<number, string>();
-const INV_MS_PER_DAY = 1 / 86400000;
-
 interface ExerciseCardProps {
   exercise: ExerciseDef;
   exerciseLogs: WorkoutLog[]; // All logs for this exercise

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, Dumbbell, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
 import { Modal } from './Modal';
 import { WorkoutLog, ExerciseDef } from '../types';

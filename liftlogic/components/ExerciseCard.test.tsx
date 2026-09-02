@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import React from 'react';
 import { ExerciseCard } from './ExerciseCard';
 import { WorkoutLog, ExerciseDef } from '../types';
 

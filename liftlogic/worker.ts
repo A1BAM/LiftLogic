@@ -150,7 +150,8 @@ export interface Env {
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  // ctx is part of the Workers fetch signature; nothing here defers work to it.
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Default security headers for all responses

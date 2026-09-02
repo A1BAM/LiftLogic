@@ -185,9 +185,7 @@ export function buildRig(): Rig {
   patch(chest, 'back', 0.030, 0.090, 0.048, 0.150, L.chest * 0.34, -0.012);
   patch(chest, 'back', 0.030, 0.090, 0.048, -0.150, L.chest * 0.34, -0.012);
   // The lat flare is carried by the ribcage loft's own section, so there is no
-  // separate lat mesh to read as a lump. These stay as tint targets only.
-  const latL = ribcage;
-  const latR = ribcage;
+  // separate lat mesh to read as a lump; the patches above are what tint.
   // Trapezius sloping from the neck out to the shoulders.
   const traps = mesh(offset(belly(0.118, 0.034, 0.050, 18), 0, L.chest * 0.93, -0.026), skin);
   chest.add(traps);
