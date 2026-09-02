@@ -26,6 +26,10 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    // Dead locals, dead imports and dead parameters fail the build rather than
+    // accumulating. Prefix a parameter with _ when a signature forces it.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   }
 }

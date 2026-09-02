@@ -113,7 +113,7 @@ export function createScene(
 
   rig.setHandPose(anim.handPose ?? 'grip');
 
-  const equipment: EquipmentResult = buildEquipment(anim.equipment, rig);
+  const equipment: EquipmentResult = buildEquipment(anim.equipment);
   attachEquipment(equipment, rig, scene);
   equipment.sceneObjects.forEach(o => o.traverse(c => {
     const m = c as THREE.Mesh;

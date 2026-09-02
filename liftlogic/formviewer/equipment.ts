@@ -32,7 +32,7 @@ export interface EquipmentResult {
   dispose: () => void;
 }
 
-export function buildEquipment(kind: EquipmentKind, rig: Rig): EquipmentResult {
+export function buildEquipment(kind: EquipmentKind): EquipmentResult {
   const owned: Array<THREE.BufferGeometry | THREE.Material> = [];
   const M = (color: number, opts: THREE.MeshStandardMaterialParameters = {}) => {
     const m = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4, ...opts });

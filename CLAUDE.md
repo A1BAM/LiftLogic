@@ -15,6 +15,16 @@ anything that goes red, and merge on green. If a change turns out to be genuinel
 risky or ambiguous, say so — but say it while shipping the rest, not instead of
 shipping.
 
+**Poll the PR every 45 seconds.** This repository's checks finish in well under
+a minute, and the completion webhook does not reliably arrive, so waiting on a
+notification leaves a green PR sitting unmerged for minutes. After opening a
+pull request, sleep 45 seconds in the background, re-read the check runs, and
+repeat until the PR is merged or something goes red. Scheduled check-ins have a
+one-minute floor and are too slow for this; use the background sleep.
+
+Poll only while a pull request of yours is actually open and unmerged. Never run
+a standing timer outside that window.
+
 Practicalities:
 
 - Work on the branch the session is assigned; open the PR against `main`.

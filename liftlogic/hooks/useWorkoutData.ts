@@ -3,7 +3,6 @@ import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
 import { exerciseService } from '../services/exerciseService';
-import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 import { useWorkoutExercises } from './useWorkoutExercises';
 import { useWorkoutLogs } from './useWorkoutLogs';
