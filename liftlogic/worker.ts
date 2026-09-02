@@ -235,6 +235,14 @@ export default {
       return new Response(null, { status: 200, headers });
     }
 
+    // Session probe. Everything above already rejected an unauthenticated
+    // request, so reaching here is the answer. Deliberately placed before the
+    // database pool is opened: the app asks this on every load purely to find
+    // out whether it is logged in, and that question costs no query.
+    if (request.method === 'GET' && (url.pathname === '/gym-api/session' || url.pathname === '/gym-api/session/')) {
+      return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers });
+    }
+
     // Use the environment variable for Cloudflare
     const connectionString = env.DATABASE_URL;
 

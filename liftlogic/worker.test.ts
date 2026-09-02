@@ -255,6 +255,31 @@ describe('Worker', () => {
     });
   });
 
+  describe('Session probe', () => {
+    it('confirms a valid session without touching the database', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api/session');
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ authenticated: true });
+      // The whole point of the endpoint: opening the app asks this instead of
+      // downloading the entire workout history to find out it is logged in.
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('rejects an unauthenticated probe', async () => {
+      const request = createRequest('GET', 'http://localhost/gym-api/session', undefined, null as any);
+      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(401);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+  });
+
   describe('GET Requests', () => {
     it('returns empty array if dummy database URL is used and fetch fails', async () => {
       mockQuery.mockRejectedValueOnce(new Error('Connection failed'));

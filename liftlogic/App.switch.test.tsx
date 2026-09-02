@@ -31,7 +31,11 @@ const { workoutRows } = vi.hoisted(() => {
 });
 
 vi.mock('./services/authService', () => ({
-  authService: { login: vi.fn().mockResolvedValue({}), logout: vi.fn().mockResolvedValue({}) }
+  authService: {
+    login: vi.fn().mockResolvedValue({}),
+    logout: vi.fn().mockResolvedValue({}),
+    checkSession: vi.fn().mockResolvedValue(false)
+  }
 }));
 vi.mock('./services/exerciseService', () => ({
   exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn() }

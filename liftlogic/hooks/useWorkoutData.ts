@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { workoutService } from '../services/workoutService';
@@ -61,8 +61,12 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Forward declaration for mutual dependency
-  let fetchDataAndSyncFn: () => Promise<void>;
+  // The logs hook re-syncs from the cloud when a write fails, and the sync
+  // itself needs the logs hook. A ref breaks that cycle without handing the
+  // logs hook a new function on every render, which would rebuild addLog,
+  // removeLog and updateLog each time and undo their memoisation.
+  const fetchDataAndSyncRef = useRef<() => Promise<void>>(async () => {});
+  const resyncOnFailure = useCallback(() => fetchDataAndSyncRef.current(), []);
 
   const {
     logs,
@@ -74,7 +78,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     getLogsForExercise,
     getTodaysLogs,
     getLastSessionLogs
-  } = useWorkoutLogs(() => fetchDataAndSyncFn());
+  } = useWorkoutLogs(resyncOnFailure);
 
   const {
     syncedExercises,
@@ -116,8 +120,8 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     }
   }, [saveDefinitionsToCloud, setSyncedExercises, setLogs]);
 
-  // Resolve the forward declaration
-  fetchDataAndSyncFn = fetchDataAndSync;
+  // Keep the ref pointing at the current sync for the next failed write.
+  fetchDataAndSyncRef.current = fetchDataAndSync;
 
   useEffect(() => {
     if (isAuthenticated) {

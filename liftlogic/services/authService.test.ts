@@ -10,6 +10,27 @@ describe('authService', () => {
     mockFetch.mockReset();
   });
 
+  describe('checkSession', () => {
+    const headers = (contentType: string) => ({ get: () => contentType });
+
+    it('asks the session endpoint rather than downloading the history', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, headers: headers('application/json') });
+
+      await expect(authService.checkSession()).resolves.toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/session`, expect.anything());
+    });
+
+    it('reports no session on a 401', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401, headers: headers('application/json') });
+      await expect(authService.checkSession()).resolves.toBe(false);
+    });
+
+    it('does not mistake a dev server index.html for a session', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, headers: headers('text/html; charset=utf-8') });
+      await expect(authService.checkSession()).resolves.toBe(false);
+    });
+  });
+
   describe('login', () => {
     it('should send a POST request with the hash and return data on success', async () => {
       const mockHash = 'deadbeef';
