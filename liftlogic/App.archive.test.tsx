@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
+import { workoutService } from './services/workoutService';
 
 /**
  * Two rules about archiving, checked against the whole app rather than a
@@ -33,7 +34,11 @@ const { PUSH_EXERCISES, workoutRows } = vi.hoisted(() => {
 });
 
 vi.mock('./services/authService', () => ({
-  authService: { login: vi.fn().mockResolvedValue({}), logout: vi.fn().mockResolvedValue({}) }
+  authService: {
+    login: vi.fn().mockResolvedValue({}),
+    logout: vi.fn().mockResolvedValue({}),
+    checkSession: vi.fn().mockResolvedValue(false)
+  }
 }));
 vi.mock('./services/exerciseService', () => ({
   exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn() }
@@ -71,6 +76,14 @@ describe('archiving from the workout screen', () => {
     });
   });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); cleanup(); });
+
+  it('downloads the history once when the app opens, not twice', async () => {
+    // The regression: the mount check used to prove it was logged in by
+    // fetching the whole workout table and throwing the result away, and the
+    // data hook then fetched exactly the same thing again.
+    await openPush();
+    expect(workoutService.fetchWorkouts).toHaveBeenCalledTimes(1);
+  });
 
   it('offers an archive control for every exercise on the day, not just the top card', async () => {
     await openPush();

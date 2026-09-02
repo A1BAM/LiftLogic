@@ -15,7 +15,6 @@ import { RestTimer } from './components/RestTimer';
 const FormViewerModal = lazy(() => import('./components/FormViewerModal'));
 import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
-import { workoutService } from './services/workoutService';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
 
@@ -30,6 +29,14 @@ const App: React.FC = () => {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
+
+  // Stable identities: the timer keeps these in its effect dependencies, so
+  // fresh arrows would tear down and restart the countdown on every render.
+  const cancelRest = useCallback(() => setRestEndTime(null), []);
+  const addRest = useCallback(
+    (seconds: number) => setRestEndTime(prev => (prev ? prev + seconds * 1000 : null)),
+    []
+  );
 
   // Hook for data and sync
   const {
@@ -50,14 +57,14 @@ const App: React.FC = () => {
     getLastSessionLogs,
   } = useWorkoutData(isAuthenticated);
 
-  // Check Auth on Mount
+  // Check Auth on Mount. This only asks whether the cookie is still good:
+  // useWorkoutData does the one fetch of the history, once that answer is yes.
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await workoutService.fetchWorkouts();
-        setIsAuthenticated(true);
+        if (await authService.checkSession()) setIsAuthenticated(true);
       } catch (err) {
-        // Not authenticated
+        // Offline or server down; the lock screen is the safe default.
       }
     };
     checkAuth();
@@ -72,8 +79,9 @@ const App: React.FC = () => {
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
       
       try {
+        // Logging in is enough; the history download follows from
+        // isAuthenticated, so there is no point fetching it here as well.
         await authService.login(hashHex);
-        await workoutService.fetchWorkouts();
         setIsAuthenticated(true);
         setPasswordInput("");
       } catch (err: unknown) {
@@ -691,11 +699,7 @@ const App: React.FC = () => {
 
 
       {workoutDay && (
-        <RestTimer
-          endTime={restEndTime}
-          onCancel={() => setRestEndTime(null)}
-          onAdd={(seconds) => setRestEndTime(prev => prev ? prev + seconds * 1000 : null)}
-        />
+        <RestTimer endTime={restEndTime} onCancel={cancelRest} onAdd={addRest} />
       )}
     </div>
   );
