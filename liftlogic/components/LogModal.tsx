@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ExerciseDef, WorkoutLog } from '../types';
-import { X, Plus, Minus, Trash2 } from 'lucide-react';
+import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface LogModalProps {
   exercise: ExerciseDef;
@@ -19,13 +20,6 @@ export const LogModal: React.FC<LogModalProps> = ({
   onSave,
   onDelete
 }) => {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   // Determine default values for the input form
   // 1. If we just logged a set today, copy that weight/reps for convenience
@@ -62,32 +56,12 @@ export const LogModal: React.FC<LogModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
+    <Modal
+      onClose={onClose}
+      variant="sheet"
+      title={exercise.name}
+      subtitle="Log each set individually"
     >
-      <div
-        className="bg-slate-900 w-full max-w-md sm:rounded-2xl border-t sm:border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        
-        {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <div>
-            <h2 className="text-xl font-bold text-white">{exercise.name}</h2>
-            <p className="text-xs text-slate-400">Log each set individually</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           
@@ -212,7 +186,6 @@ export const LogModal: React.FC<LogModalProps> = ({
             </button>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

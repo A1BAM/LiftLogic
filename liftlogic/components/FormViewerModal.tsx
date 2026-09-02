@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Play, Pause, RotateCcw, AlertTriangle, Flame } from 'lucide-react';
 import { ExerciseDef } from '../types';
 import { loadAnimation } from '../formviewer/loader';
+import { useEscapeKey } from './Modal';
 import { createScene, type SceneHandle, type CameraPreset, type CueLabel } from '../formviewer/scene';
 import type { AnimationFile } from '../formviewer/types';
 import { logger } from '../utils/logger';
@@ -71,11 +72,10 @@ export const FormViewerModal: React.FC<FormViewerModalProps> = ({ exercise, onCl
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [playing]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // The shell in Modal does not fit here: this one is full screen, has no
+  // backdrop to dismiss over the canvas, and carries its own header controls.
+  // Escape should still close it, so that much is shared.
+  useEscapeKey(onClose);
 
   const togglePlay = useCallback(() => {
     setPlaying(p => { sceneRef.current?.setPlaying(!p); return !p; });

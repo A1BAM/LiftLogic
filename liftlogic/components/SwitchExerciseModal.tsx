@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ExerciseDef } from '../types';
-import { X, ArrowRightLeft, Archive } from 'lucide-react';
+import { ArrowRightLeft, Archive } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface SwitchExerciseModalProps {
   currentExercise: ExerciseDef;
@@ -22,39 +23,11 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
   onSelect,
   onArchive
 }) => {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
+    <Modal
+      onClose={onClose}
+      title={<><ArrowRightLeft className="text-blue-500" size={20} />Swap this lift</>}
     >
-      <div
-        className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 flex flex-col max-h-[90vh] shadow-2xl"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <ArrowRightLeft className="text-blue-500" size={20} />
-            Swap this lift
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {availableExercises.length === 0 ? (
             <div className="text-center text-slate-500 py-12 flex flex-col items-center">
@@ -110,7 +83,6 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
              here ready to swap back, with all its history, unless you archive it.
            </p>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
