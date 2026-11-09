@@ -32,14 +32,14 @@ export const ExerciseRow: React.FC<ExerciseRowProps> = ({
             <Check size={11} strokeWidth={3} className="text-aero-900" />
           </span>
         ) : (
-          <span className="nums text-[13px] text-aero-600/75">{String(position).padStart(2, '0')}</span>
+          <span className="nums text-[14px] text-aero-700">{String(position).padStart(2, '0')}</span>
         )}
       </span>
-      <span className={`flex-1 truncate text-[15px] ${isComplete ? 'text-aero-600/60 line-through' : 'text-aero-800'}`}>
+      <span className={`flex-1 truncate text-[15px] ${isComplete ? 'text-aero-700 line-through' : 'text-aero-900'}`}>
         {exercise.name}
       </span>
       {slot && (
-        <span className="nums shrink-0 rounded-full border border-white/70 bg-white/55 px-2.5 py-0.5 text-[12px] text-aero-700/85">
+        <span className="nums shrink-0 rounded-full border border-white/70 bg-white/55 px-2.5 py-0.5 text-[13px] text-aero-700">
           {slot.sets} × {formatReps(slot).replace(' reps', '')}
         </span>
       )}

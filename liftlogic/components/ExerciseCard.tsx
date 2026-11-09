@@ -197,34 +197,39 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/70 to-transparent"
       />
+      {/* A radial gradient, not a blurred circle: a filter on a card that
+          scrolls makes iOS re-rasterise the layer every frame. */}
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full blur-2xl ${
-          isCompletedToday ? 'bg-leaf-300/45' : 'bg-aero-300/45'
-        }`}
+        className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full"
+        style={{
+          background: isCompletedToday
+            ? 'radial-gradient(circle, rgba(169,226,43,0.40) 0%, rgba(169,226,43,0.16) 45%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(78,207,233,0.40) 0%, rgba(78,207,233,0.16) 45%, transparent 70%)'
+        }}
       />
       <header className="relative flex items-baseline gap-3">
         {position !== undefined && (
-          <span className="nums text-sm text-aero-600/70 tabular-nums pt-1">
+          <span className="nums text-sm text-aero-700 tabular-nums pt-1">
             {String(position).padStart(2, '0')}
           </span>
         )}
         <div className="min-w-0 flex-1">
           <h2
             className={`text-[23px] leading-[1.18] font-semibold tracking-[-0.02em] ${
-              isCompletedToday ? 'text-aero-600/85' : 'text-aero-900'
+              isCompletedToday ? 'text-aero-700' : 'text-aero-900'
             }`}
           >
             {exercise.name}
           </h2>
-          <p className="mt-1 text-[13px] text-aero-600/85">
+          <p className="mt-1 text-[14px] text-aero-700">
             {slot
               ? `${slot.sets} × ${formatReps(slot)} · ${formatRest(slot)}`
               : exercise.muscleGroup}
           </p>
         </div>
         {isCompletedToday && (
-          <span className="shrink-0 flex items-center gap-1 rounded-full border border-leaf-500/40 bg-gradient-to-b from-leaf-200 to-leaf-300 px-2.5 py-1 text-[11px] font-semibold text-aero-900 shadow-bubble">
+          <span className="shrink-0 flex items-center gap-1 rounded-full border border-leaf-500/40 bg-gradient-to-b from-leaf-200 to-leaf-300 px-2.5 py-1 text-[12px] font-semibold text-aero-900 shadow-bubble">
             <Check size={12} strokeWidth={3} /> Done
           </span>
         )}
@@ -234,15 +239,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           gym, so it is the only thing set at this size. */}
       <div className="relative mt-6 flex items-end justify-between gap-4">
         <div>
-          <p className="text-[12px] text-aero-700/75">{barLabel}</p>
+          <p className="text-[13px] text-aero-700">{barLabel}</p>
           <p className="nums mt-1 text-aero-900">
-            <span className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-transparent bg-clip-text bg-gradient-to-b from-aero-700 to-aero-900">
+            <span className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-aero-900">
               {onTheBar}
             </span>
-            <span className="ml-1.5 text-base text-aero-600/85">lbs</span>
-            <span className="mx-2.5 text-aero-400">×</span>
+            <span className="ml-1.5 text-base text-aero-700">lbs</span>
+            <span className="mx-2.5 text-aero-700">×</span>
             <span className="text-[26px] leading-none font-medium">{recommendation.reps}</span>
-            <span className="ml-1.5 text-base text-aero-600/85">reps</span>
+            <span className="ml-1.5 text-base text-aero-700">reps</span>
           </p>
         </div>
 
@@ -267,15 +272,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       {/* The advice is for deciding what to load. Once a set is in, that
           decision is made, so it gives the space back. */}
       {!todaySession && (
-        <p className="relative mt-3 text-[13px] leading-relaxed text-aero-700/85">
+        <p className="relative mt-3 text-[14px] leading-relaxed text-aero-700">
           {recommendation.reason}
         </p>
       )}
 
       {lastTime && (
-        <p className="nums relative mt-3 text-[13px] text-aero-700/85">
-          <span className="text-aero-600/75">Last time</span> {lastTime.text}
-          <span className="text-aero-600/75"> · {lastTime.when}</span>
+        <p className="nums relative mt-3 text-[14px] text-aero-700">
+          <span className="text-aero-700">Last time</span> {lastTime.text}
+          <span className="text-aero-700"> · {lastTime.when}</span>
         </p>
       )}
 
@@ -283,7 +288,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           logged: it is guidance for right now, not history. */}
       {showWarmup && !isCompletedToday && (
         <div className="relative mt-5 border-t border-white/70 pt-4">
-          <p className="mb-2 text-[12px] text-aero-600/70">Warm up first</p>
+          <p className="mb-2 text-[13px] text-aero-700">Warm up first</p>
           {[
             { key: 'cardio', text: WARMUP.cardioLabel },
             { key: 'set', text: `One set at ${warmupWeight(recommendation.weight)} lbs — not logged` }
@@ -292,7 +297,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               key={item.key}
               onClick={() => toggleWarmup(item.key)}
               aria-pressed={!!warmupDone[item.key]}
-              className="flex items-center gap-2.5 w-full text-left py-1.5"
+              className="flex min-h-[44px] w-full items-center gap-2.5 py-1.5 text-left"
             >
               <span
                 className={`shrink-0 w-[18px] h-[18px] rounded-md border flex items-center justify-center ${
@@ -303,7 +308,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               >
                 {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-aero-900" />}
               </span>
-              <span className={`text-[13px] ${warmupDone[item.key] ? 'text-aero-600/70 line-through' : 'text-aero-700/80'}`}>
+              <span className={`text-[14px] ${warmupDone[item.key] ? 'text-aero-700 line-through' : 'text-aero-700'}`}>
                 {item.text}
               </span>
             </button>

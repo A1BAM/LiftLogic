@@ -16,11 +16,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({ password, onPasswordChan
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-center px-6">
+    <div className="relative flex min-h-[100dvh] flex-col justify-center px-6">
       <Bubbles />
       <div className="glass relative mx-auto w-full max-w-sm px-6 py-7">
         <h1 className="text-[19px] font-semibold tracking-[-0.01em] text-aero-900">LiftLogic</h1>
-        <p className="mt-0.5 text-[13px] text-aero-700/75">Locked</p>
+        <p className="mt-0.5 text-[14px] text-aero-700">Locked</p>
 
         <form onSubmit={onSubmit} className="mt-7">
           <div className="well relative flex items-center px-4 focus-within:ring-2 focus-within:ring-aero-300">

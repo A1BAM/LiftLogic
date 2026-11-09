@@ -78,6 +78,35 @@ gel bubbles.
 `Bubbles` is background only: keep it out from behind text. Numbers use `.nums`
 so columns line up.
 
+## iPhone Safari
+
+The app is used on an iPhone 16 Pro in Safari, which constrains the aero
+styling in specific ways. These were all found by measuring, not guessing:
+
+- **Never `background-attachment: fixed`.** iOS repaints the whole gradient
+  every scroll frame. The page gradient lives on a fixed `body::before` layer
+  instead, painted once and composited.
+- **No filters on anything that scrolls.** `blur-*` on a card forces a
+  re-rasterise per frame; use a radial gradient for a glow. Keep the count of
+  `backdrop-filter` layers low and the radius modest — each one is its own
+  compositing layer.
+- **Heights are `100dvh`, never `100vh`.** `100vh` is the height with Safari's
+  chrome hidden, so a `100vh` screen is always taller than what you can see.
+- **Every input is at least 16px.** Safari zooms the page when a smaller field
+  takes focus and does not zoom back out. `index.css` enforces this.
+- **Safe areas**: `index.html` sets `viewport-fit=cover`, and the insets are
+  folded into the padding value on the elements that need them
+  (`pt-[calc(env(safe-area-inset-top)+1rem)]`). A helper class in
+  `@layer components` loses to a plain padding utility, so don't use one.
+- **Tap targets are 44px**, which `.btn-quiet` enforces for icon buttons.
+
+## Readability
+
+Text is solid colour, never a faded one: an alpha on text over the gradient
+drops it under 3:1. Body copy is 14px and up, micro-labels 13px. The label on
+`.btn-gel` sits on the gradient's middle stop, which is dark enough for white
+text to clear 4.5:1 — darken the whole gradient rather than brightening it.
+
 ## Conventions
 
 - Comments explain *why*, not what. Match the density already in the file.
