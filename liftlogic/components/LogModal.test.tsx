@@ -39,7 +39,7 @@ describe('LogModal', () => {
     expect(screen.getByDisplayValue('10')).toBeInTheDocument(); // targetReps
 
     // Check empty state text
-    expect(screen.getByText('No sets logged yet today.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing logged yet today.')).toBeInTheDocument();
   });
 
   it('pre-fills with todays last log if available', () => {
@@ -88,8 +88,8 @@ describe('LogModal', () => {
     render(<LogModal {...defaultProps} />);
     const user = userEvent.setup();
 
-    const decreaseRepsBtn = screen.getByRole('button', { name: 'Decrease reps' });
-    const increaseRepsBtn = screen.getByRole('button', { name: 'Increase reps' });
+    const decreaseRepsBtn = screen.getByRole('button', { name: 'Decrease reps by 1' });
+    const increaseRepsBtn = screen.getByRole('button', { name: 'Increase reps by 1' });
 
     // Initial 10
     expect(screen.getByDisplayValue('10')).toBeInTheDocument();

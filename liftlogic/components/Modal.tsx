@@ -90,10 +90,8 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-center backdrop-blur-sm animate-in fade-in duration-200 ${
-        isSheet
-          ? 'items-end sm:items-center bg-black/90'
-          : 'items-center p-4 bg-black/80'
+      className={`fixed inset-0 z-50 flex justify-center bg-black/70 backdrop-blur-[2px] animate-in fade-in duration-150 ${
+        isSheet ? 'items-end sm:items-center' : 'items-center p-4'
       }`}
       onClick={onClose}
     >
@@ -105,28 +103,29 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`bg-slate-900 w-full max-w-md border-slate-700 flex flex-col max-h-[90vh] shadow-2xl outline-none ${
-          isSheet ? 'sm:rounded-2xl border-t sm:border' : 'rounded-2xl border'
-        }`}
+        className={`bg-ink-900 w-full max-w-md border-ink-700 flex flex-col max-h-[90vh] outline-none
+          animate-in duration-200 ${isSheet
+            ? 'slide-in-from-bottom-4 rounded-t-2xl sm:rounded-2xl border-t sm:border'
+            : 'zoom-in-95 rounded-2xl border'}`}
       >
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center gap-2 bg-slate-800/50 rounded-t-2xl">
+        <div className="flex items-center justify-between gap-2 px-5 pb-4 pt-5">
           <div className="min-w-0">
             {/* A long title wraps; the icon beside it must not be squashed to
                 make room, which is what happened when each dialog rolled its
                 own header. */}
-            <h2 id={titleId} className="text-xl font-bold text-white flex items-center gap-2 [&>svg]:shrink-0">
+            <h2 id={titleId} className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.01em] text-zinc-50 [&>svg]:shrink-0">
               {title}
             </h2>
-            {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-[13px] text-zinc-500">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {headerActions}
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
+              className="btn-quiet p-2"
               aria-label="Close"
             >
-              <X size={24} />
+              <X size={22} />
             </button>
           </div>
         </div>

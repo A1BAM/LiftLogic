@@ -53,7 +53,7 @@ describe('ArchivedExercisesModal', () => {
     expect(onArchive).toHaveBeenCalledWith(inUse);
   });
 
-  it('renders "No archived exercises." when exercises array is empty', () => {
+  it('says so when nothing is archived', () => {
     render(
       <ArchivedExercisesModal
         exercises={[]}
@@ -62,7 +62,7 @@ describe('ArchivedExercisesModal', () => {
         onDelete={mockOnDelete}
       />
     );
-    expect(screen.getByText('No archived exercises.')).toBeTruthy();
+    expect(screen.getByText('Nothing archived.')).toBeTruthy();
   });
 
   it('renders exercise names and details when exercises are provided', () => {
@@ -75,9 +75,9 @@ describe('ArchivedExercisesModal', () => {
       />
     );
     expect(screen.getByText('Archived Bench')).toBeTruthy();
-    expect(screen.getByText('Chest • PUSH')).toBeTruthy();
+    expect(screen.getByText('Chest · push')).toBeTruthy();
     expect(screen.getByText('Archived Row')).toBeTruthy();
-    expect(screen.getByText('Back • PULL')).toBeTruthy();
+    expect(screen.getByText('Back · pull')).toBeTruthy();
   });
 
   it('calls onClose when close button is clicked', () => {

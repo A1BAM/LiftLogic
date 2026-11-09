@@ -7,9 +7,10 @@ describe('App', () => {
     cleanup();
   });
 
-  it('renders LiftLogic Locked login screen initially', () => {
+  it('renders the locked screen initially', () => {
     render(<App />);
-    expect(screen.getByText('LiftLogic Locked')).toBeTruthy();
+    expect(screen.getByText('LiftLogic')).toBeTruthy();
+    expect(screen.getByText('Locked')).toBeTruthy();
   });
 
   it('toggles password visibility when the show/hide password button is clicked', () => {

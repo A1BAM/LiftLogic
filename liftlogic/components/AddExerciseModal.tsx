@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DayType, ExerciseDef } from '../types';
-import { Save, Dumbbell } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface AddExerciseModalProps {
@@ -42,11 +42,11 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
   return (
     <Modal
       onClose={onClose}
-      title={<><Dumbbell size={20} className="text-blue-500" />Add New {dayType} Exercise</>}
+      title={`New ${dayType.toLowerCase()} exercise`}
     >
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto px-5 pb-6">
           <div>
-            <label htmlFor="exercise-name" className="block text-slate-400 text-xs font-bold uppercase mb-2">Exercise Name</label>
+            <label htmlFor="exercise-name" className="mb-2 block text-[12px] text-zinc-600">Exercise Name</label>
             <input 
               id="exercise-name"
               type="text" 
@@ -55,12 +55,12 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Incline Bench Press"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
+              className="w-full rounded-xl border border-ink-700 bg-ink-800 p-3 text-[15px] text-zinc-50 placeholder-zinc-700 focus:border-zinc-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label htmlFor="muscle-group" className="block text-slate-400 text-xs font-bold uppercase mb-2">Muscle Group</label>
+            <label htmlFor="muscle-group" className="mb-2 block text-[12px] text-zinc-600">Muscle Group</label>
             <input 
               id="muscle-group"
               type="text" 
@@ -68,13 +68,13 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               value={muscleGroup}
               onChange={e => setMuscleGroup(e.target.value)}
               placeholder="e.g. Upper Chest"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 placeholder-slate-700"
+              className="w-full rounded-xl border border-ink-700 bg-ink-800 p-3 text-[15px] text-zinc-50 placeholder-zinc-700 focus:border-zinc-500 focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="start-weight" className="block text-slate-400 text-xs font-bold uppercase mb-2">Start Weight (lbs)</label>
+              <label htmlFor="start-weight" className="mb-2 block text-[12px] text-zinc-600">Start Weight (lbs)</label>
               <input 
                 id="start-weight"
                 type="number" 
@@ -83,11 +83,11 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 value={defaultWeight}
                 onChange={e => setDefaultWeight(Number(e.target.value))}
                 onFocus={e => e.target.select()}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3 text-[15px] text-zinc-50 focus:border-zinc-500 focus:outline-none"
               />
             </div>
             <div>
-              <label htmlFor="target-reps" className="block text-slate-400 text-xs font-bold uppercase mb-2">Target Reps</label>
+              <label htmlFor="target-reps" className="mb-2 block text-[12px] text-zinc-600">Target Reps</label>
               <input 
                 id="target-reps"
                 type="number" 
@@ -96,13 +96,13 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 value={targetReps}
                 onChange={e => setTargetReps(Number(e.target.value))}
                 onFocus={e => e.target.select()}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3 text-[15px] text-zinc-50 focus:border-zinc-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="progression-increment" className="block text-slate-400 text-xs font-bold uppercase mb-2">Progression Increment (lbs)</label>
+            <label htmlFor="progression-increment" className="mb-2 block text-[12px] text-zinc-600">Progression Increment (lbs)</label>
             <div className="flex items-center gap-4">
                <input 
                 id="progression-increment"
@@ -112,16 +112,16 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 step="2.5"
                 value={increment}
                 onChange={e => setIncrement(Number(e.target.value))}
-                className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-ink-700 accent-zinc-100"
               />
-              <span className="text-white font-mono w-12 text-right">{increment}</span>
+              <span className="nums w-12 text-right text-[15px] text-zinc-50">{increment}</span>
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">Weight to add when you hit your rep goal.</p>
+            <p className="mt-2 text-[12px] text-zinc-600">Weight to add when you hit your rep goal.</p>
           </div>
 
           <button 
             type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all mt-6"
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 py-4 text-[15px]"
           >
             <Save size={20} />
             Create Exercise

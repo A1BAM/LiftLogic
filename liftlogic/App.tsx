@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -11,21 +11,21 @@ import { AddExerciseModal } from './components/AddExerciseModal';
 import { ArchivedExercisesModal } from './components/ArchivedExercisesModal';
 import { SwitchExerciseModal } from './components/SwitchExerciseModal';
 import { RestTimer } from './components/RestTimer';
-
-const FormViewerModal = lazy(() => import('./components/FormViewerModal'));
-import { Dumbbell, ClipboardList, ChevronLeft, Loader2, AlertCircle, Lock, LogOut, Plus, Archive, Eye, EyeOff } from 'lucide-react';
+import { LockScreen } from './components/LockScreen';
+import { HomeScreen } from './components/HomeScreen';
+import { ChevronLeft, Loader2, AlertCircle, Plus, ClipboardList } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
+import { getLocalDateKey } from './utils/date';
 
 const App: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   // UI State
-  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | 'form' | null>(null);
+  const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
@@ -114,23 +114,6 @@ const App: React.FC = () => {
   const handleLogClick = useCallback((exercise: ExerciseDef) => {
     setSelectedExercise(exercise);
     setActiveModal('log');
-  }, []);
-
-  const handleFormClick = useCallback((exercise: ExerciseDef) => {
-    setSelectedExercise(exercise);
-    setActiveModal('form');
-  }, []);
-
-  // Closing the viewer drops straight back into the log, mid-workout, with
-  // nothing lost: only the modal layer changed, all workout state is untouched.
-  const handleFormLogSet = useCallback(() => {
-    setActiveModal('log');
-    // Wait for the log modal to mount before reaching for its weight field.
-    requestAnimationFrame(() => {
-      const input = document.getElementById('weight-input') as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    });
   }, []);
 
   const handleHistoryClick = useCallback((exercise: ExerciseDef) => {
@@ -335,6 +318,39 @@ const App: React.FC = () => {
 
   const archivedExercises = useMemo(() => allExercises.filter(ex => ex.isArchived), [allExercises]);
 
+  /**
+   * When each day was last trained. It is what you are actually choosing on
+   * from the home screen — the day you have rested longest is usually the one
+   * to do — so it is worth the single pass over the logs.
+   */
+  const lastTrainedByDay = useMemo(() => {
+    const dayOf = new Map(allExercises.map(ex => [ex.id, ex.dayType]));
+    const latest: Partial<Record<DayType, number>> = {};
+    for (const log of logs) {
+      const day = dayOf.get(log.exerciseId);
+      if (!day) continue;
+      if (!latest[day] || log.timestamp > latest[day]!) latest[day] = log.timestamp;
+    }
+    return latest;
+  }, [logs, allExercises]);
+
+  /** Sets, days and weight moved over the last seven days. */
+  const week = useMemo(() => {
+    const since = Date.now() - 7 * 86400000;
+    const days = new Set<string>();
+    let sets = 0;
+    let volume = 0;
+    for (const log of logs) {
+      if (!Number.isFinite(log.timestamp) || log.timestamp < since) continue;
+      const n = Math.floor(Number(log.sets));
+      const counted = Number.isFinite(n) && n > 0 ? n : 1;
+      sets += counted;
+      volume += (Number(log.weight) || 0) * (Number(log.reps) || 0) * counted;
+      days.add(getLocalDateKey(log.timestamp));
+    }
+    return { sets, volume, days: days.size };
+  }, [logs]);
+
   // Everything still in circulation, day by day, so the main-menu list can
   // archive any exercise you have — including a slot's unused variant, which
   // never appears on a workout screen.
@@ -349,55 +365,20 @@ const App: React.FC = () => {
   // 1. LOCK SCREEN
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6">
-        <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-700">
-          <div className="flex justify-center mb-6">
-            <div className="bg-slate-700 p-4 rounded-full shadow-inner">
-              <Lock className="text-blue-500" size={32} />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-white text-center mb-6">LiftLogic Locked</h1>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative flex items-center w-full">
-              <input 
-                type={showPassword ? 'text' : 'password'}
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-600 rounded-xl p-3 pr-12 text-white focus:outline-none focus:border-blue-500 placeholder-slate-600"
-                placeholder="Enter password to unlock"
-                autoFocus
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(prev => !prev)}
-                className="absolute right-3 p-1 text-slate-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                title={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
-            >
-              Unlock App
-            </button>
-          </form>
-        </div>
-      </div>
+      <LockScreen
+        password={passwordInput}
+        onPasswordChange={setPasswordInput}
+        onSubmit={handleLogin}
+      />
     );
   }
 
   // 2. LOADING STATE
   if (isLoading && !workoutDay && logs.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-400">
-        <Loader2 className="animate-spin mb-4" size={48} />
-        <p>Syncing data...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-zinc-600">
+        <Loader2 className="animate-spin" size={20} />
+        <p className="text-[13px]">Syncing…</p>
       </div>
     );
   }
@@ -405,11 +386,13 @@ const App: React.FC = () => {
   // 3. ERROR STATE
   if (error && logs.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-        <AlertCircle className="text-red-500 mb-4" size={48} />
-        <p className="text-white text-xl font-bold mb-2">Connection Error</p>
-        <p className="mb-6">{error}</p>
-        <button onClick={fetchDataAndSync} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold mr-4">Retry</button>
+      <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-7">
+        <AlertCircle className="mb-4 text-zinc-600" size={20} />
+        <p className="text-[17px] font-medium text-zinc-100">Could not reach your workouts</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">{error}</p>
+        <button onClick={fetchDataAndSync} className="btn-primary mt-6 w-full py-3.5 text-[15px]">
+          Try again
+        </button>
       </div>
     );
   }
@@ -417,73 +400,17 @@ const App: React.FC = () => {
   // 4. DASHBOARD HOME
   if (!workoutDay) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 animate-in fade-in relative">
-        
+      <div className="animate-in fade-in duration-200">
+        <HomeScreen
+          lastTrained={lastTrainedByDay}
+          week={week}
+          onPick={setWorkoutDay}
+          onJournal={() => setActiveModal('globalHistory')}
+          onExercises={() => setActiveModal('archived')}
+          onLogout={handleLogout}
+        />
 
-        {/* Logout Button */}
-        <div className="absolute top-4 right-4 flex gap-2">
-           <button 
-             onClick={handleLogout} 
-             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-           >
-             <LogOut size={16} /> Logout
-           </button>
-        </div>
-
-
-        <div className="text-center mb-12">
-          <div className="bg-blue-600 p-4 rounded-2xl inline-block mb-4 shadow-xl shadow-blue-900/20">
-            <Dumbbell className="text-white" size={48} />
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-2">LiftLogic</h1>
-          <p className="text-slate-400">Select your workout for today</p>
-        </div>
-
-        <div className="w-full max-w-sm space-y-4">
-          <button 
-            onClick={() => setWorkoutDay('PUSH')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
-          >
-            <span>Push Day</span>
-            <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Chest • Shoulders • Triceps</span>
-          </button>
-
-          <button 
-            onClick={() => setWorkoutDay('PULL')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
-          >
-            <span>Pull Day</span>
-            <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Back • Biceps</span>
-          </button>
-
-          <button 
-            onClick={() => setWorkoutDay('LEGS')}
-            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 hover:border-blue-500/50 text-white font-bold text-xl py-6 rounded-2xl transition-all shadow-lg flex flex-col items-center gap-2 group"
-          >
-            <span>Leg Day</span>
-            <span className="text-sm font-normal text-slate-500 group-hover:text-slate-400">Quads • Hamstrings • Calves</span>
-          </button>
-        </div>
-
-        <div className="mt-12 flex gap-6">
-          <button 
-            onClick={() => setActiveModal('globalHistory')}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
-          >
-            <ClipboardList size={16} /> View Journal
-          </button>
-          
-
-          <button 
-            onClick={() => setActiveModal('archived')}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
-          >
-            <Archive size={16} /> Your Exercises
-          </button>
-
-        </div>
-
-         {activeModal === 'globalHistory' && (
+        {activeModal === 'globalHistory' && (
           <GlobalHistoryModal
             logs={logs}
             currentDayType={workoutDay}
@@ -493,8 +420,8 @@ const App: React.FC = () => {
           />
         )}
 
-      {activeModal === 'archived' && (
-          <ArchivedExercisesModal 
+        {activeModal === 'archived' && (
+          <ArchivedExercisesModal
             exercises={archivedExercises}
             onClose={() => setActiveModal(null)}
             onRestore={handleRestoreExercise}
@@ -508,138 +435,114 @@ const App: React.FC = () => {
   }
 
   // 5. WORKOUT VIEW
+  const doneCount = plannedExercises.filter(({ exercise, slot }) =>
+    isSlotComplete(getTodaysLogs(exercise.id), slot)
+  ).length;
+
   return (
-    <div className="min-h-screen pb-12 font-sans selection:bg-blue-500 selection:text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-4 shadow-lg">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setWorkoutDay(null)}
-              className="mr-1 p-1 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              aria-label="Back to Dashboard"
-            >
-              <ChevronLeft size={28} />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-white leading-none capitalize">
-                {workoutDay?.toLowerCase()} Day
-              </h1>
-              <p className="text-xs text-blue-400 font-medium">LiftLogic</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setActiveModal('globalHistory')}
-
-
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              title="View Workout Journal"
-              aria-label="View Workout Journal"
-            >
-              <ClipboardList size={24} />
-            </button>
-            <button 
-              onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              title="Logout"
-              aria-label="Logout"
-            >
-              <LogOut size={24} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-md mx-auto p-4 animate-in slide-in-from-right-4 fade-in duration-300">
-        <div className="space-y-6">
-          {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
-            const { slot } = plannedExercises[i];
-            // On a planned day only the current lift gets a full card; the rest
-            // are quiet rows underneath, so opening the app answers "what am I
-            // walking to" without reading a list.
-            const isCurrent = currentIndex === i;
-            if (hasPlan && !isCurrent) return null;
-
-            return (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                exerciseLogs={exerciseLogs}
-                onLogClick={handleLogClick}
-                onHistoryClick={handleHistoryClick}
-                onArchive={handleArchiveClick}
-                onSwitch={
-                  switchOptionsFor(workoutDay, exercise.id, allExercises).length > 0
-                    ? handleSwitchInit
-                    : undefined
-                }
-                onFormClick={handleFormClick}
-                slot={slot}
-                isCurrent={isCurrent}
-                showWarmup={hasPlan && i === 0}
-              />
-            );
-          })}
-
-          {hasPlan && (
-            <div className="space-y-2">
-              {currentIndex !== null && (
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 pt-1">
-                  Then
-                </p>
-              )}
-              {plannedExercises.map(({ exercise, slot, position }, i) => {
-                if (currentIndex === i) return null;
-                return (
-                  <ExerciseRow
-                    key={exercise.id}
-                    exercise={exercise}
-                    slot={slot}
-                    position={position}
-                    isComplete={isSlotComplete(getTodaysLogs(exercise.id), slot)}
-                    onLogClick={handleLogClick}
-                    onFormClick={handleFormClick}
-                    onArchive={handleArchiveClick}
-                  />
-                );
-              })}
-              {currentIndex === null && (
-                <p className="text-center text-sm text-green-400 font-bold py-3">
-                  All {plannedExercises.length} exercises done. Nice work.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Add Exercise Button */}
+    <div className="min-h-screen pb-28 selection:bg-zinc-200 selection:text-ink-950">
+      <header className="sticky top-0 z-40 bg-ink-950/90 backdrop-blur">
+        <div className="mx-auto flex max-w-md items-center gap-1 px-4 pb-3 pt-4">
           <button
-            onClick={() => setActiveModal('addExercise')}
-            className="w-full border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-xl p-4 flex items-center justify-center gap-2 text-slate-500 hover:text-white hover:bg-slate-800/50 transition-all group"
+            onClick={() => setWorkoutDay(null)}
+            className="btn-quiet -ml-2 p-2"
+            aria-label="Back to Dashboard"
           >
-            <Plus size={20} className="group-hover:text-blue-500 transition-colors" />
-            <span className="font-medium">Add New Exercise</span>
+            <ChevronLeft size={22} />
+          </button>
+          <h1 className="flex-1 text-[15px] font-semibold capitalize tracking-[-0.01em] text-zinc-100">
+            {workoutDay.toLowerCase()}
+          </h1>
+          {hasPlan && (
+            <span className="nums mr-1 text-[13px] text-zinc-600">
+              {doneCount}/{plannedExercises.length}
+            </span>
+          )}
+          <button
+            onClick={() => setActiveModal('globalHistory')}
+            className="btn-quiet p-2"
+            title="View Workout Journal"
+            aria-label="View Workout Journal"
+          >
+            <ClipboardList size={19} />
           </button>
         </div>
+        {/* How far through the day you are, as one hairline. */}
+        {hasPlan && (
+          <div className="mx-auto h-px max-w-md bg-ink-700">
+            <div
+              className="h-px bg-ember transition-[width] duration-500"
+              style={{ width: `${(doneCount / plannedExercises.length) * 100}%` }}
+            />
+          </div>
+        )}
+      </header>
+
+      <main className="mx-auto max-w-md px-6 animate-in fade-in duration-200">
+        {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
+          const { slot, position } = plannedExercises[i];
+          // On a planned day only the current lift gets a full card; the rest
+          // are quiet rows underneath, so opening the app answers "what am I
+          // walking to" without reading a list.
+          const isCurrent = currentIndex === i;
+          if (hasPlan && !isCurrent) return null;
+
+          return (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              exerciseLogs={exerciseLogs}
+              onLogClick={handleLogClick}
+              onHistoryClick={handleHistoryClick}
+              onArchive={handleArchiveClick}
+              onSwitch={
+                switchOptionsFor(workoutDay, exercise.id, allExercises).length > 0
+                  ? handleSwitchInit
+                  : undefined
+              }
+              slot={slot}
+              position={hasPlan ? position : undefined}
+              showWarmup={hasPlan && i === 0}
+            />
+          );
+        })}
+
+        {hasPlan && (
+          <div className="mt-9">
+            {currentIndex !== null && (
+              <p className="mb-1 text-[12px] text-zinc-600">Up next</p>
+            )}
+            {plannedExercises.map(({ exercise, slot, position }, i) => {
+              if (currentIndex === i) return null;
+              return (
+                <ExerciseRow
+                  key={exercise.id}
+                  exercise={exercise}
+                  slot={slot}
+                  position={position}
+                  isComplete={isSlotComplete(getTodaysLogs(exercise.id), slot)}
+                  onLogClick={handleLogClick}
+                  onArchive={handleArchiveClick}
+                />
+              );
+            })}
+            {currentIndex === null && (
+              <p className="py-6 text-center text-[15px] text-zinc-400">
+                That is the whole day. Well done.
+              </p>
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={() => setActiveModal('addExercise')}
+          className="btn-quiet mt-8 flex w-full items-center justify-center gap-2 py-4 text-[13px]"
+        >
+          <Plus size={15} /> Add an exercise
+        </button>
       </main>
 
       {/* Modals */}
-      {activeModal === 'form' && selectedExercise && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
-            Loading form model…
-          </div>
-        }>
-          <FormViewerModal
-            exercise={selectedExercise}
-            onClose={() => setActiveModal(null)}
-            onLogSet={handleFormLogSet}
-          />
-        </Suspense>
-      )}
-
       {activeModal === 'log' && selectedExercise && (
         <LogModal
           exercise={selectedExercise}

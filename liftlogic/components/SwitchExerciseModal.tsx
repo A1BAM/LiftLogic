@@ -26,62 +26,56 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
   return (
     <Modal
       onClose={onClose}
-      title={<><ArrowRightLeft className="text-blue-500" size={20} />Swap this lift</>}
+      title="Swap this lift"
     >
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-5">
           {availableExercises.length === 0 ? (
-            <div className="text-center text-slate-500 py-12 flex flex-col items-center">
-              <ArrowRightLeft size={48} className="opacity-20 mb-4" />
-              <p>No similar exercise set up for this slot.</p>
-            </div>
+            <p className="py-5 text-[13px] text-zinc-600">No similar exercise set up for this slot.</p>
           ) : (
-            availableExercises.map(ex => (
-              <div
-                key={ex.id}
-                className="bg-slate-950 rounded-xl border border-slate-800 flex items-center group focus-within:border-blue-500/50 hover:border-blue-500/50 transition-colors"
-              >
-                <button
-                  onClick={() => onSelect(ex)}
-                  aria-label={`Swap to ${ex.name}`}
-                  className="flex-1 min-w-0 text-left p-4 flex justify-between items-center gap-3"
-                >
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-300 group-hover:text-white truncate">{ex.name}</h3>
-                    <p className="text-xs text-slate-500 uppercase font-bold">{ex.muscleGroup}</p>
-                  </div>
-                  <div className="shrink-0 p-2 bg-blue-900/20 text-blue-400 group-hover:bg-blue-600 group-hover:text-white rounded-lg border border-blue-900/50 transition-colors">
-                    <ArrowRightLeft size={18} />
-                  </div>
-                </button>
-                {onArchive && (
+            <ul>
+              {availableExercises.map(ex => (
+                <li key={ex.id} className="flex items-center gap-2 border-b border-ink-700 last:border-b-0">
                   <button
-                    onClick={() => onArchive(ex)}
-                    className="shrink-0 self-stretch px-3 flex items-center text-slate-600 hover:text-amber-500 border-l border-slate-800 rounded-r-xl transition-colors"
-                    title={`Archive ${ex.name}`}
-                    aria-label={`Archive ${ex.name}`}
+                    onClick={() => onSelect(ex)}
+                    aria-label={`Swap to ${ex.name}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3.5 text-left"
                   >
-                    <Archive size={18} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] text-zinc-200">{ex.name}</span>
+                      <span className="block text-[12px] text-zinc-600">{ex.muscleGroup}</span>
+                    </span>
+                    <ArrowRightLeft size={16} className="shrink-0 text-zinc-500" />
                   </button>
-                )}
-              </div>
-            ))
+                  {onArchive && (
+                    <button
+                      onClick={() => onArchive(ex)}
+                      className="btn-quiet shrink-0 p-2"
+                      title={`Archive ${ex.name}`}
+                      aria-label={`Archive ${ex.name}`}
+                    >
+                      <Archive size={16} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl space-y-3">
-           {onArchive && (
-             <button
-               onClick={() => onArchive(currentExercise)}
-               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-slate-800 text-sm font-semibold text-slate-400 hover:text-amber-500 hover:border-amber-900/50 transition-colors"
-               aria-label={`Archive ${currentExercise.name}`}
-             >
-               <Archive size={16} /> Archive {currentExercise.name} instead
-             </button>
-           )}
-           <p className="text-[10px] text-slate-500 text-center">
-             Swapping only changes which lift you are doing. {currentExercise.name} stays
-             here ready to swap back, with all its history, unless you archive it.
-           </p>
+        <div className="px-5 pb-6 pt-4">
+          {onArchive && (
+            <button
+              onClick={() => onArchive(currentExercise)}
+              className="btn-quiet mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-700 py-3 text-[13px]"
+              aria-label={`Archive ${currentExercise.name}`}
+            >
+              <Archive size={15} /> Archive {currentExercise.name} instead
+            </button>
+          )}
+          <p className="text-[12px] leading-relaxed text-zinc-600">
+            Swapping only changes which lift you are doing. {currentExercise.name} stays
+            here ready to swap back, with all its history, unless you archive it.
+          </p>
         </div>
     </Modal>
   );

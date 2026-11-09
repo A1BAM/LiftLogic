@@ -9,6 +9,41 @@
   }
 
   body {
-    @apply bg-slate-900 text-slate-50;
+    @apply bg-ink-950 text-zinc-100 antialiased;
+  }
+
+  /* Weights and reps line up column-wise between sets, and a 1 never shifts
+     the number beside it. */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* The number fields are typed into as often as they are tapped, so the
+     spinner arrows only get in the way. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  /* The one loud control on a screen: whatever you came here to press. */
+  .btn-primary {
+    @apply bg-zinc-100 text-ink-950 font-semibold rounded-xl
+           active:bg-zinc-300 disabled:bg-ink-800 disabled:text-zinc-600
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-100
+           focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 transition-colors;
+  }
+
+  /* Everything else: present, not competing. */
+  .btn-quiet {
+    @apply text-zinc-500 rounded-lg active:text-zinc-200 active:bg-ink-800
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600
+           transition-colors;
   }
 }

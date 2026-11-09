@@ -40,48 +40,33 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
   };
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center animate-in slide-in-from-bottom-5">
-      <div className="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-4 w-full max-w-sm">
-        <div className="bg-blue-600/20 p-3 rounded-full animate-pulse">
-           <Timer className="text-blue-500" size={24} />
-        </div>
-        
+    <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center p-4 animate-in slide-in-from-bottom-4">
+      <div className="flex w-full max-w-md items-center gap-4 rounded-2xl border border-ink-700 bg-ink-900/95 px-4 py-3 backdrop-blur">
+        <Timer size={18} className="shrink-0 text-ember" />
+
         <div className="flex-1">
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Rest Timer</p>
-          <div className="text-3xl font-mono font-bold text-white tabular-nums">
+          <p className="text-[12px] text-zinc-600">Rest</p>
+          <div className="nums text-[26px] font-medium leading-tight text-zinc-50">
             {formatTime(timeLeft)}
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-           <button 
-             onClick={() => {
-               navigator.vibrate?.(10);
-               onAdd(30);
-             }}
-             className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
-             aria-label="Add 30 seconds"
-           >
-             <Plus size={14} />
-           </button>
-           <button 
-             onClick={() => {
-               navigator.vibrate?.(10);
-               onAdd(-30);
-             }}
-             className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded border border-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition-all"
-             aria-label="Subtract 30 seconds"
-           >
-             <Minus size={14} />
-           </button>
-        </div>
-
-        <button 
-          onClick={onCancel}
-          className="p-2 hover:bg-slate-800 rounded-full text-slate-500 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors ml-2"
-          aria-label="Close Timer"
+        <button
+          onClick={() => { navigator.vibrate?.(10); onAdd(-30); }}
+          className="btn-quiet p-2"
+          aria-label="Subtract 30 seconds"
         >
-          <X size={20} />
+          <Minus size={16} />
+        </button>
+        <button
+          onClick={() => { navigator.vibrate?.(10); onAdd(30); }}
+          className="btn-quiet p-2"
+          aria-label="Add 30 seconds"
+        >
+          <Plus size={16} />
+        </button>
+        <button onClick={onCancel} className="btn-quiet p-2" aria-label="Close Timer">
+          <X size={18} />
         </button>
       </div>
     </div>

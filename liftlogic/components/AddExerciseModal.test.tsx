@@ -19,7 +19,7 @@ describe('AddExerciseModal', () => {
     render(<AddExerciseModal {...defaultProps} />);
 
     // Check title includes dayType
-    expect(screen.getByRole('heading', { name: /Add New PUSH Exercise/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /New push exercise/i })).toBeTruthy();
 
     // Check form inputs
     expect(screen.getByLabelText(/Exercise Name/i)).toBeTruthy();

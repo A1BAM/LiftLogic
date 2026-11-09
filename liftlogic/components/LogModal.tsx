@@ -12,15 +12,66 @@ interface LogModalProps {
   onDelete: (logId: string) => void;
 }
 
-export const LogModal: React.FC<LogModalProps> = ({ 
-  exercise, 
+/** A number you can either type into or nudge with a thumb. */
+const Stepper: React.FC<{
+  id: string;
+  /** Shown above the field, so it can carry the unit. */
+  label: string;
+  /** Spoken name, without the unit: "decrease weight by 5". */
+  name: string;
+  value: string;
+  onChange: (next: string) => void;
+  onStep: (delta: number) => void;
+  step: number;
+  min: number;
+  inputMode: 'decimal' | 'numeric';
+  width: string;
+}> = ({ id, label, name, value, onChange, onStep, step, min, inputMode, width }) => (
+  <div>
+    <label htmlFor={id} className="mb-2 block text-[12px] text-zinc-600">{label}</label>
+    <div className="flex items-center gap-1 rounded-xl border border-ink-700 bg-ink-800 p-1">
+      <button
+        type="button"
+        onClick={() => onStep(-step)}
+        className="btn-quiet shrink-0 rounded-lg p-3 text-zinc-400"
+        aria-label={`Decrease ${name} by ${step}`}
+      >
+        <Minus size={17} />
+      </button>
+      <input
+        id={id}
+        type="number"
+        inputMode={inputMode}
+        min={min}
+        aria-label={label}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        // Typing is the fast path for a big jump; selecting on focus means the
+        // first keystroke replaces the number instead of appending to it.
+        onFocus={e => e.target.select()}
+        className={`nums ${width} min-w-0 flex-1 bg-transparent text-center text-[28px] font-medium text-zinc-50
+                   focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 rounded-lg py-1`}
+      />
+      <button
+        type="button"
+        onClick={() => onStep(step)}
+        className="btn-quiet shrink-0 rounded-lg p-3 text-zinc-400"
+        aria-label={`Increase ${name} by ${step}`}
+      >
+        <Plus size={17} />
+      </button>
+    </div>
+  </div>
+);
+
+export const LogModal: React.FC<LogModalProps> = ({
+  exercise,
   todaysLogs,
   lastSessionLogs,
-  onClose, 
+  onClose,
   onSave,
   onDelete
 }) => {
-
   // Determine default values for the input form
   // 1. If we just logged a set today, copy that weight/reps for convenience
   // 2. If no logs today, use the LAST session's weight and Target Reps
@@ -56,136 +107,72 @@ export const LogModal: React.FC<LogModalProps> = ({
   };
 
   return (
-    <Modal
-      onClose={onClose}
-      variant="sheet"
-      title={exercise.name}
-      subtitle="Log each set individually"
-    >
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          
-          {/* Today's Sets List */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Today's Sets</h3>
-            {todaysLogs.length === 0 ? (
-              <div className="text-sm text-slate-600 italic text-center py-4 border border-dashed border-slate-800 rounded-xl">
-                No sets logged yet today.
-              </div>
-            ) : (
-              todaysLogs.map((log, index) => (
-                <div key={log.id} className="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700 animate-in slide-in-from-left-2 fade-in">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-slate-700 text-slate-300 text-xs font-bold px-2 py-1 rounded">
-                      Set {index + 1}
-                    </span>
-                    <div className="text-white font-mono font-medium">
-                      <span className="text-lg">{log.weight}</span> <span className="text-xs text-slate-500">lbs</span>
-                      <span className="mx-2 text-slate-600">x</span>
-                      <span className="text-lg">{log.reps}</span> <span className="text-xs text-slate-500">reps</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      navigator.vibrate?.(10);
-                      if (window.confirm('Delete this set?')) onDelete(log.id);
-                    }}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-lg focus-visible:ring-2 focus-visible:ring-red-500 transition-colors"
-                    aria-label={`Delete set ${index + 1}`}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+    <Modal onClose={onClose} variant="sheet" title={exercise.name} subtitle="One set at a time">
+      <div className="flex-1 overflow-y-auto px-5 pb-2">
+        {todaysLogs.length === 0 ? (
+          <p className="py-5 text-[13px] text-zinc-600">Nothing logged yet today.</p>
+        ) : (
+          <ul className="py-1">
+            {todaysLogs.map((log, index) => (
+              <li
+                key={log.id}
+                className="flex items-center gap-3 border-b border-ink-700 py-2.5 last:border-b-0 animate-in fade-in"
+              >
+                <span className="nums w-5 shrink-0 text-[13px] text-zinc-600">{index + 1}</span>
+                <span className="nums flex-1 text-[15px] text-zinc-200">
+                  {log.weight}
+                  <span className="text-zinc-600"> lbs × </span>
+                  {log.reps}
+                  <span className="text-zinc-600"> reps</span>
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.vibrate?.(10);
+                    if (window.confirm('Delete this set?')) onDelete(log.id);
+                  }}
+                  className="btn-quiet p-2"
+                  aria-label={`Delete set ${index + 1}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-          {/* Input Area */}
-          <form onSubmit={handleAddSet} className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
-             <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-4 text-center">New Set</h3>
-             
-             <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Weight */}
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="weight-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Weight (lbs)</label>
-                  <div className="flex items-center justify-between gap-1">
-                    <button
-                      type="button"
-                      onClick={() => adjustWeight(-5)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
-                      aria-label="Decrease weight by 5"
-                      title="Decrease by 5"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      id="weight-input"
-                      type="number"
-                      inputMode="decimal"
-                      aria-label="Weight in lbs"
-                      value={weightInput}
-                      onChange={(e) => setWeightInput(e.target.value)}
-                      onFocus={(e) => { e.target.select(); }}
-                      className="w-20 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => adjustWeight(5)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
-                      aria-label="Increase weight by 5"
-                      title="Increase by 5"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Reps */}
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <label htmlFor="reps-input" className="block text-slate-500 text-[10px] font-bold uppercase mb-2 text-center">Reps</label>
-                  <div className="flex items-center justify-between gap-1">
-                    <button
-                      type="button"
-                      onClick={() => adjustReps(-1)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
-                      aria-label="Decrease reps"
-                      title="Decrease by 1"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      id="reps-input"
-                      type="number"
-                      inputMode="numeric"
-                      aria-label="Number of reps"
-                      value={repsInput}
-                      onChange={(e) => setRepsInput(e.target.value)}
-                      onFocus={(e) => { e.target.select(); }}
-                      className="w-16 bg-transparent text-xl font-bold text-white font-mono text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => adjustReps(1)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0"
-                      aria-label="Increase reps"
-                      title="Increase by 1"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-             </div>
-
-             <button 
-              type="submit" 
-              disabled={reps < 1}
-              className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-blue-400 transition-all"
-            >
-              <Plus size={20} />
-              Add Set
-            </button>
-          </form>
+      <form onSubmit={handleAddSet} className="border-t border-ink-700 px-5 pb-6 pt-5">
+        <div className="grid grid-cols-2 gap-3">
+          <Stepper
+            id="weight-input"
+            label="Weight (lbs)"
+            name="weight"
+            value={weightInput}
+            onChange={setWeightInput}
+            onStep={adjustWeight}
+            step={5}
+            min={0}
+            inputMode="decimal"
+            width="w-full"
+          />
+          <Stepper
+            id="reps-input"
+            label="Reps"
+            name="reps"
+            value={repsInput}
+            onChange={setRepsInput}
+            onStep={adjustReps}
+            step={1}
+            min={1}
+            inputMode="numeric"
+            width="w-full"
+          />
         </div>
+
+        <button type="submit" disabled={reps < 1} className="btn-primary mt-4 w-full py-4 text-[15px]">
+          Add set {todaysLogs.length + 1}
+        </button>
+      </form>
     </Modal>
   );
 };

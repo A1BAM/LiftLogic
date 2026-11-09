@@ -44,10 +44,9 @@ MCP tools are never invoked autonomously.
 - `liftlogic/worker.ts` — the Cloudflare Worker: auth, CORS, and the `/gym-api`
   endpoints over Neon.
 - `liftlogic/hooks/` — data fetching, log and exercise state.
-- `liftlogic/components/` — dialogs share the shell in `Modal.tsx`.
-- `liftlogic/formviewer/` + `liftlogic/data/animations/` — the 3D form guide.
-  Animations are files in the repo, keyed on the exercise's primary key. They
-  are never stored in or written to the database.
+- `liftlogic/components/` — screens and dialogs. Dialogs share the shell in
+  `Modal.tsx`; `LockScreen` and `HomeScreen` are the two screens outside a
+  workout.
 
 ## Checks before pushing
 
@@ -61,6 +60,17 @@ npm test
 
 CI runs the same thing. Dependencies are pnpm; CI installs with
 `--frozen-lockfile`, so commit `pnpm-lock.yaml` whenever `package.json` changes.
+
+## Look and feel
+
+Dark, quiet, typography-led. Neutral greys (`ink-*`, `zinc-*`), never slate.
+One accent (`ember`) and only for what is happening now: the day's progress
+line, the pips for sets done, the rest timer. The one loud control on a screen
+is `.btn-primary` — white on near-black — and everything else is `.btn-quiet`.
+
+Hairlines and spacing separate things; boxes, badges and shadows mostly do not.
+Micro-labels are sentence case at 12px, not wide-tracked capitals. Numbers use
+`.nums` so columns line up.
 
 ## Conventions
 

@@ -63,7 +63,7 @@ const openPush = async () => {
     target: { value: 'pw' }
   });
   fireEvent.click(screen.getByRole('button', { name: /unlock app/i }));
-  fireEvent.click(await screen.findByText('Push Day', {}, { timeout: 5000 }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Push/ }, { timeout: 5000 }));
   await screen.findByText('Incline Chest Dumbbells', {}, { timeout: 5000 });
 };
 
@@ -104,12 +104,12 @@ describe('archiving from the workout screen', () => {
       target: { value: 'pw' }
     });
     fireEvent.click(screen.getByRole('button', { name: /unlock app/i }));
-    await screen.findByText('Push Day', {}, { timeout: 5000 });
+    await screen.findByRole('button', { name: /^Push/ }, { timeout: 5000 });
 
     // Smith Bench shares slot 1 with the incline press, so it appears on no
     // workout screen while the incline press fills the slot. The main-menu
     // list is what makes it archivable at all.
-    fireEvent.click(screen.getByText('Your Exercises'));
+    fireEvent.click(screen.getByRole('button', { name: 'Exercises' }));
     const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 });
     fireEvent.click(within(dialog).getByLabelText('Archive Smith Bench'));
 
