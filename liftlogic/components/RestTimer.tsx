@@ -41,12 +41,12 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center p-4 animate-in slide-in-from-bottom-4">
-      <div className="flex w-full max-w-md items-center gap-4 rounded-2xl border border-ink-700 bg-ink-900/95 px-4 py-3 backdrop-blur">
-        <Timer size={18} className="shrink-0 text-ember" />
+      <div className="glass flex w-full max-w-md items-center gap-3 px-4 py-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/70 bg-gradient-to-b from-aero-200 to-aero-400 shadow-bubble"><Timer size={17} className="text-aero-900" /></span>
 
         <div className="flex-1">
-          <p className="text-[12px] text-zinc-600">Rest</p>
-          <div className="nums text-[26px] font-medium leading-tight text-zinc-50">
+          <p className="text-[12px] text-aero-700/75">Rest</p>
+          <div className="nums text-[26px] font-semibold leading-tight text-aero-900">
             {formatTime(timeLeft)}
           </div>
         </div>

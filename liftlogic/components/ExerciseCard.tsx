@@ -191,45 +191,58 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const setPips = Array.from({ length: targetSetsForSlot }, (_, i) => i < setsToday);
 
   return (
-    <section className="pt-5">
-      <header className="flex items-baseline gap-3">
+    <section className="glass relative mt-5 overflow-hidden px-5 pb-5 pt-5">
+      {/* A pane of water behind the card's top edge, lit from above. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/70 to-transparent"
+      />
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full blur-2xl ${
+          isCompletedToday ? 'bg-leaf-300/45' : 'bg-aero-300/45'
+        }`}
+      />
+      <header className="relative flex items-baseline gap-3">
         {position !== undefined && (
-          <span className="nums text-sm text-zinc-600 tabular-nums pt-1">
+          <span className="nums text-sm text-aero-600/70 tabular-nums pt-1">
             {String(position).padStart(2, '0')}
           </span>
         )}
         <div className="min-w-0 flex-1">
           <h2
-            className={`text-[26px] leading-[1.15] font-semibold tracking-[-0.02em] ${
-              isCompletedToday ? 'text-zinc-500' : 'text-zinc-50'
+            className={`text-[23px] leading-[1.18] font-semibold tracking-[-0.02em] ${
+              isCompletedToday ? 'text-aero-600/85' : 'text-aero-900'
             }`}
           >
             {exercise.name}
           </h2>
-          <p className="mt-1 text-[13px] text-zinc-500">
+          <p className="mt-1 text-[13px] text-aero-600/85">
             {slot
               ? `${slot.sets} × ${formatReps(slot)} · ${formatRest(slot)}`
               : exercise.muscleGroup}
           </p>
         </div>
         {isCompletedToday && (
-          <span className="shrink-0 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500">
-            <Check size={13} /> Done
+          <span className="shrink-0 flex items-center gap-1 rounded-full border border-leaf-500/40 bg-gradient-to-b from-leaf-200 to-leaf-300 px-2.5 py-1 text-[11px] font-semibold text-aero-900 shadow-bubble">
+            <Check size={12} strokeWidth={3} /> Done
           </span>
         )}
       </header>
 
       {/* What to put on the bar. The one number worth reading from across the
           gym, so it is the only thing set at this size. */}
-      <div className="mt-6 flex items-end justify-between gap-4">
+      <div className="relative mt-6 flex items-end justify-between gap-4">
         <div>
-          <p className="text-[12px] text-zinc-600">{barLabel}</p>
-          <p className="nums mt-1 text-zinc-50">
-            <span className="text-[44px] leading-none font-medium">{onTheBar}</span>
-            <span className="ml-1.5 text-base text-zinc-500">lbs</span>
-            <span className="mx-2.5 text-zinc-700">×</span>
+          <p className="text-[12px] text-aero-700/75">{barLabel}</p>
+          <p className="nums mt-1 text-aero-900">
+            <span className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-transparent bg-clip-text bg-gradient-to-b from-aero-700 to-aero-900">
+              {onTheBar}
+            </span>
+            <span className="ml-1.5 text-base text-aero-600/85">lbs</span>
+            <span className="mx-2.5 text-aero-400">×</span>
             <span className="text-[26px] leading-none font-medium">{recommendation.reps}</span>
-            <span className="ml-1.5 text-base text-zinc-500">reps</span>
+            <span className="ml-1.5 text-base text-aero-600/85">reps</span>
           </p>
         </div>
 
@@ -239,7 +252,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           aria-label={`${setsToday} of ${targetSetsForSlot} sets done`}
         >
           {setPips.map((done, i) => (
-            <span key={i} className={`h-1 w-4 rounded-full ${done ? 'bg-ember' : 'bg-ink-700'}`} />
+            <span
+              key={i}
+              className={`h-3.5 w-3.5 rounded-full border ${
+                done
+                  ? 'border-leaf-500/50 bg-gradient-to-b from-leaf-300 to-leaf-500 shadow-bubble'
+                  : 'border-white/70 bg-white/55'
+              }`}
+            />
           ))}
         </div>
       </div>
@@ -247,21 +267,23 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       {/* The advice is for deciding what to load. Once a set is in, that
           decision is made, so it gives the space back. */}
       {!todaySession && (
-        <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{recommendation.reason}</p>
+        <p className="relative mt-3 text-[13px] leading-relaxed text-aero-700/85">
+          {recommendation.reason}
+        </p>
       )}
 
       {lastTime && (
-        <p className="nums mt-3 text-[13px] text-zinc-500">
-          <span className="text-zinc-600">Last time</span> {lastTime.text}
-          <span className="text-zinc-600"> · {lastTime.when}</span>
+        <p className="nums relative mt-3 text-[13px] text-aero-700/85">
+          <span className="text-aero-600/75">Last time</span> {lastTime.text}
+          <span className="text-aero-600/75"> · {lastTime.when}</span>
         </p>
       )}
 
       {/* The warm-up belongs to the first lift of the day only, and is never
           logged: it is guidance for right now, not history. */}
       {showWarmup && !isCompletedToday && (
-        <div className="mt-5 border-t border-ink-700 pt-4">
-          <p className="mb-2 text-[12px] text-zinc-600">Warm up first</p>
+        <div className="relative mt-5 border-t border-white/70 pt-4">
+          <p className="mb-2 text-[12px] text-aero-600/70">Warm up first</p>
           {[
             { key: 'cardio', text: WARMUP.cardioLabel },
             { key: 'set', text: `One set at ${warmupWeight(recommendation.weight)} lbs — not logged` }
@@ -274,12 +296,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             >
               <span
                 className={`shrink-0 w-[18px] h-[18px] rounded-md border flex items-center justify-center ${
-                  warmupDone[item.key] ? 'bg-zinc-200 border-zinc-200' : 'border-ink-700'
+                  warmupDone[item.key]
+                    ? 'border-leaf-500/50 bg-gradient-to-b from-leaf-300 to-leaf-500 shadow-bubble'
+                    : 'border-white/80 bg-white/60'
                 }`}
               >
-                {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-ink-950" />}
+                {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-aero-900" />}
               </span>
-              <span className={`text-[13px] ${warmupDone[item.key] ? 'text-zinc-600 line-through' : 'text-zinc-400'}`}>
+              <span className={`text-[13px] ${warmupDone[item.key] ? 'text-aero-600/70 line-through' : 'text-aero-700/80'}`}>
                 {item.text}
               </span>
             </button>
@@ -287,8 +311,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-2">
-        <button onClick={() => onLogClick(exercise)} className="btn-primary flex-1 py-3.5 text-[15px]">
+      <div className="relative mt-6 flex items-center gap-1.5">
+        <button
+          onClick={() => onLogClick(exercise)}
+          className={`btn-gel flex-1 py-3.5 text-[15px] ${isCompletedToday ? 'btn-gel-leaf' : ''}`}
+        >
           {isCompletedToday ? "Today's sets" : setsToday > 0 ? `Log set ${setsToday + 1}` : 'Log a set'}
         </button>
 

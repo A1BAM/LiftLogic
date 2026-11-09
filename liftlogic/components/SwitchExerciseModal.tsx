@@ -30,21 +30,21 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
     >
         <div className="flex-1 overflow-y-auto px-5">
           {availableExercises.length === 0 ? (
-            <p className="py-5 text-[13px] text-zinc-600">No similar exercise set up for this slot.</p>
+            <p className="py-5 text-[13px] text-aero-600/70">No similar exercise set up for this slot.</p>
           ) : (
             <ul>
               {availableExercises.map(ex => (
-                <li key={ex.id} className="flex items-center gap-2 border-b border-ink-700 last:border-b-0">
+                <li key={ex.id} className="flex items-center gap-2 border-b border-aero-200/70 last:border-b-0">
                   <button
                     onClick={() => onSelect(ex)}
                     aria-label={`Swap to ${ex.name}`}
                     className="flex min-w-0 flex-1 items-center gap-3 py-3.5 text-left"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] text-zinc-200">{ex.name}</span>
-                      <span className="block text-[12px] text-zinc-600">{ex.muscleGroup}</span>
+                      <span className="block truncate text-[15px] text-aero-800">{ex.name}</span>
+                      <span className="block text-[12px] text-aero-600/70">{ex.muscleGroup}</span>
                     </span>
-                    <ArrowRightLeft size={16} className="shrink-0 text-zinc-500" />
+                    <ArrowRightLeft size={16} className="shrink-0 text-aero-600/85" />
                   </button>
                   {onArchive && (
                     <button
@@ -66,13 +66,13 @@ export const SwitchExerciseModal: React.FC<SwitchExerciseModalProps> = ({
           {onArchive && (
             <button
               onClick={() => onArchive(currentExercise)}
-              className="btn-quiet mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-700 py-3 text-[13px]"
+              className="btn-quiet mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-aero-200/70 py-3 text-[13px]"
               aria-label={`Archive ${currentExercise.name}`}
             >
               <Archive size={15} /> Archive {currentExercise.name} instead
             </button>
           )}
-          <p className="text-[12px] leading-relaxed text-zinc-600">
+          <p className="text-[12px] leading-relaxed text-aero-600/70">
             Swapping only changes which lift you are doing. {currentExercise.name} stays
             here ready to swap back, with all its history, unless you archive it.
           </p>
