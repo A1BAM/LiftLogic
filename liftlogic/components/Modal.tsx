@@ -103,7 +103,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`bg-white/60 w-full max-w-md border-aero-200/70 flex flex-col max-h-[90vh] outline-none
+        className={`bg-white/60 w-full max-w-md border-aero-200/70 flex flex-col max-h-[88dvh] outline-none
           animate-in duration-200 ${isSheet
             ? 'slide-in-from-bottom-4 rounded-t-2xl sm:rounded-2xl border-t sm:border'
             : 'zoom-in-95 rounded-2xl border'}`}
@@ -116,7 +116,7 @@ export const Modal: React.FC<ModalProps> = ({
             <h2 id={titleId} className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.01em] text-aero-900 [&>svg]:shrink-0">
               {title}
             </h2>
-            {subtitle && <p className="mt-0.5 text-[13px] text-aero-600/85">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-[14px] text-aero-700">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {headerActions}

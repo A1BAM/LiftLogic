@@ -32,15 +32,15 @@ const todayFormatter = new Intl.DateTimeFormat(undefined, {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   lastTrained, week, onPick, onJournal, onExercises, onLogout
 }) => (
-  <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-5">
+  <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5">
     <Bubbles />
 
-    <header className="relative flex items-start justify-between pt-11">
+    <header className="relative flex items-start justify-between pt-[calc(env(safe-area-inset-top)+2.75rem)]">
       <div>
         <h1 className="text-[17px] font-semibold tracking-[-0.01em] text-aero-900">LiftLogic</h1>
-        <p className="mt-0.5 text-[13px] text-aero-700/80">{todayFormatter.format(Date.now())}</p>
+        <p className="mt-0.5 text-[14px] text-aero-700">{todayFormatter.format(Date.now())}</p>
       </div>
-      <button onClick={onLogout} className="btn-quiet px-3 py-1.5 text-[13px]">
+      <button onClick={onLogout} className="btn-quiet px-3 py-1.5 text-[14px]">
         Lock
       </button>
     </header>
@@ -65,9 +65,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <span className="block text-[27px] font-semibold leading-none tracking-[-0.02em] text-aero-900">
                 {title}
               </span>
-              <span className="mt-1.5 block text-[13px] text-aero-700/75">{muscles}</span>
+              <span className="mt-1.5 block text-[14px] text-aero-700">{muscles}</span>
             </span>
-            <span className="shrink-0 rounded-full border border-white/70 bg-white/60 px-3 py-1 text-[12px] text-aero-700/90">
+            <span className="shrink-0 rounded-full border border-white/70 bg-white/60 px-3 py-1 text-[13px] text-aero-700">
               {last ? daysAgoLabel(last) : 'never'}
             </span>
           </button>
@@ -77,7 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
     {/* The week so far. Small, but it is the one thing worth knowing before
         picking a day. */}
-    <p className="nums relative text-[13px] text-aero-700/75">
+    <p className="nums relative text-[14px] text-aero-700">
       {week.sets === 0 ? (
         'Nothing logged this week yet.'
       ) : (
@@ -97,7 +97,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       )}
     </p>
 
-    <footer className="relative flex gap-3 pb-7 pt-4 text-[13px]">
+    <footer className="relative flex gap-3 pt-4 text-[14px] pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
       <button onClick={onJournal} className="btn-quiet border-white/70 bg-white/55 px-4 py-2">
         Journal
       </button>

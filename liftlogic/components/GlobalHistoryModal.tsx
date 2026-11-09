@@ -83,13 +83,13 @@ function ImportLogsView({
 }) {
   return (
     <div className="p-6 flex-1 flex flex-col gap-4">
-      <div className="rounded-xl border border-aero-200/70 bg-white/60 p-4 text-[13px] leading-relaxed text-aero-700/80">
+      <div className="rounded-xl border border-aero-200/70 bg-white/60 p-4 text-[14px] leading-relaxed text-aero-700">
         Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
       </div>
       <textarea
         autoFocus
         aria-label="Workout history JSON"
-        className="flex-1 bg-white/60 border border-aero-200/70 rounded-xl p-4 text-xs font-mono text-aero-700 focus:outline-none focus:border-aero-400 focus-visible:ring-2 focus-visible:ring-aero-300 resize-none min-h-[200px]"
+        className="flex-1 bg-white/60 border border-aero-200/70 rounded-xl p-4 text-[16px] font-mono text-aero-700 focus:outline-none focus:border-aero-400 focus-visible:ring-2 focus-visible:ring-aero-300 resize-none min-h-[200px]"
         placeholder='[{"id":"...", "weight": 20, ...}]'
         value={importText}
         onChange={(e) => setImportText(e.target.value)}
@@ -119,7 +119,7 @@ function TodaySummaryCard({
 }) {
   if (!todaySummary || !currentDayType) return null;
   return (
-    <p className="nums px-5 pb-4 text-[13px] text-aero-600/85">
+    <p className="nums px-5 pb-4 text-[14px] text-aero-700">
       Today&rsquo;s {currentDayType.toLowerCase()}:{' '}
       <span className="text-aero-800">
         {todaySummary.exercisesCount} {todaySummary.exercisesCount === 1 ? 'exercise' : 'exercises'}
@@ -146,7 +146,7 @@ function StatsSummaryRow({
       {figures.map(f => (
         <div key={f.label}>
           <div className="nums text-[22px] font-medium leading-none text-aero-900">{f.value}</div>
-          <div className="mt-1.5 text-[12px] text-aero-600/70">{f.label}</div>
+          <div className="mt-1.5 text-[13px] text-aero-700">{f.label}</div>
         </div>
       ))}
     </div>
@@ -163,22 +163,22 @@ function ChronologicalLogList({
   return (
     <div className="flex-1 overflow-y-auto px-5">
       {days.length === 0 ? (
-        <p className="py-6 text-[13px] text-aero-600/70">
+        <p className="py-6 text-[14px] text-aero-700">
           Nothing recorded yet. Log a set and it shows up here.
         </p>
       ) : (
         days.map(([date, dayLogs]) => (
           <section key={date} className="pt-5">
-            <h3 className="sticky top-0 z-10 bg-white/60 pb-2 text-[12px] text-aero-600/70">{date}</h3>
+            <h3 className="sticky top-0 z-10 bg-white/60 pb-2 text-[13px] text-aero-700">{date}</h3>
             <ul>
               {dayLogs.map(({ log, exercise }) => (
                 <li key={log.id} className="flex items-baseline gap-3 border-b border-aero-200/70 py-2.5 last:border-b-0">
-                  <span className={`min-w-0 flex-1 truncate text-[15px] ${exercise ? 'text-aero-800' : 'italic text-aero-600/70'}`}>
+                  <span className={`min-w-0 flex-1 truncate text-[15px] ${exercise ? 'text-aero-800' : 'italic text-aero-700'}`}>
                     {exercise ? exercise.name : 'Deleted exercise'}
                   </span>
-                  <span className="nums shrink-0 text-[13px] text-aero-600/85">
+                  <span className="nums shrink-0 text-[14px] text-aero-700">
                     {log.weight}
-                    <span className="text-aero-600/70"> × </span>
+                    <span className="text-aero-700"> × </span>
                     {(log.sets || 1) > 1 ? `${log.sets}×${log.reps}` : log.reps}
                   </span>
                 </li>
@@ -212,7 +212,7 @@ function JournalHeaderActions({
         <>
           <button
             onClick={() => setIsImporting(true)}
-            className="p-2 text-aero-600/85 hover:text-aero-900 hover:bg-aero-200 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-aero-300 outline-none"
+            className="p-2 text-aero-700 hover:text-aero-900 hover:bg-aero-200 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-aero-300 outline-none"
             aria-label="Import Data"
             title="Import Data"
           >
@@ -220,7 +220,7 @@ function JournalHeaderActions({
           </button>
           <button
             onClick={handleExport}
-            className="btn-quiet flex items-center gap-1.5 px-2 py-1.5 text-[13px]"
+            className="btn-quiet flex items-center gap-1.5 px-2 py-1.5 text-[14px]"
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
             {copied ? 'Copied' : 'Export'}
@@ -229,7 +229,7 @@ function JournalHeaderActions({
       ) : (
         <button
           onClick={() => { setIsImporting(false); setError(null); }}
-          className="text-aero-600/85 hover:text-aero-900 text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-aero-300 outline-none"
+          className="text-aero-700 hover:text-aero-900 text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-aero-300 outline-none"
           aria-label="Cancel import"
         >
           Cancel

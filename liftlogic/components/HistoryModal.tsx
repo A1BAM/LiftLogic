@@ -28,7 +28,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {/* Logs List */}
           {logs.length === 0 ? (
-            <p className="py-5 text-[13px] text-aero-600/70">Nothing logged for this one yet.</p>
+            <p className="py-5 text-[14px] text-aero-700">Nothing logged for this one yet.</p>
           ) : (
             <ul>
               {logs.map(log => {
@@ -45,14 +45,14 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                     <div className="min-w-0 flex-1">
                       <p className="nums text-[15px] text-aero-800">
                         {log.weight}
-                        <span className="text-aero-600/70"> lbs × </span>
+                        <span className="text-aero-700"> lbs × </span>
                         {log.reps}
-                        <span className="text-aero-600/70"> reps</span>
+                        <span className="text-aero-700"> reps</span>
                         {(log.sets || 1) > 1 && (
-                          <span className="text-aero-600/70"> · {log.sets} sets</span>
+                          <span className="text-aero-700"> · {log.sets} sets</span>
                         )}
                       </p>
-                      <p className="text-[12px] text-aero-600/70">{dateStr}</p>
+                      <p className="text-[13px] text-aero-700">{dateStr}</p>
                     </div>
                     <button
                       type="button"
