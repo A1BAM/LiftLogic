@@ -6,36 +6,17 @@
   button,
   input {
     touch-action: manipulation;
-    /* iOS paints a grey block over anything tappable otherwise, which on a
-       gel capsule looks like the button is broken. */
+    /* iOS paints a grey block over anything tappable otherwise. */
     -webkit-tap-highlight-color: transparent;
   }
 
   html {
-    /* Overscrolling past either end of the page shows this rather than white. */
-    background-color: #dff4fb;
+    background-color: #000;
   }
 
   body {
-    @apply text-aero-900 antialiased;
+    @apply bg-ink-950 text-white antialiased;
     min-height: 100dvh;
-  }
-
-  /* The sky-to-meadow gradient lives on its own fixed layer behind everything.
-     `background-attachment: fixed` is the obvious way to do this and the wrong
-     one: iOS Safari repaints the whole gradient on every scroll frame, which
-     is most of where the scrolling jank came from. A fixed element is painted
-     once and composited. */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(900px 620px at 12% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
-      radial-gradient(760px 520px at 108% 6%, rgba(169, 226, 43, 0.22), transparent 60%),
-      radial-gradient(620px 520px at 50% 108%, rgba(200, 242, 85, 0.28), transparent 62%),
-      linear-gradient(180deg, #cfeffb 0%, #e4f8fc 42%, #f2fcef 100%);
   }
 
   /* Weights and reps line up column-wise between sets, and a 1 never shifts
@@ -63,105 +44,52 @@
   textarea {
     font-size: max(16px, 1em);
   }
+
+  /* Dark fields get the dark keyboard and a white caret rather than a white
+     autofill block. */
+  :root {
+    color-scheme: dark;
+  }
 }
 
 @layer components {
-  /* Frosted panel. Everything that holds content floats on the background
-     rather than boxing it in. The blur is deliberately modest: each one is a
-     separate compositing layer on iOS, and there are several on screen. */
-  .glass {
-    @apply rounded-[26px] border border-white/80 shadow-glass;
-    background: linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.86),
-      rgba(255, 255, 255, 0.7) 48%,
-      rgba(226, 248, 255, 0.74)
-    );
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+  /* A panel is the black page lifted by one step, outlined by a hairline.
+     No blur, no shadow, no gradient: on an OLED screen in a dim gym those
+     read as haze, and they were most of the glare. */
+  .panel {
+    @apply rounded-2xl border border-ink-700 bg-ink-900;
   }
 
-  /* The same pane, but opaque enough that a dialog's text never competes
-     with whatever is blurred behind it. */
-  .glass-solid {
-    background: linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.97),
-      rgba(243, 253, 255, 0.95) 48%,
-      rgba(229, 249, 255, 0.96)
-    );
+  /* The one control you came to press. White on black is the brightest thing
+     the screen can draw, so nothing else needs to compete. */
+  .btn-primary {
+    @apply rounded-xl bg-white font-semibold text-black
+           active:bg-zinc-300 disabled:bg-ink-800 disabled:text-zinc-400
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
+           focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-colors;
   }
 
-  /* The one control you came to press: a gel capsule with the light
-     catching its top half. */
-  .btn-gel {
-    @apply relative overflow-hidden rounded-full font-semibold text-white shadow-gel
-           active:translate-y-px disabled:text-white/70 disabled:shadow-none
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aero-600
-           focus-visible:ring-offset-2 focus-visible:ring-offset-white/60;
-    background: linear-gradient(180deg, #17a8cb 0%, #0a7f9f 48%, #05627c 100%);
-    /* Dark enough behind white text to clear 4.5:1 at the bottom of the gel. */
-    text-shadow: 0 1px 1px rgba(3, 62, 80, 0.45);
-  }
-  .btn-gel::before {
-    content: '';
-    position: absolute;
-    left: 3px;
-    right: 3px;
-    top: 2px;
-    height: 38%;
-    border-radius: 999px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.02));
-    pointer-events: none;
-  }
-  .btn-gel:disabled {
-    background: linear-gradient(180deg, #cfe6ee 0%, #adcfdb 100%);
-    text-shadow: none;
-  }
-  .btn-gel > * {
-    position: relative;
+  /* Its quieter twin, for an action that is no longer the point — reading
+     back sets you have already finished, say. */
+  .btn-secondary {
+    @apply rounded-xl border border-ink-700 bg-ink-800 font-semibold text-white
+           active:bg-ink-700
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white;
   }
 
-  /* The same gel in meadow green, for anything that means "done". Green is
-     pale, so its label goes dark rather than white. */
-  .btn-gel-leaf {
-    background: linear-gradient(180deg, #cdf278 0%, #a6e032 48%, #82c20f 100%);
-    @apply text-aero-900;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
-  }
-
-  /* Secondary actions: a soft glass pill. Sized to the 44px Apple asks for,
-     since most of these are icon-only. */
+  /* Icon buttons and text links. Sized to the 44px Apple asks for, and never
+     dimmer than zinc-400, which is where grey on black stops being readable
+     at arm's length. */
   .btn-quiet {
-    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full
-           border border-transparent text-aero-700
-           active:border-white/80 active:bg-white/80 active:text-aero-900
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aero-600
+    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl
+           border border-transparent text-zinc-400
+           active:border-ink-700 active:bg-ink-800 active:text-white
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
            transition-colors;
   }
 
-  /* A water well for numbers you type into. */
+  /* A recessed field for numbers you type into. */
   .well {
-    @apply rounded-2xl border border-white/80;
-    background: linear-gradient(180deg, rgba(232, 250, 255, 0.95), rgba(255, 255, 255, 0.8));
-    box-shadow: inset 0 2px 6px rgba(9, 118, 146, 0.14), 0 1px 0 rgba(255, 255, 255, 0.9);
+    @apply rounded-xl border border-ink-700 bg-ink-800;
   }
-
-  /* Decorative bubbles. Pointer-events-none and low contrast on purpose:
-     they belong to the room, not to the reading. */
-  .bubble {
-    @apply pointer-events-none absolute rounded-full;
-    background:
-      radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.28) 38%, transparent 60%),
-      radial-gradient(circle at 70% 76%, rgba(169, 226, 43, 0.3), transparent 58%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(143, 225, 245, 0.34));
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    box-shadow: inset 0 -10px 20px -10px rgba(8, 120, 150, 0.35);
-  }
-
-  /* Safe areas are folded into each padding value where they are needed
-     (`pt-[calc(env(safe-area-inset-top)+1rem)]` and friends) rather than
-     living in a helper here: a helper in this layer loses to any plain
-     padding utility on the same element. viewport-fit=cover in index.html is
-     what makes the insets resolve to anything. */
 }
