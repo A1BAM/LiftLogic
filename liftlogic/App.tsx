@@ -376,7 +376,7 @@ const App: React.FC = () => {
   // 2. LOADING STATE
   if (isLoading && !workoutDay && logs.length === 0) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-zinc-600">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-aero-600/70">
         <Loader2 className="animate-spin" size={20} />
         <p className="text-[13px]">Syncing…</p>
       </div>
@@ -387,10 +387,10 @@ const App: React.FC = () => {
   if (error && logs.length === 0) {
     return (
       <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-7">
-        <AlertCircle className="mb-4 text-zinc-600" size={20} />
-        <p className="text-[17px] font-medium text-zinc-100">Could not reach your workouts</p>
-        <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">{error}</p>
-        <button onClick={fetchDataAndSync} className="btn-primary mt-6 w-full py-3.5 text-[15px]">
+        <AlertCircle className="mb-4 text-aero-600/70" size={20} />
+        <p className="text-[17px] font-medium text-aero-900">Could not reach your workouts</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-aero-600/85">{error}</p>
+        <button onClick={fetchDataAndSync} className="btn-gel mt-6 w-full py-3.5 text-[15px]">
           Try again
         </button>
       </div>
@@ -440,8 +440,8 @@ const App: React.FC = () => {
   ).length;
 
   return (
-    <div className="min-h-screen pb-28 selection:bg-zinc-200 selection:text-ink-950">
-      <header className="sticky top-0 z-40 bg-ink-950/90 backdrop-blur">
+    <div className="min-h-screen pb-28 selection:bg-aero-200 selection:text-aero-900">
+      <header className="sticky top-0 z-40 border-b border-white/50 bg-white/55 backdrop-blur-xl">
         <div className="mx-auto flex max-w-md items-center gap-1 px-4 pb-3 pt-4">
           <button
             onClick={() => setWorkoutDay(null)}
@@ -450,11 +450,11 @@ const App: React.FC = () => {
           >
             <ChevronLeft size={22} />
           </button>
-          <h1 className="flex-1 text-[15px] font-semibold capitalize tracking-[-0.01em] text-zinc-100">
+          <h1 className="flex-1 text-[17px] font-semibold capitalize tracking-[-0.01em] text-aero-900">
             {workoutDay.toLowerCase()}
           </h1>
           {hasPlan && (
-            <span className="nums mr-1 text-[13px] text-zinc-600">
+            <span className="nums mr-1 rounded-full border border-white/70 bg-white/60 px-2.5 py-0.5 text-[12px] font-medium text-aero-700/90">
               {doneCount}/{plannedExercises.length}
             </span>
           )}
@@ -469,16 +469,16 @@ const App: React.FC = () => {
         </div>
         {/* How far through the day you are, as one hairline. */}
         {hasPlan && (
-          <div className="mx-auto h-px max-w-md bg-ink-700">
+          <div className="mx-auto h-1.5 max-w-md overflow-hidden rounded-full bg-white/55">
             <div
-              className="h-px bg-ember transition-[width] duration-500"
+              className="h-1.5 rounded-full bg-gradient-to-r from-aero-300 via-aero-400 to-leaf-400 transition-[width] duration-500"
               style={{ width: `${(doneCount / plannedExercises.length) * 100}%` }}
             />
           </div>
         )}
       </header>
 
-      <main className="mx-auto max-w-md px-6 animate-in fade-in duration-200">
+      <main className="relative mx-auto max-w-md px-4 pb-4 animate-in fade-in duration-200">
         {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
           const { slot, position } = plannedExercises[i];
           // On a planned day only the current lift gets a full card; the rest
@@ -508,10 +508,11 @@ const App: React.FC = () => {
         })}
 
         {hasPlan && (
-          <div className="mt-9">
+          <div className="mt-8">
             {currentIndex !== null && (
-              <p className="mb-1 text-[12px] text-zinc-600">Up next</p>
+              <p className="mb-2 px-1 text-[12px] text-aero-700/75">Up next</p>
             )}
+            <div className="glass px-4 py-1">
             {plannedExercises.map(({ exercise, slot, position }, i) => {
               if (currentIndex === i) return null;
               return (
@@ -526,8 +527,9 @@ const App: React.FC = () => {
                 />
               );
             })}
+            </div>
             {currentIndex === null && (
-              <p className="py-6 text-center text-[15px] text-zinc-400">
+              <p className="pt-6 text-center text-[15px] font-medium text-aero-800">
                 That is the whole day. Well done.
               </p>
             )}
@@ -536,7 +538,7 @@ const App: React.FC = () => {
 
         <button
           onClick={() => setActiveModal('addExercise')}
-          className="btn-quiet mt-8 flex w-full items-center justify-center gap-2 py-4 text-[13px]"
+          className="btn-quiet mt-6 flex w-full items-center justify-center gap-2 border-white/60 bg-white/45 py-3.5 text-[13px]"
         >
           <Plus size={15} /> Add an exercise
         </button>

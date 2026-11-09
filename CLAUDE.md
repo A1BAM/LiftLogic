@@ -63,14 +63,20 @@ CI runs the same thing. Dependencies are pnpm; CI installs with
 
 ## Look and feel
 
-Dark, quiet, typography-led. Neutral greys (`ink-*`, `zinc-*`), never slate.
-One accent (`ember`) and only for what is happening now: the day's progress
-line, the pips for sets done, the rest timer. The one loud control on a screen
-is `.btn-primary` — white on near-black — and everything else is `.btn-quiet`.
+Frutiger Aero: bright, wet and glossy, never dark. The page is a fixed
+sky-to-meadow gradient (`index.css`), and everything that holds content floats
+on it as frosted glass (`.glass`, `.glass-solid` for dialogs) rather than
+sitting in a box.
 
-Hairlines and spacing separate things; boxes, badges and shadows mostly do not.
-Micro-labels are sentence case at 12px, not wide-tracked capitals. Numbers use
-`.nums` so columns line up.
+Two colours: `aero-*` for water and `leaf-*` for growth. Text is the dark end
+of the water ramp (`aero-900`/`aero-700`), never grey. The one control you came
+to press is a gel capsule (`.btn-gel`, `.btn-gel-leaf` when it means done) with
+the light catching its top half; everything else is `.btn-quiet`. Numbers you
+type into sit in a `.well`. Sets done, checkboxes and completion read as little
+gel bubbles.
+
+`Bubbles` is background only: keep it out from behind text. Numbers use `.nums`
+so columns line up.
 
 ## Conventions
 
