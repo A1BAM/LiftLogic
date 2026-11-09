@@ -27,28 +27,31 @@ describe('the current lift is unmistakable', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
   afterEach(() => { vi.useRealTimers(); cleanup(); });
 
-  it('labels the current lift START HERE and shows its prescription', () => {
+  it('shows its position in the day and the prescription', () => {
     render(
       <ExerciseCard
         exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={pressSlot} isCurrent showWarmup
+        slot={pressSlot} position={1} showWarmup
       />
     );
-    expect(screen.getByText(/start here/i)).toBeInTheDocument();
+    // The number ties the card to the same lift in the list below it.
+    expect(screen.getByText('01')).toBeInTheDocument();
     // 3 sets, 6-8 reps, 2 minutes rest, straight off the plan.
     expect(screen.getByText(/3 × 6-8 reps · 2 min rest/)).toBeInTheDocument();
   });
 
-  it('does not label a lift that is not the current one', () => {
+  it('leads with what to put on the bar', () => {
     render(
       <ExerciseCard
         exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={pressSlot} isCurrent={false}
+        slot={pressSlot} position={1}
       />
     );
-    expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
+    // Last session was 3 x 135 at 8 reps, so the plan says move up.
+    expect(screen.getByText(/move up to/i)).toBeInTheDocument();
+    expect(screen.getByText('140')).toBeInTheDocument();
   });
 
   it('offers the warm-up at roughly half the working weight, and does not log it', () => {
@@ -56,12 +59,12 @@ describe('the current lift is unmistakable', () => {
       <ExerciseCard
         exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={pressSlot} isCurrent showWarmup
+        slot={pressSlot} position={1} showWarmup
       />
     );
     expect(screen.getByText(/5 min easy bike/i)).toBeInTheDocument();
     // Last session was 3x135 at 8 reps, so the target is 140 and half is 70.
-    const warmup = screen.getByText(/1 warm-up set ≈ 70 lbs \(not logged\)/i);
+    const warmup = screen.getByText(/one set at 70 lbs — not logged/i);
     expect(warmup).toBeInTheDocument();
     // Ticking it off is a local checklist, not a logged set.
     fireEvent.click(warmup);
@@ -73,7 +76,7 @@ describe('the current lift is unmistakable', () => {
       <ExerciseCard
         exercise={press} exerciseLogs={history}
         onLogClick={() => {}} onHistoryClick={() => {}}
-        slot={pressSlot} isCurrent showWarmup={false}
+        slot={pressSlot} position={1} showWarmup={false}
       />
     );
     expect(screen.queryByText(/5 min easy bike/i)).not.toBeInTheDocument();
@@ -92,7 +95,7 @@ describe('the upcoming exercises', () => {
         isComplete={false} onLogClick={onLogClick}
       />
     );
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('03')).toBeInTheDocument();
     // The row names the lift actually loaded, so after a swap it is obvious
     // which variant is in the slot.
     expect(screen.getByText('Incline Chest Dumbbells')).toBeInTheDocument();
@@ -129,7 +132,7 @@ describe('the upcoming exercises', () => {
         isComplete onLogClick={() => {}}
       />
     );
-    expect(screen.queryByText('3')).not.toBeInTheDocument();
+    expect(screen.queryByText('03')).not.toBeInTheDocument();
   });
 });
 

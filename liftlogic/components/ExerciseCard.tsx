@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ExerciseDef, WorkoutLog, ProgressionRecommendation } from '../types';
-import { ChevronRight, TrendingUp, History, CheckCircle2, ArrowUpCircle, Repeat, Archive, Layers, ArrowRightLeft, PersonStanding } from 'lucide-react';
-import { hasAnimation } from '../formviewer/loader';
+import { History, Check, ArrowRightLeft, Archive } from 'lucide-react';
 import { PlanSlot, WARMUP, warmupWeight, formatReps, formatRest } from '../workoutPlan';
 
 interface ExerciseCardProps {
@@ -11,26 +10,37 @@ interface ExerciseCardProps {
   onHistoryClick: (exercise: ExerciseDef) => void;
   onArchive?: (exercise: ExerciseDef) => void;
   onSwitch?: (exercise: ExerciseDef) => void;
-  /** Opens the 3D form guide. Omitted callers simply get no form button. */
-  onFormClick?: (exercise: ExerciseDef) => void;
   /** Prescription for this slot, when the day has a fixed plan. */
   slot?: PlanSlot;
-  /** Marks this as the lift to walk to next. */
-  isCurrent?: boolean;
+  /** 1-based position in the day, shown so the card matches the list below. */
+  position?: number;
   /** The warm-up belongs to the first exercise of the day only. */
   showWarmup?: boolean;
 }
 
+/** A log row always counts as at least one set, whatever a legacy row says. */
+const countSets = (logs: WorkoutLog[]) =>
+  logs.reduce((acc, log) => {
+    const n = Math.floor(Number(log.sets));
+    return acc + (Number.isFinite(n) && n > 0 ? n : 1);
+  }, 0);
+
+const dayFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+
+/**
+ * The lift you are on. Everything here answers one of three questions: what am
+ * I doing, what did I do last time, and what should I put on the bar. Anything
+ * that answered none of them has been taken out.
+ */
 export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
-  exercise, 
+  exercise,
   exerciseLogs,
-  onLogClick, 
+  onLogClick,
   onHistoryClick,
   onArchive,
   onSwitch,
-  onFormClick,
   slot,
-  isCurrent = false,
+  position,
   showWarmup = false
 }) => {
   // Ticked off in the session only. Deliberately not persisted: a warm-up is
@@ -38,34 +48,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const [warmupDone, setWarmupDone] = useState<Record<string, boolean>>({});
   const toggleWarmup = (key: string) =>
     setWarmupDone(prev => ({ ...prev, [key]: !prev[key] }));
-  const handleLogClick = () => onLogClick(exercise);
-  const handleHistoryClick = () => onHistoryClick(exercise);
-  // Confirmation lives with the handler in App, so archiving asks the same
-  // question wherever it is triggered from.
-  const handleArchiveClick = onArchive ? (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onArchive(exercise);
-  } : undefined;
-  const handleSwitchClick = onSwitch ? (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSwitch(exercise);
-  } : undefined;
-
-  // An exercise added to the database later simply has no animation file yet,
-  // so the button greys out rather than the app breaking.
-  const formModelReady = hasAnimation(exercise.id);
-  const handleFormClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (formModelReady) onFormClick?.(exercise);
-  };
-
-  // A log row always represents at least one set. Guard against corrupt or legacy
-  // `sets` values (0, negative, non-numeric) that would otherwise mis-count completion.
-  const countSets = (logs: WorkoutLog[]) =>
-    logs.reduce((acc, log) => {
-      const n = Math.floor(Number(log.sets));
-      return acc + (Number.isFinite(n) && n > 0 ? n : 1);
-    }, 0);
 
   // 1. Organize logs into sessions (grouped by calendar day)
   // Logs are bucketed by local calendar day and then ordered newest-first. This does
@@ -73,7 +55,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   // collapse a whole history into one "session", which made unrelated days look like
   // a single completed workout.
   const sessions = useMemo(() => {
-    const buckets = new Map<number, { date: string; dayStart: number; logs: WorkoutLog[] }>();
+    const buckets = new Map<number, { dayStart: number; logs: WorkoutLog[] }>();
 
     for (const log of exerciseLogs) {
       // This prop means "logs for this exercise". Enforce it rather than trust
@@ -87,7 +69,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
       let bucket = buckets.get(dayStart);
       if (!bucket) {
-        bucket = { date: d.toDateString(), dayStart, logs: [] };
+        bucket = { dayStart, logs: [] };
         buckets.set(dayStart, bucket);
       }
       bucket.logs.push(log);
@@ -123,10 +105,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
   const targetSetsForSlot = slot?.sets ?? 3;
   const targetRepsForSlot = slot ? slot.reps[1] : exercise.targetReps;
 
-  const isCompletedToday = useMemo(() => {
-    if (!todaySession) return false;
-    return countSets(todaySession.logs) >= targetSetsForSlot;
-  }, [todaySession, targetSetsForSlot]);
+  const setsToday = todaySession ? countSets(todaySession.logs) : 0;
+  const isCompletedToday = setsToday >= targetSetsForSlot;
 
   const referenceMaxWeight = useMemo(() => {
     if (!referenceSession) return 0;
@@ -138,13 +118,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     }, 0);
   }, [referenceSession]);
 
-// 3. Calculate Recommendation based on Reference Session
+  // 3. Calculate Recommendation based on Reference Session
   const recommendation: ProgressionRecommendation = useMemo(() => {
     if (!referenceSession) {
       return {
         weight: exercise.defaultWeight,
         reps: targetRepsForSlot,
-        reason: "Start light to build form."
+        reason: 'First time on this one — start light and keep it clean.'
       };
     }
 
@@ -155,202 +135,151 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       const r = Number(l.reps);
       return Number.isFinite(r) && r < min ? r : min;
     }, Infinity);
-    
+
     // Rule 1: Volume
-    const targetSets = targetSetsForSlot;
-    if (totalSets < targetSets) {
-       return {
-         weight: usedWeight,
-         reps: targetRepsForSlot,
-         reason: `Build Volume: Complete ${targetSets} sets.`
-       };
-    }
-
-    // Rule 2: Overload
-    let nextWeight = usedWeight + exercise.increment;
-    let nextReps = Math.max(6, targetRepsForSlot - 4);
-    let reason = `Overload: All sets hit ${targetRepsForSlot}+ reps!`;
-
-    if (Number.isFinite(minReps) && minReps >= targetRepsForSlot) {
-      return {
-        weight: nextWeight,
-        reps: nextReps,
-        reason: reason
-      };
-    } else {
+    if (totalSets < targetSetsForSlot) {
       return {
         weight: usedWeight,
         reps: targetRepsForSlot,
-        reason: `Build Strength: Hit ${targetRepsForSlot} reps on all sets.`
+        reason: `Last time stopped at ${totalSets} ${totalSets === 1 ? 'set' : 'sets'} — get all ${targetSetsForSlot} in.`
       };
     }
+
+    // Rule 2: Overload
+    if (Number.isFinite(minReps) && minReps >= targetRepsForSlot) {
+      return {
+        weight: usedWeight + exercise.increment,
+        reps: Math.max(6, targetRepsForSlot - 4),
+        reason: `You cleared ${targetRepsForSlot} on every set — move up ${exercise.increment} lbs.`
+      };
+    }
+
+    return {
+      weight: usedWeight,
+      reps: targetRepsForSlot,
+      reason: `Same weight until all ${targetSetsForSlot} sets reach ${targetRepsForSlot}.`
+    };
   }, [referenceSession, exercise, referenceMaxWeight, targetSetsForSlot, targetRepsForSlot]);
 
-  const isWeightIncrease = referenceSession ? recommendation.weight > referenceMaxWeight : false;
+  const isWeightIncrease = referenceSession && recommendation.weight > referenceMaxWeight;
 
-  const previousText = useMemo(() => {
-    const session = todaySession || referenceSession;
-    if (!session) return "No logs yet";
+  // Once a set is in, the number to show is the one already on the bar, not
+  // the one the plan suggested before you started.
+  const onTheBar = todaySession ? todaySession.logs[0].weight : recommendation.weight;
+  const barLabel = isCompletedToday
+    ? 'Finished at'
+    : todaySession
+      ? 'On the bar'
+      : isWeightIncrease
+        ? 'Move up to'
+        : 'Aim for';
 
-    if (session.logs.length === 0) return <span className="text-slate-400 italic">No logs yet</span>;
+  /** Last time out, as "55 × 8, 8, 8" with the date. */
+  const lastTime = useMemo(() => {
+    if (!referenceSession || referenceSession.logs.length === 0) return null;
+    const logs = [...referenceSession.logs].reverse(); // oldest set first
+    const weight = logs[0].weight;
+    const sameWeight = logs.every(l => l.weight === weight);
+    return {
+      when: dayFormatter.format(referenceSession.dayStart),
+      text: sameWeight
+        ? `${weight} × ${logs.map(l => l.reps).join(', ')}`
+        : logs.map(l => `${l.weight}×${l.reps}`).join('  ')
+    };
+  }, [referenceSession]);
 
-    let firstWeight = session.logs[0].weight;
-    let isSingleWeight = true;
-    let repList = String(session.logs[0].reps);
-
-    for (let i = 1; i < session.logs.length; i++) {
-      const l = session.logs[i];
-      if (l.weight !== firstWeight) {
-        isSingleWeight = false;
-        break;
-      }
-      repList += ', ' + l.reps;
-    }
-
-    if (isSingleWeight) {
-      return (
-        <span>
-          <span className="font-bold text-lg">{firstWeight}</span>
-          <span className="text-xs text-slate-500 ml-0.5">lbs</span>
-          <span className="mx-2 text-slate-600">•</span>
-          <span className="text-slate-300">{repList}</span>
-        </span>
-      );
-    } else {
-      return <span className="text-slate-400 italic">Mixed Weights</span>;
-    }
-  }, [todaySession, referenceSession]);
+  const setPips = Array.from({ length: targetSetsForSlot }, (_, i) => i < setsToday);
 
   return (
-    <div 
-      className={`relative rounded-xl p-5 mb-4 shadow-lg border transition-all duration-300 ${
-        isCompletedToday
-          ? "bg-slate-900/40 border-green-500/50"
-          : isCurrent
-            ? "bg-slate-800 border-blue-500 ring-2 ring-blue-500/40 shadow-blue-900/20"
-            : "bg-slate-800 border-slate-700"
-      }`}
-    >
-      {isCompletedToday && (
-        <div className="absolute top-4 right-4 flex items-center gap-2 text-green-400 font-bold bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20 shadow-sm animate-in fade-in zoom-in">
-          <CheckCircle2 size={16} />
-          <span className="text-xs uppercase tracking-wider">Done</span>
+    <section className="pt-5">
+      <header className="flex items-baseline gap-3">
+        {position !== undefined && (
+          <span className="nums text-sm text-zinc-600 tabular-nums pt-1">
+            {String(position).padStart(2, '0')}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <h2
+            className={`text-[26px] leading-[1.15] font-semibold tracking-[-0.02em] ${
+              isCompletedToday ? 'text-zinc-500' : 'text-zinc-50'
+            }`}
+          >
+            {exercise.name}
+          </h2>
+          <p className="mt-1 text-[13px] text-zinc-500">
+            {slot
+              ? `${slot.sets} × ${formatReps(slot)} · ${formatRest(slot)}`
+              : exercise.muscleGroup}
+          </p>
         </div>
+        {isCompletedToday && (
+          <span className="shrink-0 flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500">
+            <Check size={13} /> Done
+          </span>
+        )}
+      </header>
+
+      {/* What to put on the bar. The one number worth reading from across the
+          gym, so it is the only thing set at this size. */}
+      <div className="mt-6 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[12px] text-zinc-600">{barLabel}</p>
+          <p className="nums mt-1 text-zinc-50">
+            <span className="text-[44px] leading-none font-medium">{onTheBar}</span>
+            <span className="ml-1.5 text-base text-zinc-500">lbs</span>
+            <span className="mx-2.5 text-zinc-700">×</span>
+            <span className="text-[26px] leading-none font-medium">{recommendation.reps}</span>
+            <span className="ml-1.5 text-base text-zinc-500">reps</span>
+          </p>
+        </div>
+
+        {/* Sets done, as a glance rather than a sentence. */}
+        <div
+          className="flex items-center gap-1 pb-3"
+          aria-label={`${setsToday} of ${targetSetsForSlot} sets done`}
+        >
+          {setPips.map((done, i) => (
+            <span key={i} className={`h-1 w-4 rounded-full ${done ? 'bg-ember' : 'bg-ink-700'}`} />
+          ))}
+        </div>
+      </div>
+
+      {/* The advice is for deciding what to load. Once a set is in, that
+          decision is made, so it gives the space back. */}
+      {!todaySession && (
+        <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{recommendation.reason}</p>
       )}
 
-      {isCurrent && !isCompletedToday && (
-        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-400 mb-2">
-          Start here
+      {lastTime && (
+        <p className="nums mt-3 text-[13px] text-zinc-500">
+          <span className="text-zinc-600">Last time</span> {lastTime.text}
+          <span className="text-zinc-600"> · {lastTime.when}</span>
         </p>
       )}
 
-      <div className="flex justify-between items-start mb-2 pr-20"> 
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className={`text-xl font-bold transition-colors ${isCompletedToday ? 'text-slate-400' : 'text-white'}`}>
-              {exercise.name}
-            </h3>
-            {onFormClick && (
-              <button
-                onClick={handleFormClick}
-                disabled={!formModelReady}
-                title={formModelReady ? `Show ${exercise.name} form` : 'No model yet'}
-                aria-label={formModelReady ? `Show ${exercise.name} form` : `${exercise.name}: no model yet`}
-                className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
-                  formModelReady
-                    ? 'bg-slate-700/70 border-slate-600 text-blue-300 active:bg-slate-600'
-                    : 'bg-slate-800/40 border-slate-700/60 text-slate-600 cursor-not-allowed'
-                }`}
-              >
-                <PersonStanding size={18} />
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-            {slot ? (
-              <span className="text-xs font-bold text-blue-300 bg-blue-400/10 px-2 py-0.5 rounded">
-                {slot.sets} × {formatReps(slot)} · {formatRest(slot)}
-              </span>
-            ) : (
-              <span className="text-xs font-medium text-blue-400 uppercase tracking-wider bg-blue-400/10 px-2 py-0.5 rounded">
-                {exercise.muscleGroup}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className={`grid grid-cols-2 gap-4 mt-4 transition-opacity ${isCompletedToday ? 'opacity-50 grayscale-[0.5]' : 'opacity-100'}`}>
-        <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 flex flex-col justify-between">
-          <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-            {todaySession ? "Today's Lift" : "Previous"}
-          </p>
-          <div className="text-white font-mono leading-tight">
-            {previousText}
-          </div>
-          {(todaySession || referenceSession) && (
-             <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
-               <Layers size={10} /> {(todaySession || referenceSession)?.logs.length} Sets
-             </div>
-          )}
-        </div>
-
-        <div className={`p-3 rounded-lg relative overflow-hidden border ${
-          isWeightIncrease 
-            ? "bg-emerald-500/10 border-emerald-500/30" 
-            : "bg-blue-600/20 border-blue-500/30"
-        }`}>
-          <div className="absolute top-0 right-0 p-1 opacity-20">
-            {isWeightIncrease ? (
-              <ArrowUpCircle size={40} className="text-emerald-500" />
-            ) : (
-              <TrendingUp size={40} className="text-blue-500" />
-            )}
-          </div>
-          <p className={`text-[10px] font-bold uppercase mb-1 ${isWeightIncrease ? 'text-emerald-400' : 'text-blue-300'}`}>
-            {isWeightIncrease ? 'Increase Weight' : 'Target Goal'}
-          </p>
-          <div className="text-white font-mono z-10 relative">
-            <span className={`text-xl font-bold ${isWeightIncrease ? 'text-emerald-100' : 'text-blue-100'}`}>
-              {recommendation.weight}
-            </span> <span className="text-xs">lbs</span>
-            <div className="text-xs flex items-center gap-1">
-              {recommendation.reps} reps
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Warm-up belongs to the first lift of the day only, and is never
+      {/* The warm-up belongs to the first lift of the day only, and is never
           logged: it is guidance for right now, not history. */}
       {showWarmup && !isCompletedToday && (
-        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-2">
-            Before you start
-          </p>
+        <div className="mt-5 border-t border-ink-700 pt-4">
+          <p className="mb-2 text-[12px] text-zinc-600">Warm up first</p>
           {[
             { key: 'cardio', text: WARMUP.cardioLabel },
-            {
-              key: 'set',
-              text: `1 warm-up set ≈ ${warmupWeight(recommendation.weight)} lbs (not logged)`
-            }
+            { key: 'set', text: `One set at ${warmupWeight(recommendation.weight)} lbs — not logged` }
           ].map(item => (
             <button
               key={item.key}
               onClick={() => toggleWarmup(item.key)}
               aria-pressed={!!warmupDone[item.key]}
-              className="flex items-center gap-2 w-full text-left py-1"
+              className="flex items-center gap-2.5 w-full text-left py-1.5"
             >
               <span
-                className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
-                  warmupDone[item.key]
-                    ? 'bg-amber-500 border-amber-400'
-                    : 'border-amber-500/50'
+                className={`shrink-0 w-[18px] h-[18px] rounded-md border flex items-center justify-center ${
+                  warmupDone[item.key] ? 'bg-zinc-200 border-zinc-200' : 'border-ink-700'
                 }`}
               >
-                {warmupDone[item.key] && <CheckCircle2 size={12} className="text-slate-900" />}
+                {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-ink-950" />}
               </span>
-              <span className={`text-xs ${warmupDone[item.key] ? 'text-slate-500 line-through' : 'text-amber-100/90'}`}>
+              <span className={`text-[13px] ${warmupDone[item.key] ? 'text-zinc-600 line-through' : 'text-zinc-400'}`}>
                 {item.text}
               </span>
             </button>
@@ -358,57 +287,45 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
         </div>
       )}
 
-      <div className={`flex items-start gap-2 mt-3 p-2 rounded bg-slate-900/30 ${isCompletedToday ? 'hidden' : 'block'}`}>
-        <Repeat size={14} className="text-slate-500 mt-0.5 min-w-[14px]" />
-        <p className="text-xs text-slate-400 italic leading-tight">
-          {recommendation.reason}
-        </p>
-      </div>
-
-      <div className="flex gap-2 mt-4">
-        {handleArchiveClick && (
-          <button
-            onClick={handleArchiveClick}
-            className="p-3 bg-slate-800 hover:bg-amber-900/20 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-700 transition-colors"
-            title="Archive Exercise"
-            aria-label="Archive Exercise"
-          >
-            <Archive size={20} />
-          </button>
-        )}
-
-        {handleSwitchClick && (
-          <button
-            onClick={handleSwitchClick}
-            className="p-3 bg-slate-800 hover:bg-blue-900/20 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-700 transition-colors"
-            title="Switch Exercise"
-            aria-label="Switch Exercise"
-          >
-            <ArrowRightLeft size={20} />
-          </button>
-        )}
-
-        <button 
-          onClick={handleHistoryClick}
-          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg border border-slate-700 transition-colors"
-          aria-label="View History"
-        >
-          <History size={20} />
+      <div className="mt-6 flex items-center gap-2">
+        <button onClick={() => onLogClick(exercise)} className="btn-primary flex-1 py-3.5 text-[15px]">
+          {isCompletedToday ? "Today's sets" : setsToday > 0 ? `Log set ${setsToday + 1}` : 'Log a set'}
         </button>
 
         <button
-          onClick={handleLogClick}
-          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-            isCompletedToday
-              ? "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
-              : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20"
-          }`}
+          onClick={() => onHistoryClick(exercise)}
+          className="btn-quiet p-3"
+          aria-label="View History"
+          title="History"
         >
-          {isCompletedToday ? "View Today's Log" : (todaySession ? "Add Another Set" : "Start Workout")} 
-          {!isCompletedToday && <ChevronRight size={18} />}
+          <History size={19} />
         </button>
+
+        {onSwitch && (
+          <button
+            onClick={() => onSwitch(exercise)}
+            className="btn-quiet p-3"
+            aria-label="Switch Exercise"
+            title="Swap this lift"
+          >
+            <ArrowRightLeft size={19} />
+          </button>
+        )}
+
+        {onArchive && (
+          // Confirmation lives with the handler in App, so archiving asks the
+          // same question wherever it is triggered from.
+          <button
+            onClick={() => onArchive(exercise)}
+            className="btn-quiet p-3"
+            aria-label="Archive Exercise"
+            title="Archive"
+          >
+            <Archive size={19} />
+          </button>
+        )}
       </div>
-    </div>
+    </section>
   );
 });
 

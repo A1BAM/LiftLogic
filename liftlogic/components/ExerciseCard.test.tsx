@@ -34,8 +34,10 @@ describe('ExerciseCard session grouping and completion state', () => {
     const v = view([...history].reverse());
     // reference session is the 3x100 day, so target = 100 + 10
     expect(v.text).toContain('110');
-    expect(v.text).not.toContain('Mixed Weights');
-    expect(v.text).toContain('3 Sets');
+    // ...and the three sets of that day are read back as one line, rather than
+    // the 9-day-old session bleeding into it.
+    expect(v.text).toContain('100 × 10, 10, 10');
+    expect(v.text).not.toContain('90');
   });
 
   it('shuffled input matches sorted input exactly', () => {
@@ -77,6 +79,8 @@ describe('ExerciseCard session grouping and completion state', () => {
     const v = view([]);
     expect(v.done).toBe(false);
     expect(v.text).toContain('60');
-    expect(v.text).toContain('No logs yet');
+    expect(v.text).toContain('First time on this one');
+    // With no history there is no previous session to read back.
+    expect(v.text).not.toContain('Last time');
   });
 });

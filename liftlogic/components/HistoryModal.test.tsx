@@ -54,22 +54,19 @@ describe('HistoryModal', () => {
     expect(screen.getByRole('heading', { level: 2 }).textContent).toMatch(/Bench Press\s*History/);
   });
 
-  it('renders "No history available yet." when logs array is empty', () => {
+  it('says so when the exercise has no history', () => {
     render(<HistoryModal {...defaultProps} logs={[]} />);
-    expect(screen.getByText('No history available yet.')).toBeTruthy();
+    expect(screen.getByText('Nothing logged for this one yet.')).toBeTruthy();
   });
 
   it('renders a list of logs', () => {
     render(<HistoryModal {...defaultProps} />);
 
-    // Check for weights
-    expect(screen.getByText('135')).toBeTruthy();
-    expect(screen.getByText('140')).toBeTruthy();
-
-    // Check for sets and reps using a custom matcher since they are separated by nodes/spaces
+    // Each row reads as one line: the weight, the reps, and the set count
+    // when a row stands for more than one set.
     const logsContainer = screen.getByRole('dialog');
-    expect(logsContainer.textContent).toContain('3 x 10');
-    expect(logsContainer.textContent).toContain('3 x 8');
+    expect(logsContainer.textContent).toContain('135 lbs × 10 reps · 3 sets');
+    expect(logsContainer.textContent).toContain('140 lbs × 8 reps · 3 sets');
   });
 
   it('calls onClose when close button is clicked', () => {

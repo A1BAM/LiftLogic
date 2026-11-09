@@ -1,6 +1,6 @@
 import React from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
-import { Trash2, Edit2, Layers } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface HistoryModalProps {
@@ -25,13 +25,13 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
 }) => {
   return (
     <Modal onClose={onClose} title={`${exercise.name} History`}>
-        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 pb-5">
           {/* Logs List */}
-          <div className="space-y-3">
-            {logs.length === 0 ? (
-              <div className="text-center text-slate-500 py-10">No history available yet.</div>
-            ) : (
-              logs.map((log) => {
+          {logs.length === 0 ? (
+            <p className="py-5 text-[13px] text-zinc-600">Nothing logged for this one yet.</p>
+          ) : (
+            <ul>
+              {logs.map(log => {
                 const d = new Date(log.timestamp);
                 const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
                 let dateStr = historyDateCache.get(dateKey);
@@ -41,48 +41,44 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 }
 
                 return (
-                  <div key={log.id} className="bg-slate-800 p-3 rounded-lg flex justify-between items-center border border-slate-700">
-                    <div>
-                      <div className="text-xs text-slate-400 mb-1">
-                        {dateStr}
-                      </div>
-                      <div className="text-white font-mono font-medium">
-                        <span className="text-lg">{log.weight}</span> lbs
-                        <div className="text-sm text-slate-400 flex items-center gap-1">
-                           <Layers size={12} /> {log.sets || 1} x {log.reps}
-                        </div>
-                      </div>
+                  <li key={log.id} className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="nums text-[15px] text-zinc-200">
+                        {log.weight}
+                        <span className="text-zinc-600"> lbs × </span>
+                        {log.reps}
+                        <span className="text-zinc-600"> reps</span>
+                        {(log.sets || 1) > 1 && (
+                          <span className="text-zinc-600"> · {log.sets} sets</span>
+                        )}
+                      </p>
+                      <p className="text-[12px] text-zinc-600">{dateStr}</p>
                     </div>
-                    <div className="flex gap-2">
-                     <button 
+                    <button
                       type="button"
-                      onClick={() => {
-                        navigator.vibrate?.(10);
-                        onEdit(log);
-                      }}
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+                      onClick={() => { navigator.vibrate?.(10); onEdit(log); }}
+                      className="btn-quiet shrink-0 p-2"
                       aria-label="Edit set"
                     >
-                      <Edit2 size={18} />
+                      <Edit2 size={16} />
                     </button>
-                    <button 
+                    <button
                       type="button"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         navigator.vibrate?.(10);
-                        if(window.confirm('Delete this log?')) onDelete(log.id);
+                        if (window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors focus-visible:ring-2 focus-visible:ring-red-500 outline-none"
+                      className="btn-quiet shrink-0 p-2 active:text-red-400"
                       aria-label="Delete set"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
-                    </div>
-                  </div>
+                  </li>
                 );
-              })
-            )}
-          </div>
+              })}
+            </ul>
+          )}
         </div>
     </Modal>
   );

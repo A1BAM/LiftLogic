@@ -57,7 +57,7 @@ const unlockAndOpenPush = async () => {
     target: { value: 'pw' }
   });
   fireEvent.click(screen.getByRole('button', { name: /unlock app/i }));
-  const push = await screen.findByText('Push Day', {}, { timeout: 5000 });
+  const push = await screen.findByRole('button', { name: /^Push/ }, { timeout: 5000 });
   fireEvent.click(push);
   // The incline press is slot 1, so it takes the top card.
   await screen.findByText('Incline Chest Dumbbells', {}, { timeout: 5000 });
@@ -82,7 +82,7 @@ describe('switching from a workout day', () => {
     const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 });
     expect(dialog).toBeInTheDocument();
     // Still on the workout day, not bounced back to the day picker.
-    expect(screen.queryByText('Select your workout for today')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Pull/ })).not.toBeInTheDocument();
   });
 
   it('offers the similar press rather than reporting nothing to switch', async () => {

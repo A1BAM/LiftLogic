@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Dumbbell, Layers, Copy, Check, Download, AlertCircle } from 'lucide-react';
+import { Copy, Check, Download, AlertCircle } from 'lucide-react';
 import { Modal } from './Modal';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
@@ -83,13 +83,13 @@ function ImportLogsView({
 }) {
   return (
     <div className="p-6 flex-1 flex flex-col gap-4">
-      <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-200">
+      <div className="rounded-xl border border-ink-700 bg-ink-800 p-4 text-[13px] leading-relaxed text-zinc-400">
         Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
       </div>
       <textarea
         autoFocus
         aria-label="Workout history JSON"
-        className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 resize-none min-h-[200px]"
+        className="flex-1 bg-ink-800 border border-ink-700 rounded-xl p-4 text-xs font-mono text-zinc-300 focus:outline-none focus:border-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600 resize-none min-h-[200px]"
         placeholder='[{"id":"...", "weight": 20, ...}]'
         value={importText}
         onChange={(e) => setImportText(e.target.value)}
@@ -101,7 +101,7 @@ function ImportLogsView({
       )}
       <button
         onClick={onImportSubmit}
-        className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20"
+        className="btn-primary w-full py-3.5 text-[15px]"
       >
         Import Logs
       </button>
@@ -119,18 +119,14 @@ function TodaySummaryCard({
 }) {
   if (!todaySummary || !currentDayType) return null;
   return (
-    <div className="mx-4 mt-4 bg-gradient-to-r from-blue-900/40 to-slate-800 border border-blue-500/30 rounded-xl p-4 flex justify-between items-center shadow-lg">
-      <div>
-        <h3 className="text-blue-200 font-bold text-sm uppercase tracking-wider mb-1">Today's {currentDayType} Session</h3>
-        <div className="text-xs text-blue-400/80 font-medium">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </div>
-      </div>
-      <div className="text-right">
-        <div className="text-2xl font-bold text-white font-mono">{(todaySummary.volume / 1000).toFixed(1)}k <span className="text-sm text-slate-400 font-sans">lbs</span></div>
-        <div className="text-xs text-slate-300">{todaySummary.exercisesCount} Exercises Completed</div>
-      </div>
-    </div>
+    <p className="nums px-5 pb-4 text-[13px] text-zinc-500">
+      Today&rsquo;s {currentDayType.toLowerCase()}:{' '}
+      <span className="text-zinc-200">
+        {todaySummary.exercisesCount} {todaySummary.exercisesCount === 1 ? 'exercise' : 'exercises'}
+      </span>{' '}
+      ·{' '}
+      <span className="text-zinc-200">{(todaySummary.volume / 1000).toFixed(1)}k lbs</span> moved
+    </p>
   );
 }
 
@@ -140,21 +136,19 @@ function StatsSummaryRow({
 }: {
   stats: { totalWorkouts: number; totalVolume: number; totalDays: number; }
 }) {
+  const figures = [
+    { label: 'sets', value: String(stats.totalWorkouts) },
+    { label: 'days', value: String(stats.totalDays) },
+    { label: 'lbs moved', value: `${(stats.totalVolume / 1000).toFixed(1)}k` }
+  ];
   return (
-    <div className="grid grid-cols-3 gap-2 p-4 bg-slate-800/30 border-b border-slate-800">
-      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-        <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Workouts</div>
-        <div className="text-xl font-bold text-white">{stats.totalWorkouts}</div>
-      </div>
-      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-          <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Total Volume</div>
-          <div className="text-xl font-bold text-blue-400">{(stats.totalVolume / 1000).toFixed(1)}k</div>
-          <div className="text-[9px] text-slate-500">lbs moved</div>
-      </div>
-      <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700">
-          <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">Active Days</div>
-          <div className="text-xl font-bold text-white">{stats.totalDays}</div>
-      </div>
+    <div className="flex gap-8 border-y border-ink-700 px-5 py-4">
+      {figures.map(f => (
+        <div key={f.label}>
+          <div className="nums text-[22px] font-medium leading-none text-zinc-50">{f.value}</div>
+          <div className="mt-1.5 text-[12px] text-zinc-600">{f.label}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -165,47 +159,32 @@ function ChronologicalLogList({
 }: {
   groupedLogs: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]>
 }) {
+  const days = Object.entries(groupedLogs);
   return (
-    <div className="overflow-y-auto flex-1 p-4 space-y-6">
-      {Object.entries(groupedLogs).length === 0 ? (
-          <div className="text-center text-slate-500 py-10 flex flex-col items-center">
-            <Dumbbell size={48} className="opacity-20 mb-4" />
-            <p>No workouts recorded yet.</p>
-            <p className="text-xs mt-2">Start lifting to see your history!</p>
-          </div>
+    <div className="flex-1 overflow-y-auto px-5">
+      {days.length === 0 ? (
+        <p className="py-6 text-[13px] text-zinc-600">
+          Nothing recorded yet. Log a set and it shows up here.
+        </p>
       ) : (
-        Object.entries(groupedLogs).map(([date, dayLogs]) => (
-          <div key={date}>
-            <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 sticky top-0 bg-slate-900 py-2 z-10 border-b border-slate-800/50 backdrop-blur-sm">
-              {date}
-            </h3>
-            <div className="space-y-2">
-              {dayLogs.map((item) => {
-                const log = item.log;
-                const exercise = item.exercise;
-                return (
-                  <div key={log.id} className="bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center hover:border-slate-600 transition-colors">
-                    <div>
-                      <div className={`font-bold ${exercise ? 'text-slate-200' : 'text-slate-500 italic'}`}>
-                        {exercise ? exercise.name : 'Unknown Exercise (Deleted)'}
-                      </div>
-                      <div className="text-xs text-slate-400 flex items-center gap-1">
-                        {exercise?.muscleGroup}
-                      </div>
-                    </div>
-                    <div className="text-right font-mono">
-                      <div className="text-white font-bold text-lg">
-                        {log.weight}<span className="text-sm text-slate-500 ml-1">lbs</span>
-                      </div>
-                      <div className="text-xs text-slate-400 flex items-center justify-end gap-1">
-                          <Layers size={10} /> {log.sets || 1} x {log.reps}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        days.map(([date, dayLogs]) => (
+          <section key={date} className="pt-5">
+            <h3 className="sticky top-0 z-10 bg-ink-900 pb-2 text-[12px] text-zinc-600">{date}</h3>
+            <ul>
+              {dayLogs.map(({ log, exercise }) => (
+                <li key={log.id} className="flex items-baseline gap-3 border-b border-ink-700 py-2.5 last:border-b-0">
+                  <span className={`min-w-0 flex-1 truncate text-[15px] ${exercise ? 'text-zinc-200' : 'italic text-zinc-600'}`}>
+                    {exercise ? exercise.name : 'Deleted exercise'}
+                  </span>
+                  <span className="nums shrink-0 text-[13px] text-zinc-500">
+                    {log.weight}
+                    <span className="text-zinc-600"> × </span>
+                    {(log.sets || 1) > 1 ? `${log.sets}×${log.reps}` : log.reps}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ))
       )}
     </div>
@@ -233,7 +212,7 @@ function JournalHeaderActions({
         <>
           <button
             onClick={() => setIsImporting(true)}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            className="p-2 text-zinc-500 hover:text-zinc-50 hover:bg-ink-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-zinc-600 outline-none"
             aria-label="Import Data"
             title="Import Data"
           >
@@ -241,7 +220,7 @@ function JournalHeaderActions({
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-blue-400 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-700 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            className="btn-quiet flex items-center gap-1.5 px-2 py-1.5 text-[13px]"
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
             {copied ? 'Copied' : 'Export'}
@@ -250,7 +229,7 @@ function JournalHeaderActions({
       ) : (
         <button
           onClick={() => { setIsImporting(false); setError(null); }}
-          className="text-slate-400 hover:text-white text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+          className="text-zinc-500 hover:text-zinc-50 text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-zinc-600 outline-none"
           aria-label="Cancel import"
         >
           Cancel
@@ -320,7 +299,7 @@ export function GlobalHistoryModal({
   return (
     <Modal
       onClose={onClose}
-      title={<><Calendar className="text-blue-500" size={20} />{isImporting ? 'Import Data' : 'Workout Journal'}</>}
+      title={isImporting ? 'Import data' : 'Journal'}
       headerActions={
         <JournalHeaderActions
           isImporting={isImporting}
