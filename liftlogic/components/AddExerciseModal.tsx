@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { DayType, ExerciseDef } from '../types';
 import { Save } from 'lucide-react';
 import { Modal } from './Modal';
+import { cleanDecimal, cleanInteger } from '../utils/number';
 
 interface AddExerciseModalProps {
   dayType: DayType;
@@ -17,14 +18,17 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
 
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('');
-  const [defaultWeight, setDefaultWeight] = useState(20);
-  const [targetReps, setTargetReps] = useState(10);
+  // Held as text so a half-typed "27." survives; parsed on submit.
+  const [weightText, setWeightText] = useState('20');
+  const [repsText, setRepsText] = useState('10');
   const [increment, setIncrement] = useState(5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !muscleGroup.trim()) return;
-    if (!Number.isFinite(defaultWeight) || defaultWeight < 0) return;
+    const defaultWeight = Number(weightText);
+    const targetReps = Number(repsText);
+    if (weightText.trim() === '' || !Number.isFinite(defaultWeight) || defaultWeight < 0) return;
     if (!Number.isInteger(targetReps) || targetReps < 1) return;
 
     const newExercise: ExerciseDef = {
@@ -83,12 +87,13 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               <label htmlFor="start-weight" className="mb-2 block text-[13px] text-cream-400">Start Weight (lbs)</label>
               <input 
                 id="start-weight"
-                type="number" 
+                // Text with a numeric keypad, not type="number": see utils/number.
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 required
-                min="0"
-                step="any"
-                value={defaultWeight}
-                onChange={e => setDefaultWeight(Number(e.target.value))}
+                value={weightText}
+                onChange={e => setWeightText(cleanDecimal(e.target.value))}
                 onFocus={e => e.target.select()}
                 className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-cream-50 focus:border-cream-600 focus:outline-none"
               />
@@ -97,11 +102,12 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               <label htmlFor="target-reps" className="mb-2 block text-[13px] text-cream-400">Target Reps</label>
               <input 
                 id="target-reps"
-                type="number" 
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
                 required
-                min="1"
-                value={targetReps}
-                onChange={e => setTargetReps(Number(e.target.value))}
+                value={repsText}
+                onChange={e => setRepsText(cleanInteger(e.target.value))}
                 onFocus={e => e.target.select()}
                 className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-cream-50 focus:border-cream-600 focus:outline-none"
               />

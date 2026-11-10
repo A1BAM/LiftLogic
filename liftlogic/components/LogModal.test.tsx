@@ -92,6 +92,22 @@ describe('LogModal', () => {
     expect(screen.getByDisplayValue('8')).toBeInTheDocument();
   });
 
+  it('reads a comma as the decimal point and ignores stray characters', async () => {
+    const onSave = vi.fn();
+    render(<LogModal {...defaultProps} onSave={onSave} />);
+    const user = userEvent.setup();
+
+    const weight = screen.getByLabelText('Weight (lbs)');
+    await user.clear(weight);
+    await user.type(weight, '32,5x');
+    expect(weight).toHaveValue('32.5');
+
+    const reps = screen.getByLabelText('Reps');
+    await user.clear(reps);
+    await user.type(reps, '8.5');
+    expect(reps).toHaveValue('85');
+  });
+
   it('adjusts weight using +/- buttons', async () => {
     render(<LogModal {...defaultProps} />);
     const user = userEvent.setup();
@@ -184,8 +200,10 @@ describe('LogModal', () => {
     const weight = screen.getByLabelText('Weight (lbs)') as HTMLInputElement;
     await user.clear(weight);
     await user.type(weight, '27.5');
-    // The browser's own check is what used to block the submit.
-    expect(weight.checkValidity()).toBe(true);
+    // Not a number field: Safari validates those itself and refused 27.5
+    // with its own bubble, whatever attributes were set.
+    expect(weight.type).toBe('text');
+    expect(weight.inputMode).toBe('decimal');
 
     await user.click(screen.getByRole('button', { name: /Add set/ }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weight: 27.5 }));

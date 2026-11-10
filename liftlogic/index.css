@@ -38,17 +38,6 @@
     letter-spacing: -0.01em;
   }
 
-  /* The number fields are typed into as often as they are tapped, so the
-     spinner arrows only get in the way. */
-  input[type='number']::-webkit-outer-spin-button,
-  input[type='number']::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  input[type='number'] {
-    -moz-appearance: textfield;
-  }
-
   /* Safari zooms the page when a field under 16px takes focus, and never zooms
      back out. Every input in the app is at least this size for that reason. */
   input,

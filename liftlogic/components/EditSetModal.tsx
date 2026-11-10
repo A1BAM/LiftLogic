@@ -38,7 +38,6 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ log, onClose, onSave
             onChange={setWeightInput}
             onStep={d => setWeightInput(prev => String(Math.max(0, (Number(prev) || 0) + d)))}
             step={5}
-            min={0}
             inputMode="decimal"
           />
           <Stepper
@@ -49,7 +48,6 @@ export const EditSetModal: React.FC<EditSetModalProps> = ({ log, onClose, onSave
             onChange={setRepsInput}
             onStep={d => setRepsInput(prev => String(Math.max(1, (Number(prev) || 0) + d)))}
             step={1}
-            min={1}
             inputMode="numeric"
           />
         </div>
