@@ -40,7 +40,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-in slide-in-from-bottom-4">
+    <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
       <div className="panel flex w-full max-w-md items-center gap-3 px-4 py-3">
         <Timer size={18} className="shrink-0 text-ember" />
 

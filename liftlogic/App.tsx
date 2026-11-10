@@ -411,7 +411,7 @@ const App: React.FC = () => {
   // 4. DASHBOARD HOME
   if (!workoutDay) {
     return (
-      <div className="animate-in fade-in duration-200">
+      <div>
         <HomeScreen
           lastTrained={lastTrainedByDay}
           week={week}
@@ -489,7 +489,7 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="relative mx-auto max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] animate-in fade-in duration-200">
+      <main className="relative mx-auto max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)]">
         {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
           const { slot, position } = plannedExercises[i];
           // On a planned day only the current lift gets a full card; the rest

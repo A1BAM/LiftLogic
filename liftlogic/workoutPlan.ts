@@ -97,7 +97,6 @@ export const WORKOUT_PLAN: Partial<Record<DayType, PlanSlot[]>> = {
 
 /** The warm-up, shown on the first exercise of a planned day only. */
 export const WARMUP = {
-  cardioMinutes: 5,
   cardioLabel: '5 min easy bike',
   /** One light set at about half the working weight. Never logged. */
   workingWeightFraction: 0.5
