@@ -98,7 +98,6 @@ describe('archiving from the workout screen', () => {
   });
 
   it('archives a lift the workout screen never shows, from the main menu', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     fireEvent.change(screen.getByPlaceholderText('Enter password to unlock'), {
       target: { value: 'pw' }
@@ -112,6 +111,7 @@ describe('archiving from the workout screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exercises' }));
     const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 });
     fireEvent.click(within(dialog).getByLabelText('Archive Smith Bench'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
 
     await waitFor(() =>
       expect(within(dialog).queryByLabelText('Archive Smith Bench')).not.toBeInTheDocument()
@@ -121,10 +121,11 @@ describe('archiving from the workout screen', () => {
   });
 
   it('removes an archived exercise from the day entirely', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await openPush();
 
     fireEvent.click(screen.getByLabelText('Archive Chest Fly'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
 
     await waitFor(() => expect(screen.queryByText('Chest Fly')).not.toBeInTheDocument());
     // The rest of the day is untouched.
@@ -132,7 +133,6 @@ describe('archiving from the workout screen', () => {
   });
 
   it('keeps an archived variant out of the swap picker', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await openPush();
 
     // Smith Bench shares slot 1 with the incline press, so it is the swap on
@@ -142,6 +142,8 @@ describe('archiving from the workout screen', () => {
     expect(within(picker).getByText('Smith Bench')).toBeInTheDocument();
 
     fireEvent.click(within(picker).getByLabelText('Archive Smith Bench'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
     await waitFor(() => expect(screen.queryByText('Smith Bench')).not.toBeInTheDocument());
 
     // And it does not come back the next time the picker is opened. The other

@@ -144,42 +144,51 @@ describe('LogModal', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onDelete when trash icon is clicked and confirmed', async () => {
+  const oneSet: WorkoutLog[] = [
+    { id: 'log-123', exerciseId: 'test-id', timestamp: 1000, weight: 140, reps: 8, sets: 1 }
+  ];
+
+  it('deletes a set in two taps without any system dialog', async () => {
     const onDelete = vi.fn();
-    // Mock window.confirm to return true
-    vi.spyOn(window, 'confirm').mockImplementation(() => true);
-
-    const todaysLogs: WorkoutLog[] = [
-      { id: 'log-123', exerciseId: 'test-id', timestamp: 1000, weight: 140, reps: 8, sets: 1 }
-    ];
-
-    render(<LogModal {...defaultProps} todaysLogs={todaysLogs} onDelete={onDelete} />);
+    // The bug this replaces: confirm() can come back false without ever being
+    // shown, which made the bin do nothing. It must not be consulted at all.
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
+    render(<LogModal {...defaultProps} todaysLogs={oneSet} onDelete={onDelete} />);
     const user = userEvent.setup();
 
-    const deleteBtn = screen.getByRole('button', { name: 'Delete set 1' });
-    await user.click(deleteBtn);
+    await user.click(screen.getByRole('button', { name: 'Delete set 1' }));
+    expect(onDelete).not.toHaveBeenCalled();
 
-    expect(window.confirm).toHaveBeenCalledWith('Delete this set?');
+    await user.click(screen.getByRole('button', { name: 'Confirm delete set 1' }));
     expect(onDelete).toHaveBeenCalledWith('log-123');
+    expect(confirmSpy).not.toHaveBeenCalled();
   });
 
-  it('does not call onDelete when trash icon is clicked and cancelled', async () => {
+  it('keeps the set when the delete is cancelled', async () => {
     const onDelete = vi.fn();
-    // Mock window.confirm to return false
-    vi.spyOn(window, 'confirm').mockImplementation(() => false);
-
-    const todaysLogs: WorkoutLog[] = [
-      { id: 'log-123', exerciseId: 'test-id', timestamp: 1000, weight: 140, reps: 8, sets: 1 }
-    ];
-
-    render(<LogModal {...defaultProps} todaysLogs={todaysLogs} onDelete={onDelete} />);
+    render(<LogModal {...defaultProps} todaysLogs={oneSet} onDelete={onDelete} />);
     const user = userEvent.setup();
 
-    const deleteBtn = screen.getByRole('button', { name: 'Delete set 1' });
-    await user.click(deleteBtn);
+    await user.click(screen.getByRole('button', { name: 'Delete set 1' }));
+    await user.click(screen.getByRole('button', { name: 'Keep set 1' }));
 
-    expect(window.confirm).toHaveBeenCalledWith('Delete this set?');
     expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Delete set 1' })).toBeInTheDocument();
+  });
+
+  it('logs a weight with a fraction, such as 27.5', async () => {
+    const onSave = vi.fn();
+    render(<LogModal {...defaultProps} onSave={onSave} />);
+    const user = userEvent.setup();
+
+    const weight = screen.getByLabelText('Weight (lbs)') as HTMLInputElement;
+    await user.clear(weight);
+    await user.type(weight, '27.5');
+    // The browser's own check is what used to block the submit.
+    expect(weight.checkValidity()).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: /Add set/ }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weight: 27.5 }));
   });
 
   it('calls onClose when close button, backdrop are clicked or Escape is pressed', async () => {

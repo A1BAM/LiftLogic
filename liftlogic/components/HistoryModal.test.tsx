@@ -84,31 +84,23 @@ describe('HistoryModal', () => {
     expect(defaultProps.onEdit).toHaveBeenCalledWith(mockLogs[0]);
   });
 
-  it('calls onDelete when delete button is clicked and confirmed', () => {
-    // Mock window.confirm to return true
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-
+  it('asks on the row itself, and deletes on the second tap', () => {
     render(<HistoryModal {...defaultProps} />);
-    const deleteButtons = screen.getAllByRole('button', { name: 'Delete set' });
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete set' })[0]);
 
-    expect(confirmSpy).toHaveBeenCalledWith('Delete this log?');
-    expect(defaultProps.onDelete).toHaveBeenCalledWith(mockLogs[0].id);
-
-    confirmSpy.mockRestore();
-  });
-
-  it('does not call onDelete when delete button is clicked and cancelled', () => {
-    // Mock window.confirm to return false
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
-
-    render(<HistoryModal {...defaultProps} />);
-    const deleteButtons = screen.getAllByRole('button', { name: 'Delete set' });
-    fireEvent.click(deleteButtons[0]);
-
-    expect(confirmSpy).toHaveBeenCalledWith('Delete this log?');
+    // Nothing is deleted by the first tap, and no system dialog is involved.
     expect(defaultProps.onDelete).not.toHaveBeenCalled();
 
-    confirmSpy.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete set' }));
+    expect(defaultProps.onDelete).toHaveBeenCalledWith(mockLogs[0].id);
+  });
+
+  it('keeps the set when the delete is cancelled', () => {
+    render(<HistoryModal {...defaultProps} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete set' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep set' }));
+
+    expect(defaultProps.onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Confirm delete set' })).not.toBeInTheDocument();
   });
 });

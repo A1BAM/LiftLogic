@@ -86,6 +86,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 type="number" 
                 required
                 min="0"
+                step="any"
                 value={defaultWeight}
                 onChange={e => setDefaultWeight(Number(e.target.value))}
                 onFocus={e => e.target.select()}

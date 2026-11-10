@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Copy, Check, Download, AlertCircle } from 'lucide-react';
 import { Modal } from './Modal';
+import { notify } from './dialogs';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
 import { validateWorkoutLogs } from '../utils/validation';
@@ -288,7 +289,7 @@ export function GlobalHistoryModal({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       logger.error('Failed to copy:', err);
-      alert('Failed to copy data to clipboard');
+      notify('Could not copy', 'The clipboard refused the export. Try again from Safari.');
     }
   };
 

@@ -104,6 +104,12 @@ nothing to download and nothing to reflow when it arrives.
 - Long lists render a page at a time. The journal builds 14 days, not the
   whole history.
 - `theme-color` in `index.html` must equal `ink-950`.
+- Never `confirm()`, `alert()` or `prompt()`. From the Home Screen they can
+  return without ever being drawn, which is how "delete does nothing"
+  happened. Use `confirmDialog` / `notify` from `components/dialogs.tsx`, or
+  `DeleteButton` for a row.
+- A number field that takes a weight needs `step="any"`, or the browser
+  refuses 27.5.
 
 ## Readability
 

@@ -44,7 +44,7 @@ describe('GlobalHistoryModal', () => {
     // Mock logger.error to verify it gets called and to prevent console noise
     const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
-    // Mock alert
+    // It must not fall back to a system alert, which the phone can swallow.
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     // Mock clipboard writeText to reject
@@ -64,9 +64,9 @@ describe('GlobalHistoryModal', () => {
     // Verify error handling
     await waitFor(() => {
       expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to copy:', clipboardError);
-      expect(alertSpy).toHaveBeenCalledWith('Failed to copy data to clipboard');
     });
 
+    expect(alertSpy).not.toHaveBeenCalled();
     loggerErrorSpy.mockRestore();
     alertSpy.mockRestore();
   });

@@ -33,6 +33,8 @@ interface ModalProps {
    * which puts a thumb-heavy form within reach one-handed.
    */
   variant?: 'center' | 'sheet';
+  /** For a question that must be answered with its own buttons. */
+  hideClose?: boolean;
   children: React.ReactNode;
 }
 
@@ -50,6 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
   subtitle,
   headerActions,
   variant = 'center',
+  hideClose = false,
   children
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -131,13 +134,15 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {headerActions}
-            <button
-              onClick={onClose}
-              className="btn-quiet p-2"
-              aria-label="Close"
-            >
-              <X size={22} />
-            </button>
+            {!hideClose && (
+              <button
+                onClick={onClose}
+                className="btn-quiet p-2"
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+            )}
           </div>
         </div>
 
