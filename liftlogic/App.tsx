@@ -16,6 +16,7 @@ import { LockScreen } from './components/LockScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { ChevronLeft, Loader2, AlertCircle, Plus, ClipboardList } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
+import { useBackToClose } from './hooks/useBackToClose';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from './utils/date';
@@ -30,6 +31,10 @@ const App: React.FC = () => {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
+
+  // The back gesture walks out the way you walked in: sheet, then workout.
+  useBackToClose(workoutDay !== null, () => setWorkoutDay(null));
+  useBackToClose(activeModal !== null, () => setActiveModal(null));
 
   // Stable identities: the timer keeps these in its effect dependencies, so
   // fresh arrows would tear down and restart the countdown on every render.
@@ -411,7 +416,7 @@ const App: React.FC = () => {
   // 4. DASHBOARD HOME
   if (!workoutDay) {
     return (
-      <div>
+      <div className="screen-in">
         <HomeScreen
           lastTrained={lastTrainedByDay}
           week={week}
@@ -489,7 +494,7 @@ const App: React.FC = () => {
         )}
       </header>
 
-      <main className="relative mx-auto max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)]">
+      <main className="relative mx-auto max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] screen-in">
         {displayedExercisesWithLogs.map(({ exercise, logs: exerciseLogs }, i) => {
           const { slot, position } = plannedExercises[i];
           // On a planned day only the current lift gets a full card; the rest

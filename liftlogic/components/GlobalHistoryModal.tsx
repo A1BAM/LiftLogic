@@ -16,6 +16,9 @@ interface GlobalHistoryModalProps {
 }
 
 
+/** Days of history the journal renders at a time. */
+const DAYS_PER_PAGE = 14;
+
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
 });
@@ -160,6 +163,10 @@ function ChronologicalLogList({
   groupedLogs: Record<string, { log: WorkoutLog; exercise: ExerciseDef | undefined }[]>
 }) {
   const days = Object.entries(groupedLogs);
+  // A year of logging is thousands of rows. Building them all just to show
+  // the top of the list made the journal the slowest thing in the app to
+  // open; the recent weeks are what it is opened for.
+  const [shown, setShown] = useState(DAYS_PER_PAGE);
   return (
     <div className="flex-1 overflow-y-auto px-5">
       {days.length === 0 ? (
@@ -167,7 +174,7 @@ function ChronologicalLogList({
           Nothing recorded yet. Log a set and it shows up here.
         </p>
       ) : (
-        days.map(([date, dayLogs]) => (
+        days.slice(0, shown).map(([date, dayLogs]) => (
           <section key={date} className="pt-5">
             <h3 className="sticky top-0 z-10 bg-ink-800 pb-2 text-[13px] text-cream-400">{date}</h3>
             <ul>
@@ -186,6 +193,14 @@ function ChronologicalLogList({
             </ul>
           </section>
         ))
+      )}
+      {days.length > shown && (
+        <button
+          onClick={() => setShown(n => n + DAYS_PER_PAGE)}
+          className="btn-quiet my-4 w-full py-3 text-[14px]"
+        >
+          Show earlier days
+        </button>
       )}
     </div>
   );
@@ -212,7 +227,7 @@ function JournalHeaderActions({
         <>
           <button
             onClick={() => setIsImporting(true)}
-            className="p-2 text-cream-400 hover:text-cream-50 hover:bg-ink-700 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-cream-50 outline-none"
+            className="btn-quiet p-2"
             aria-label="Import Data"
             title="Import Data"
           >
@@ -229,7 +244,7 @@ function JournalHeaderActions({
       ) : (
         <button
           onClick={() => { setIsImporting(false); setError(null); }}
-          className="text-cream-400 hover:text-cream-50 text-sm font-medium px-2 rounded-lg focus-visible:ring-2 focus-visible:ring-cream-50 outline-none"
+          className="btn-quiet px-3 text-[14px]"
           aria-label="Cancel import"
         >
           Cancel

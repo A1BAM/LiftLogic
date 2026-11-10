@@ -31,6 +31,35 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
     return () => clearInterval(interval);
   }, [endTime, onCancel]);
 
+  // Keep the screen on while resting. The phone otherwise locks part-way
+  // through a two-minute rest, and the timer you were watching is behind a
+  // passcode. Released the moment the rest ends; re-taken on return, because
+  // Safari drops the lock whenever the tab is hidden.
+  useEffect(() => {
+    if (!endTime || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+    const acquire = async () => {
+      try {
+        const next = await navigator.wakeLock.request('screen');
+        if (cancelled) next.release().catch(() => {});
+        else lock = next;
+      } catch {
+        // Low Power Mode or a hidden tab refuses it; the timer still works.
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') acquire();
+    };
+    acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      lock?.release().catch(() => {});
+    };
+  }, [endTime !== null]);
+
   if (!endTime || timeLeft <= 0) return null;
 
   const formatTime = (seconds: number) => {
@@ -41,7 +70,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({ endTime, onCancel, onAdd }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-      <div className="panel flex w-full max-w-md items-center gap-3 px-4 py-3">
+      <div className="panel screen-in flex w-full max-w-md items-center gap-3 px-4 py-3">
         <Timer size={18} className="shrink-0 text-ember" />
 
         <div className="flex-1">

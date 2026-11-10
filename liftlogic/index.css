@@ -12,6 +12,18 @@
 
   html {
     background-color: #0d0c0b;
+    /* No double-tap zoom anywhere: on a page of buttons it only ever fires by
+       accident, and it is what makes a web page feel unlike an app. */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* A long press on a control should press it, not select its label or pop
+     the copy callout. Text you might want to copy is left selectable. */
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   body {
@@ -88,4 +100,38 @@
   .well {
     @apply rounded-2xl border border-ink-700 bg-ink-800;
   }
+}
+
+/* Motion. Only transform and opacity, which Safari animates on the compositor
+   without re-laying-out the page, and only when the phone has not asked for
+   reduced motion. The sheet curve is the one iOS uses for its own sheets:
+   fast out of the gate, long soft landing. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes backdrop-in { from { opacity: 0; } }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+  @keyframes pop-in { from { opacity: 0; transform: scale(0.96); } }
+  @keyframes screen-in { from { opacity: 0; transform: translateY(8px); } }
+
+  .backdrop-in { animation: backdrop-in 200ms ease-out both; }
+  .sheet-in { animation: sheet-in 380ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+  .pop-in { animation: pop-in 180ms ease-out both; }
+  .screen-in { animation: screen-in 220ms ease-out both; }
+
+  /* The press itself. iOS controls give under the thumb; a web button that
+     only changes colour feels like it missed. */
+  .btn-primary,
+  .panel {
+    transition: transform 120ms ease-out, background-color 150ms, border-color 150ms;
+  }
+  button.btn-primary:active,
+  button.panel:active {
+    transform: scale(0.98);
+  }
+}
+
+/* A dialog's scrolling stops at its own edges instead of dragging the
+   workout behind it along. */
+[role='dialog'],
+[role='dialog'] * {
+  overscroll-behavior: contain;
 }
