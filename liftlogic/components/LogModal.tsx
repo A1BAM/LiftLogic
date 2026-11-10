@@ -31,8 +31,7 @@ const Stepper: React.FC<{
   step: number;
   min: number;
   inputMode: 'decimal' | 'numeric';
-  width: string;
-}> = ({ id, label, name, value, onChange, onStep, step, min, inputMode, width }) => (
+}> = ({ id, label, name, value, onChange, onStep, step, min, inputMode }) => (
   <div>
     <label htmlFor={id} className="mb-2 block text-[13px] uppercase tracking-[0.14em] text-cream-400">{label}</label>
     <div className="well flex items-center gap-1 p-1.5">
@@ -57,7 +56,7 @@ const Stepper: React.FC<{
         // Typing is the fast path for a big jump; selecting on focus means the
         // first keystroke replaces the number instead of appending to it.
         onFocus={e => e.target.select()}
-        className={`display nums ${width} min-w-0 flex-1 rounded-xl bg-transparent py-1 text-center
+        className={`display nums w-full min-w-0 flex-1 rounded-xl bg-transparent py-1 text-center
                    text-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cream-50`}
       />
       <button
@@ -131,7 +130,7 @@ export const LogModal: React.FC<LogModalProps> = ({
             {todaysLogs.map((log, index) => (
               <li
                 key={log.id}
-                className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0 animate-in fade-in"
+                className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0"
               >
                 <span className="nums w-5 shrink-0 text-[14px] text-cream-400">
                   {index + 1}
@@ -170,7 +169,6 @@ export const LogModal: React.FC<LogModalProps> = ({
             step={5}
             min={0}
             inputMode="decimal"
-            width="w-full"
           />
           <Stepper
             id="reps-input"
@@ -182,7 +180,6 @@ export const LogModal: React.FC<LogModalProps> = ({
             step={1}
             min={1}
             inputMode="numeric"
-            width="w-full"
           />
         </div>
 

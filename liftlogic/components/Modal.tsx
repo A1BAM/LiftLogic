@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
  * Closes on Escape. Split out because the full-screen form viewer wants this
  * behaviour without the dialog shell below.
  */
-export function useEscapeKey(onEscape: () => void): void {
+function useEscapeKey(onEscape: () => void): void {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onEscape();
@@ -90,7 +90,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-center bg-black/70 animate-in fade-in duration-150 ${
+      className={`fixed inset-0 z-50 flex justify-center bg-black/70 ${
         isSheet ? 'items-end sm:items-center' : 'items-center p-4'
       }`}
       onClick={onClose}
@@ -104,9 +104,9 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={titleId}
         className={`bg-ink-800 w-full max-w-md border-ink-700 flex flex-col max-h-[88dvh] outline-none
-          animate-in duration-200 ${isSheet
-            ? 'slide-in-from-bottom-4 rounded-t-2xl sm:rounded-2xl border-t sm:border'
-            : 'zoom-in-95 rounded-2xl border'}`}
+          ${isSheet
+            ? 'rounded-t-2xl sm:rounded-2xl border-t sm:border'
+            : 'rounded-2xl border'}`}
       >
         <div className="flex items-center justify-between gap-2 px-5 pb-4 pt-5">
           <div className="min-w-0">

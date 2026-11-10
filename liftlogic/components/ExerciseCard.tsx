@@ -194,8 +194,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
 
       {lastTime && (
         <p className="nums mt-3 text-[14px] text-cream-400">
-          <span className="text-cream-400">Last time</span> {lastTime.text}
-          <span className="text-cream-400"> · {lastTime.when}</span>
+          Last time {lastTime.text} · {lastTime.when}
         </p>
       )}
 
@@ -221,7 +220,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
               >
                 {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-ink-950" />}
               </span>
-              <span className={`text-[14px] ${warmupDone[item.key] ? 'text-cream-400 line-through' : 'text-cream-400'}`}>
+              <span className={`text-[14px] text-cream-400 ${warmupDone[item.key] ? 'line-through' : ''}`}>
                 {item.text}
               </span>
             </button>
@@ -232,7 +231,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       <div className="mt-6 flex items-center gap-1.5">
         <button
           onClick={() => onLogClick(exercise)}
-          className={`btn-primary flex-1 py-3.5 text-[15px] ${isCompletedToday ? '' : ''}`}
+          className="btn-primary flex-1 py-3.5 text-[15px]"
         >
           {isCompletedToday ? "Today's sets" : setsToday > 0 ? `Log set ${setsToday + 1}` : 'Log a set'}
         </button>

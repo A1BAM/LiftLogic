@@ -73,14 +73,6 @@
            focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 transition-colors;
   }
 
-  /* Its quieter twin, for an action that is no longer the point — reading
-     back sets you have already finished, say. */
-  .btn-secondary {
-    @apply rounded-2xl border border-ink-700 bg-ink-800 font-semibold text-cream-200
-           active:bg-ink-700
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream-50;
-  }
-
   /* Icon buttons and text links. Sized to the 44px Apple asks for, and never
      dimmer than cream-400, which is where grey on this background stops being
      readable at arm's length. */

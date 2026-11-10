@@ -83,8 +83,7 @@ nothing to download and nothing to reflow when it arrives.
 
 - `.panel` holds content. `.well` is a field you type into.
 - `.btn-primary` is `cream-50` on dark: the brightest thing the screen draws,
-  so only one per screen. `.btn-secondary` is its outlined twin for an action
-  that is no longer the point. `.btn-quiet` is everything else.
+  so only one per screen. `.btn-quiet` is everything else.
 - Two colours, each with one job. `ember` is what is happening now — the day
   the screen suggests, the progress line, the pip for the set you are on.
   `sage` is what is finished — a completed pip, a row's tick, the closing line.
