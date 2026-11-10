@@ -28,7 +28,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {/* Logs List */}
           {logs.length === 0 ? (
-            <p className="py-5 text-[14px] text-aero-700">Nothing logged for this one yet.</p>
+            <p className="py-5 text-[14px] text-zinc-400">Nothing logged for this one yet.</p>
           ) : (
             <ul>
               {logs.map(log => {
@@ -41,18 +41,18 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 }
 
                 return (
-                  <li key={log.id} className="flex items-center gap-3 border-b border-aero-200/70 py-3 last:border-b-0">
+                  <li key={log.id} className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0">
                     <div className="min-w-0 flex-1">
-                      <p className="nums text-[15px] text-aero-800">
+                      <p className="nums text-[15px] text-white">
                         {log.weight}
-                        <span className="text-aero-700"> lbs × </span>
+                        <span className="text-zinc-400"> lbs × </span>
                         {log.reps}
-                        <span className="text-aero-700"> reps</span>
+                        <span className="text-zinc-400"> reps</span>
                         {(log.sets || 1) > 1 && (
-                          <span className="text-aero-700"> · {log.sets} sets</span>
+                          <span className="text-zinc-400"> · {log.sets} sets</span>
                         )}
                       </p>
-                      <p className="text-[13px] text-aero-700">{dateStr}</p>
+                      <p className="text-[13px] text-zinc-400">{dateStr}</p>
                     </div>
                     <button
                       type="button"
@@ -69,7 +69,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                         navigator.vibrate?.(10);
                         if (window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="btn-quiet shrink-0 p-2 active:text-rose-500"
+                      className="btn-quiet shrink-0 p-2 active:text-red-400"
                       aria-label="Delete set"
                     >
                       <Trash2 size={16} />

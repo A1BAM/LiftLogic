@@ -90,7 +90,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-center bg-aero-900/25 backdrop-blur-[3px] animate-in fade-in duration-150 ${
+      className={`fixed inset-0 z-50 flex justify-center bg-black/70 animate-in fade-in duration-150 ${
         isSheet ? 'items-end sm:items-center' : 'items-center p-4'
       }`}
       onClick={onClose}
@@ -103,7 +103,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`bg-white/60 w-full max-w-md border-aero-200/70 flex flex-col max-h-[88dvh] outline-none
+        className={`bg-ink-800 w-full max-w-md border-ink-700 flex flex-col max-h-[88dvh] outline-none
           animate-in duration-200 ${isSheet
             ? 'slide-in-from-bottom-4 rounded-t-2xl sm:rounded-2xl border-t sm:border'
             : 'zoom-in-95 rounded-2xl border'}`}
@@ -113,10 +113,10 @@ export const Modal: React.FC<ModalProps> = ({
             {/* A long title wraps; the icon beside it must not be squashed to
                 make room, which is what happened when each dialog rolled its
                 own header. */}
-            <h2 id={titleId} className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.01em] text-aero-900 [&>svg]:shrink-0">
+            <h2 id={titleId} className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.01em] text-white [&>svg]:shrink-0">
               {title}
             </h2>
-            {subtitle && <p className="mt-0.5 text-[14px] text-aero-700">{subtitle}</p>}
+            {subtitle && <p className="mt-1 text-[14px] text-zinc-400">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {headerActions}

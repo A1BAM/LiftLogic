@@ -21,25 +21,25 @@ interface ExerciseRowProps {
 export const ExerciseRow: React.FC<ExerciseRowProps> = ({
   exercise, slot, position, isComplete, onLogClick, onArchive
 }) => (
-  <div className="flex items-center gap-3 border-t border-white/60 first:border-t-0">
+  <div className="flex items-center gap-3 border-t border-ink-700 first:border-t-0">
     <button
       onClick={() => onLogClick(exercise)}
       className="flex flex-1 min-w-0 items-center gap-3 py-3.5 text-left"
     >
       <span className="w-6 shrink-0">
         {isComplete ? (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-leaf-500/50 bg-gradient-to-b from-leaf-300 to-leaf-500 shadow-bubble">
-            <Check size={11} strokeWidth={3} className="text-aero-900" />
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-done">
+            <Check size={11} strokeWidth={3} className="text-black" />
           </span>
         ) : (
-          <span className="nums text-[14px] text-aero-700">{String(position).padStart(2, '0')}</span>
+          <span className="nums text-[14px] text-zinc-400">{String(position).padStart(2, '0')}</span>
         )}
       </span>
-      <span className={`flex-1 truncate text-[15px] ${isComplete ? 'text-aero-700 line-through' : 'text-aero-900'}`}>
+      <span className={`flex-1 truncate text-[15px] ${isComplete ? 'text-zinc-400 line-through' : 'text-white'}`}>
         {exercise.name}
       </span>
       {slot && (
-        <span className="nums shrink-0 rounded-full border border-white/70 bg-white/55 px-2.5 py-0.5 text-[13px] text-aero-700">
+        <span className="nums shrink-0 text-[14px] text-zinc-400">
           {slot.sets} × {formatReps(slot).replace(' reps', '')}
         </span>
       )}

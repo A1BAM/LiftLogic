@@ -28,15 +28,14 @@ const Stepper: React.FC<{
   width: string;
 }> = ({ id, label, name, value, onChange, onStep, step, min, inputMode, width }) => (
   <div>
-    <label htmlFor={id} className="mb-2 block text-[13px] text-aero-700">{label}</label>
+    <label htmlFor={id} className="mb-2 block text-[13px] uppercase tracking-wider text-zinc-400">{label}</label>
     <div className="well flex items-center gap-1 p-1.5">
       <button
         type="button"
         onClick={() => onStep(-step)}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/80
-                   bg-gradient-to-b from-white to-aero-100 text-aero-700 shadow-bubble
-                   active:from-aero-100 active:to-aero-200
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aero-300"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-ink-700
+                   bg-ink-900 text-white active:bg-ink-700
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         aria-label={`Decrease ${name} by ${step}`}
       >
         <Minus size={17} />
@@ -53,15 +52,14 @@ const Stepper: React.FC<{
         // first keystroke replaces the number instead of appending to it.
         onFocus={e => e.target.select()}
         className={`nums ${width} min-w-0 flex-1 rounded-xl bg-transparent py-1 text-center text-[30px]
-                   font-semibold text-aero-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-aero-400`}
+                   font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white`}
       />
       <button
         type="button"
         onClick={() => onStep(step)}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/80
-                   bg-gradient-to-b from-white to-aero-100 text-aero-700 shadow-bubble
-                   active:from-aero-100 active:to-aero-200
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aero-300"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-ink-700
+                   bg-ink-900 text-white active:bg-ink-700
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         aria-label={`Increase ${name} by ${step}`}
       >
         <Plus size={17} />
@@ -116,22 +114,22 @@ export const LogModal: React.FC<LogModalProps> = ({
     <Modal onClose={onClose} variant="sheet" title={exercise.name} subtitle="One set at a time">
       <div className="flex-1 overflow-y-auto px-5 pb-2">
         {todaysLogs.length === 0 ? (
-          <p className="py-5 text-[14px] text-aero-700">Nothing logged yet today.</p>
+          <p className="py-5 text-[15px] text-zinc-400">Nothing logged yet today.</p>
         ) : (
           <ul className="py-1">
             {todaysLogs.map((log, index) => (
               <li
                 key={log.id}
-                className="mb-2 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/55 px-3 py-2.5 animate-in fade-in"
+                className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0 animate-in fade-in"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/80 bg-gradient-to-b from-aero-100 to-aero-300 text-[12px] font-semibold text-aero-900 shadow-bubble">
+                <span className="nums w-5 shrink-0 text-[14px] text-zinc-400">
                   {index + 1}
                 </span>
-                <span className="nums flex-1 text-[15px] font-medium text-aero-900">
+                <span className="nums flex-1 text-[16px] font-medium text-white">
                   {log.weight}
-                  <span className="font-normal text-aero-700"> lbs × </span>
+                  <span className="font-normal text-zinc-400"> lbs × </span>
                   {log.reps}
-                  <span className="font-normal text-aero-700"> reps</span>
+                  <span className="font-normal text-zinc-400"> reps</span>
                 </span>
                 <button
                   onClick={() => {
@@ -149,7 +147,7 @@ export const LogModal: React.FC<LogModalProps> = ({
         )}
       </div>
 
-      <form onSubmit={handleAddSet} className="border-t border-white/70 px-5 pt-5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
+      <form onSubmit={handleAddSet} className="border-t border-ink-700 px-5 pt-5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
         <div className="grid grid-cols-2 gap-3">
           <Stepper
             id="weight-input"
@@ -177,7 +175,7 @@ export const LogModal: React.FC<LogModalProps> = ({
           />
         </div>
 
-        <button type="submit" disabled={reps < 1} className="btn-gel mt-4 w-full py-4 text-[16px]">
+        <button type="submit" disabled={reps < 1} className="btn-primary mt-5 w-full py-4 text-[16px]">
           Add set {todaysLogs.length + 1}
         </button>
       </form>

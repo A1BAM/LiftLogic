@@ -46,7 +46,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
     >
         <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto px-5 pb-6">
           <div>
-            <label htmlFor="exercise-name" className="mb-2 block text-[13px] text-aero-700">Exercise Name</label>
+            <label htmlFor="exercise-name" className="mb-2 block text-[13px] text-zinc-400">Exercise Name</label>
             <input 
               id="exercise-name"
               type="text" 
@@ -55,12 +55,12 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Incline Bench Press"
-              className="w-full rounded-xl border border-aero-200/70 bg-white/60 p-3.5 text-[16px] text-aero-900 placeholder-aero-400 focus:border-aero-400 focus:outline-none"
+              className="w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label htmlFor="muscle-group" className="mb-2 block text-[13px] text-aero-700">Muscle Group</label>
+            <label htmlFor="muscle-group" className="mb-2 block text-[13px] text-zinc-400">Muscle Group</label>
             <input 
               id="muscle-group"
               type="text" 
@@ -68,13 +68,13 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               value={muscleGroup}
               onChange={e => setMuscleGroup(e.target.value)}
               placeholder="e.g. Upper Chest"
-              className="w-full rounded-xl border border-aero-200/70 bg-white/60 p-3.5 text-[16px] text-aero-900 placeholder-aero-400 focus:border-aero-400 focus:outline-none"
+              className="w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="start-weight" className="mb-2 block text-[13px] text-aero-700">Start Weight (lbs)</label>
+              <label htmlFor="start-weight" className="mb-2 block text-[13px] text-zinc-400">Start Weight (lbs)</label>
               <input 
                 id="start-weight"
                 type="number" 
@@ -83,11 +83,11 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 value={defaultWeight}
                 onChange={e => setDefaultWeight(Number(e.target.value))}
                 onFocus={e => e.target.select()}
-                className="nums w-full rounded-xl border border-aero-200/70 bg-white/60 p-3.5 text-[16px] text-aero-900 focus:border-aero-400 focus:outline-none"
+                className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-white focus:border-zinc-500 focus:outline-none"
               />
             </div>
             <div>
-              <label htmlFor="target-reps" className="mb-2 block text-[13px] text-aero-700">Target Reps</label>
+              <label htmlFor="target-reps" className="mb-2 block text-[13px] text-zinc-400">Target Reps</label>
               <input 
                 id="target-reps"
                 type="number" 
@@ -96,13 +96,13 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 value={targetReps}
                 onChange={e => setTargetReps(Number(e.target.value))}
                 onFocus={e => e.target.select()}
-                className="nums w-full rounded-xl border border-aero-200/70 bg-white/60 p-3.5 text-[16px] text-aero-900 focus:border-aero-400 focus:outline-none"
+                className="nums w-full rounded-xl border border-ink-700 bg-ink-800 p-3.5 text-[16px] text-white focus:border-zinc-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="progression-increment" className="mb-2 block text-[13px] text-aero-700">Progression Increment (lbs)</label>
+            <label htmlFor="progression-increment" className="mb-2 block text-[13px] text-zinc-400">Progression Increment (lbs)</label>
             <div className="flex items-center gap-4">
                <input 
                 id="progression-increment"
@@ -112,16 +112,16 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
                 step="2.5"
                 value={increment}
                 onChange={e => setIncrement(Number(e.target.value))}
-                className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-aero-200 accent-aero-500"
+                className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-ink-700 accent-white"
               />
-              <span className="nums w-12 text-right text-[15px] text-aero-900">{increment}</span>
+              <span className="nums w-12 text-right text-[15px] text-white">{increment}</span>
             </div>
-            <p className="mt-2 text-[13px] text-aero-700">Weight to add when you hit your rep goal.</p>
+            <p className="mt-2 text-[13px] text-zinc-400">Weight to add when you hit your rep goal.</p>
           </div>
 
           <button 
             type="submit" 
-            className="btn-gel mt-6 flex w-full items-center justify-center gap-2 py-4 text-[15px]"
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 py-4 text-[15px]"
           >
             <Save size={20} />
             Create Exercise

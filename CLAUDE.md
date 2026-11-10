@@ -63,49 +63,32 @@ CI runs the same thing. Dependencies are pnpm; CI installs with
 
 ## Look and feel
 
-Frutiger Aero: bright, wet and glossy, never dark. The page is a fixed
-sky-to-meadow gradient (`index.css`), and everything that holds content floats
-on it as frosted glass (`.glass`, `.glass-solid` for dialogs) rather than
-sitting in a box.
+White on black, and almost nothing else. The page is true black (`ink-950`),
+which an OLED phone simply turns off; a panel is one step up (`ink-900`) with
+an `ink-700` hairline around it. No gradients, no glass, no blur, no shadows —
+those were tried and they read as glare in a dim gym.
 
-Two colours: `aero-*` for water and `leaf-*` for growth. Text is the dark end
-of the water ramp (`aero-900`/`aero-700`), never grey. The one control you came
-to press is a gel capsule (`.btn-gel`, `.btn-gel-leaf` when it means done) with
-the light catching its top half; everything else is `.btn-quiet`. Numbers you
-type into sit in a `.well`. Sets done, checkboxes and completion read as little
-gel bubbles.
-
-`Bubbles` is background only: keep it out from behind text. Numbers use `.nums`
-so columns line up.
-
-## iPhone Safari
-
-The app is used on an iPhone 16 Pro in Safari, which constrains the aero
-styling in specific ways. These were all found by measuring, not guessing:
-
-- **Never `background-attachment: fixed`.** iOS repaints the whole gradient
-  every scroll frame. The page gradient lives on a fixed `body::before` layer
-  instead, painted once and composited.
-- **No filters on anything that scrolls.** `blur-*` on a card forces a
-  re-rasterise per frame; use a radial gradient for a glow. Keep the count of
-  `backdrop-filter` layers low and the radius modest — each one is its own
-  compositing layer.
-- **Heights are `100dvh`, never `100vh`.** `100vh` is the height with Safari's
-  chrome hidden, so a `100vh` screen is always taller than what you can see.
-- **Every input is at least 16px.** Safari zooms the page when a smaller field
-  takes focus and does not zoom back out. `index.css` enforces this.
-- **Safe areas**: `index.html` sets `viewport-fit=cover`, and the insets are
-  folded into the padding value on the elements that need them
-  (`pt-[calc(env(safe-area-inset-top)+1rem)]`). A helper class in
-  `@layer components` loses to a plain padding utility, so don't use one.
-- **Tap targets are 44px**, which `.btn-quiet` enforces for icon buttons.
+- `.panel` holds content. `.well` is a field you type into.
+- `.btn-primary` is white on black: the brightest thing the screen can draw,
+  so only one per screen. `.btn-secondary` is its outlined twin for an action
+  that is no longer the point. `.btn-quiet` is everything else.
+- `done` (a soft green) is the only colour, and only for what is finished:
+  the sets-done dots, a completed row's tick, the day's progress line.
+- Micro-labels are uppercase and tracked at 13px; body copy is 14–16px.
+  Numbers use `.nums` so columns line up.
 
 ## Readability
 
-Text is solid colour, never a faded one: an alpha on text over the gradient
-drops it under 3:1. Body copy is 14px and up, micro-labels 13px. The label on
-`.btn-gel` sits on the gradient's middle stop, which is dark enough for white
-text to clear 4.5:1 — darken the whole gradient rather than brightening it.
+This is the thing that has been got wrong twice, in both directions — once too
+dim, once too bright. The rule now: **nothing dimmer than `zinc-400`.**
+
+`zinc-500` measures 3.93:1 on a panel and 4.35:1 on black, both under the 4.5:1
+target; `zinc-400` is around 8:1 and still reads as clearly secondary. Primary
+text is plain `white`. Never put an alpha on text.
+
+Verify it rather than trusting it: render the screens and walk every text node,
+comparing its computed colour against what is actually painted behind it. The
+same pass should check that no tap target is under 44px.
 
 ## Conventions
 
