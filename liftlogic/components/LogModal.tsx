@@ -99,8 +99,11 @@ export const LogModal: React.FC<LogModalProps> = ({
   const [weightInput, setWeightInput] = useState((defaults ? defaults.weight : exercise.defaultWeight).toString());
   const [repsInput, setRepsInput] = useState((defaults ? defaults.reps : exercise.targetReps).toString());
 
-  const weight = Number(weightInput) || 0;
-  const reps = Number(repsInput) || 0;
+  // The fields are free text under the hood, so "-5" or "8.5" can be typed.
+  // The server stores reps as an integer and rejects a negative weight; both
+  // are settled here rather than surfacing as a failed save.
+  const weight = Math.min(2000, Math.max(0, Number(weightInput) || 0));
+  const reps = Math.min(1000, Math.floor(Number(repsInput) || 0));
 
   const adjustWeight = (delta: number) => {
     navigator.vibrate?.(10);

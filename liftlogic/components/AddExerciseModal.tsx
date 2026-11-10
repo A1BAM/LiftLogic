@@ -23,7 +23,9 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !muscleGroup) return;
+    if (!name.trim() || !muscleGroup.trim()) return;
+    if (!Number.isFinite(defaultWeight) || defaultWeight < 0) return;
+    if (!Number.isInteger(targetReps) || targetReps < 1) return;
 
     const newExercise: ExerciseDef = {
       id: `custom-${Date.now()}`,
@@ -52,6 +54,9 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               type="text" 
               required
               autoFocus
+              // The definition is stored as JSON in a 500-character column;
+              // an unbounded name would save locally and then never sync.
+              maxLength={80}
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Incline Bench Press"
@@ -65,6 +70,7 @@ export const AddExerciseModal: React.FC<AddExerciseModalProps> = ({
               id="muscle-group"
               type="text" 
               required
+              maxLength={80}
               value={muscleGroup}
               onChange={e => setMuscleGroup(e.target.value)}
               placeholder="e.g. Upper Chest"

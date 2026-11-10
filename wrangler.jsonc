@@ -20,6 +20,17 @@
         "limit": 10,
         "period": 60
       }
+    },
+    {
+      // Ceiling on all API requests per client, so a password cannot be
+      // guessed against the data endpoints faster than against /login allows
+      // by much. Far above normal use.
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "26080502",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
     }
   ],
   "assets": {

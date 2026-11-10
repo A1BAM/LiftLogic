@@ -152,20 +152,30 @@ const App: React.FC = () => {
     try {
       await updateLog(log);
     } catch (err) {
-      // Handled in hook
+      // The hook has already re-synced, so the list shows what was really
+      // saved; this says why the edit is not in it.
+      alert("Failed to save the edit to cloud.");
     }
   }, [updateLog]);
 
   const handleEditInit = useCallback((log: WorkoutLog) => {
     const newWeight = prompt("Enter new weight:", log.weight.toString());
+    if (newWeight === null) return;
     const newReps = prompt("Enter new reps:", log.reps.toString());
-    if (newWeight && newReps) {
-      handleEditLog({
-        ...log,
-        weight: Number(newWeight),
-        reps: Number(newReps)
-      });
+    if (newReps === null) return;
+
+    // prompt() hands back whatever was typed. Number("abc") is NaN and
+    // Number("") is 0, and either would have been written over a real set.
+    const weight = Number(newWeight);
+    const reps = Number(newReps);
+    const valid =
+      newWeight.trim() !== '' && Number.isFinite(weight) && weight >= 0 && weight <= 2000 &&
+      newReps.trim() !== '' && Number.isInteger(reps) && reps >= 1 && reps <= 1000;
+    if (!valid) {
+      alert("That is not a valid weight and whole number of reps. Nothing was changed.");
+      return;
     }
+    handleEditLog({ ...log, weight, reps });
   }, [handleEditLog]);
 
   const handleImportLogs = useCallback(async (importedLogs: WorkoutLog[]) => {

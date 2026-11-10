@@ -312,7 +312,7 @@ export function recommendNext(input: ProgressionInput): ProgressionRecommendatio
   return {
     weight: W,
     // Past the top of the range on purpose when the next weight is a big step.
-    reps: Math.min(needed, last.medianReps + 1),
+    reps: Math.max(last.medianReps, Math.min(needed, last.medianReps + 1)),
     reason: `Add a rep. ${needed} at ${W} earns the move to ${lbs(next)}.`
   };
 }

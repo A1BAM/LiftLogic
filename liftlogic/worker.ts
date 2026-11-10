@@ -1,6 +1,42 @@
 import { Pool } from '@neondatabase/serverless';
-import { logger } from './utils/logger';
 import { timingSafeEqual } from './utils/security';
+
+/**
+ * The shared logger goes quiet in production, which is right for the browser
+ * and wrong here: wrangler builds the Worker with NODE_ENV=production, so
+ * every server error was being dropped before it reached the dashboard. Only
+ * messages and error text are logged, never request bodies or credentials.
+ */
+const logger = {
+  error: (message: string, ...args: unknown[]) => console.error(`[ERROR] ${message}`, ...args)
+};
+
+/** Largest JSON body the API will read. */
+const MAX_BODY_BYTES = 1024 * 1024;
+
+/**
+ * Reads a body as text, giving up once it passes the limit. Content-Length
+ * cannot be trusted for this: a chunked request does not send one, and the
+ * login endpoint parses its body before anyone has authenticated.
+ */
+async function readBodyCapped(request: Request, limit: number): Promise<string | null> {
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > limit) {
+      await reader.cancel();
+      return null;
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
 
 async function deleteLogsByExercise(pool: Pool, exerciseId: string, headers: Record<string, string>): Promise<Response> {
   await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
@@ -25,16 +61,18 @@ function validateWorkoutItem(item: unknown, inArray = false): string | null {
   if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
     return `Invalid exerciseId${suffix}`;
   }
-  if (typeof timestamp !== 'number' || isNaN(timestamp) || timestamp <= 0) {
+  // Stored as bigint / integer: a fraction or an Infinity would otherwise
+  // surface as a 500 from the database instead of a 400 from here.
+  if (typeof timestamp !== 'number' || !Number.isSafeInteger(timestamp) || timestamp <= 0) {
     return `Invalid timestamp${suffix}`;
   }
-  if (typeof weight !== 'number' || isNaN(weight) || weight < 0 || weight > 2000) {
+  if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0 || weight > 2000) {
     return `Invalid weight${suffix}`;
   }
-  if (typeof reps !== 'number' || isNaN(reps) || reps < 0 || reps > 1000) {
+  if (typeof reps !== 'number' || !Number.isInteger(reps) || reps < 0 || reps > 1000) {
     return `Invalid reps${suffix}`;
   }
-  if (sets !== undefined && (typeof sets !== 'number' || isNaN(sets) || sets < 0 || sets > 100)) {
+  if (sets !== undefined && (typeof sets !== 'number' || !Number.isInteger(sets) || sets < 0 || sets > 100)) {
     return `Invalid sets${suffix}`;
   }
   if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 500)) {
@@ -131,13 +169,13 @@ async function getTargetHash(env: Env): Promise<string | null> {
   return null;
 }
 
-async function getLoginRateLimitKey(request: Request): Promise<string> {
+async function getRateLimitKey(request: Request, scope: 'login' | 'api'): Promise<string> {
   const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
   const digestHex = Array.from(new Uint8Array(digest))
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('');
-  return `login:${digestHex}`;
+  return `${scope}:${digestHex}`;
 }
 
 export interface Env {
@@ -146,6 +184,7 @@ export interface Env {
   TARGET_HASH?: string;
   PASSWORD?: string;
   LOGIN_RATE_LIMITER?: RateLimit;
+  API_RATE_LIMITER?: RateLimit;
   ASSETS: { fetch: typeof fetch };
 }
 
@@ -213,6 +252,30 @@ export default {
     const isLoginEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/');
     const isLogoutEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/');
 
+    // Every credential check is a password guess to someone who does not have
+    // the password, and until this was here only /login was limited: the same
+    // guess could be sent to any other endpoint as fast as the network allowed.
+    // The ceiling is far above anything the app does (a page load is two
+    // requests, a set is one), so it only ever bites a script.
+    if (request.method !== 'OPTIONS' && env.API_RATE_LIMITER) {
+      let allowed = true;
+      try {
+        ({ success: allowed } = await env.API_RATE_LIMITER.limit({
+          key: await getRateLimitKey(request, 'api')
+        }));
+      } catch (error) {
+        // Failing open here keeps the app usable through a limiter outage;
+        // login still fails closed on its own, stricter limiter.
+        logger.error('API_RATE_LIMITER failed', error instanceof Error ? error.message : String(error));
+      }
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Too many requests" }), {
+          status: 429,
+          headers: { ...headers, 'Retry-After': '60' }
+        });
+      }
+    }
+
     if (request.method !== 'OPTIONS' && !isLoginEndpoint && !isLogoutEndpoint) {
       const targetHash = await getTargetHash(env);
       if (!targetHash) {
@@ -260,11 +323,15 @@ export default {
         const contentType = request.headers.get('Content-Type') || '';
         if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
             const contentLength = request.headers.get('Content-Length');
-            if (contentLength && parseInt(contentLength, 10) > 1024 * 1024) { // 1MB limit
+            if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) {
+              return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
+            }
+            const raw = await readBodyCapped(request, MAX_BODY_BYTES);
+            if (raw === null) {
               return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
             }
             try {
-              body = await request.json();
+              body = JSON.parse(raw);
             } catch (e) {
               return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
             }
@@ -288,7 +355,7 @@ export default {
 
         try {
           const { success } = await env.LOGIN_RATE_LIMITER.limit({
-            key: await getLoginRateLimitKey(request)
+            key: await getRateLimitKey(request, 'login')
           });
           if (!success) {
             const rateLimitHeaders = new Headers(headers);
@@ -356,7 +423,7 @@ export default {
         if (typeof weightLbs !== 'number' || isNaN(weightLbs) || weightLbs <= 0 || weightLbs > 1000) {
           return new Response(JSON.stringify({ error: "Invalid weightLbs" }), { status: 400, headers });
         }
-        if (age !== undefined && age !== null && (typeof age !== 'number' || isNaN(age) || age < 0 || age > 150)) {
+        if (age !== undefined && age !== null && (typeof age !== 'number' || !Number.isInteger(age) || age < 0 || age > 150)) {
           return new Response(JSON.stringify({ error: "Invalid age" }), { status: 400, headers });
         }
 

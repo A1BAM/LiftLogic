@@ -280,6 +280,98 @@ describe('Worker', () => {
     });
   });
 
+  describe('Hardening', () => {
+    const base = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+    const set = { id: 'a', exerciseId: 'ex', timestamp: 1700000000000, weight: 100, reps: 8, sets: 1 };
+
+    it('limits credential guesses against the data endpoints, not just /login', async () => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const request = createRequest('GET', 'http://localhost/gym-api/session', undefined, 'a-wrong-guess');
+
+      const response = await worker.fetch(request, { ...base, API_RATE_LIMITER: { limit } }, {} as any);
+
+      expect(response.status).toBe(429);
+      expect(response.headers.get('Retry-After')).toBe('60');
+      expect(limit).toHaveBeenCalledWith({ key: expect.stringMatching(/^api:[0-9a-f]{64}$/) });
+    });
+
+    it('is refused by the limiter even when the guess is right', async () => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const request = createRequest('GET', 'http://localhost/gym-api/session');
+
+      const response = await worker.fetch(request, { ...base, API_RATE_LIMITER: { limit } }, {} as any);
+
+      expect(response.status).toBe(429);
+    });
+
+    it('stays usable if the API limiter itself is down', async () => {
+      const limit = vi.fn().mockRejectedValue(new Error('outage'));
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const request = createRequest('GET', 'http://localhost/gym-api/session');
+
+      const response = await worker.fetch(request, { ...base, API_RATE_LIMITER: { limit } }, {} as any);
+
+      expect(response.status).toBe(200);
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it('logs database failures on the server, where production used to drop them', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('connection refused'));
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const response = await worker.fetch(createRequest('GET', 'http://localhost/gym-api'), base, {} as any);
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: 'Internal Server Error' });
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Database Error'), 'connection refused');
+      errorSpy.mockRestore();
+    });
+
+    it.each([
+      ['fractional reps', { reps: 8.5 }],
+      ['fractional sets', { sets: 1.5 }],
+      ['a fractional timestamp', { timestamp: 1700000000000.5 }],
+      ['an out-of-range timestamp', { timestamp: 1e400 }]
+    ])('answers %s with a 400 rather than a database error', async (_name, patch) => {
+      // JSON cannot carry Infinity, so the body is written by hand.
+      const body = JSON.stringify({ ...set, ...patch }).replace('null', '1e400');
+      const request = new Request('http://localhost/gym-api', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer testsecret', 'Content-Type': 'application/json' },
+        body
+      });
+
+      const response = await worker.fetch(request, base, {} as any);
+
+      expect(response.status).toBe(400);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('refuses an oversized body that does not declare its length', async () => {
+      const chunk = new TextEncoder().encode('a'.repeat(64 * 1024));
+      let sent = 0;
+      const stream = new ReadableStream({
+        pull(controller) {
+          if (sent++ < 40) controller.enqueue(chunk); // 2.5 MB, no Content-Length
+          else controller.close();
+        }
+      });
+      const request = new Request('http://localhost/gym-api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: stream,
+        // @ts-expect-error duplex is required for a streamed body in Node
+        duplex: 'half'
+      });
+      const env = { ...base, LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) } };
+
+      const response = await worker.fetch(request, env, {} as any);
+
+      expect(response.status).toBe(413);
+    });
+  });
+
   describe('GET Requests', () => {
     it('returns empty array if dummy database URL is used and fetch fails', async () => {
       mockQuery.mockRejectedValueOnce(new Error('Connection failed'));
