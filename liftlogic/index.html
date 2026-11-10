@@ -2,12 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <!-- Added to the Home Screen, it opens full-screen with its own icon
+         instead of a screenshot thumbnail inside Safari's chrome. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LiftLogic" />
+    <!-- Content runs under the status bar; the safe-area padding already
+         accounts for it. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Safari tints its own chrome to match, so the gradient runs edge to edge
-         instead of stopping at a grey address bar. -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#000000" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+    <!-- Safari tints its own chrome to match. Must equal ink-950, or the
+         address bar sits a shade off the page under it. -->
+    <meta name="theme-color" content="#0d0c0b" />
     <title>LiftLogic</title>
 </head>
   <body>

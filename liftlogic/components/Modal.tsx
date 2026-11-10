@@ -66,6 +66,17 @@ export const Modal: React.FC<ModalProps> = ({
     return () => previouslyFocused?.focus?.();
   }, []);
 
+  // The page behind must not scroll while a dialog is up. Without this a
+  // swipe that runs past the end of a sheet moves the workout underneath.
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Tab' || !panelRef.current) return;
     const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE))
@@ -90,7 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-center bg-black/70 ${
+      className={`backdrop-in fixed inset-0 z-50 flex justify-center bg-black/70 ${
         isSheet ? 'items-end sm:items-center' : 'items-center p-4'
       }`}
       onClick={onClose}
@@ -105,8 +116,8 @@ export const Modal: React.FC<ModalProps> = ({
         aria-labelledby={titleId}
         className={`bg-ink-800 w-full max-w-md border-ink-700 flex flex-col max-h-[88dvh] outline-none
           ${isSheet
-            ? 'rounded-t-2xl sm:rounded-2xl border-t sm:border'
-            : 'rounded-2xl border'}`}
+            ? 'sheet-in rounded-t-2xl sm:rounded-2xl border-t sm:border'
+            : 'pop-in rounded-2xl border'}`}
       >
         <div className="flex items-center justify-between gap-2 px-5 pb-4 pt-5">
           <div className="min-w-0">

@@ -90,6 +90,21 @@ nothing to download and nothing to reflow when it arrives.
 - Micro-labels are uppercase and tracked at 13px; body copy is 14–16px.
   Numbers use `.nums` so columns line up.
 
+## Feeling like an iPhone app
+
+- Motion is `transform` and `opacity` only, defined once at the bottom of
+  `index.css` (`.sheet-in`, `.pop-in`, `.backdrop-in`, `.screen-in`) and
+  switched off under `prefers-reduced-motion`. There is no Tailwind animation
+  plugin: an `animate-in` class does nothing.
+- The back gesture must work. Anything that opens over the page — a workout
+  day, a dialog — goes through `hooks/useBackToClose.ts`, so swiping back
+  closes it instead of leaving the site.
+- A dialog locks the page behind it (`Modal.tsx`) and keeps its own scrolling
+  to itself.
+- Long lists render a page at a time. The journal builds 14 days, not the
+  whole history.
+- `theme-color` in `index.html` must equal `ink-950`.
+
 ## Readability
 
 This is the thing that has been got wrong twice, in both directions — once too

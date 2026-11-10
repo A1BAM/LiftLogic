@@ -28,6 +28,9 @@ export const LockScreen: React.FC<LockScreenProps> = ({ password, onPasswordChan
               onChange={e => onPasswordChange(e.target.value)}
               className="w-full bg-transparent py-3.5 pr-10 text-[16px] text-cream-50 placeholder-cream-600 focus:outline-none"
               placeholder="Enter password to unlock"
+              // Lets the iPhone offer the saved password from Keychain.
+              autoComplete="current-password"
+              enterKeyHint="go"
               autoFocus
               required
             />
