@@ -64,6 +64,34 @@ describe('LogModal', () => {
     expect(screen.getByDisplayValue('6')).toBeInTheDocument();
   });
 
+  it('pre-fills with the suggestion before the first set of the day', () => {
+    const lastSessionLogs: WorkoutLog[] = [
+      { id: '2', exerciseId: 'test-id', timestamp: 500, weight: 145, reps: 6, sets: 1 }
+    ];
+    render(
+      <LogModal
+        {...defaultProps}
+        lastSessionLogs={lastSessionLogs}
+        suggestion={{ weight: 150, reps: 7 }}
+      />
+    );
+
+    expect(screen.getByDisplayValue('150')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('7')).toBeInTheDocument();
+  });
+
+  it('prefers the set you just did over the suggestion once one is logged', () => {
+    const todaysLogs: WorkoutLog[] = [
+      { id: '1', exerciseId: 'test-id', timestamp: 1000, weight: 140, reps: 8, sets: 1 }
+    ];
+    render(
+      <LogModal {...defaultProps} todaysLogs={todaysLogs} suggestion={{ weight: 150, reps: 7 }} />
+    );
+
+    expect(screen.getByDisplayValue('140')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('8')).toBeInTheDocument();
+  });
+
   it('adjusts weight using +/- buttons', async () => {
     render(<LogModal {...defaultProps} />);
     const user = userEvent.setup();

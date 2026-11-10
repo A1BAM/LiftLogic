@@ -3,7 +3,8 @@ import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
 import { ExerciseRow } from './components/ExerciseRow';
-import { planExercisesForDay, isSlotComplete, switchOptionsFor, WORKOUT_PLAN } from './workoutPlan';
+import { planExercisesForDay, isSlotComplete, switchOptionsFor, slotFor, WORKOUT_PLAN } from './workoutPlan';
+import { groupSessions, recommendFor } from './progression';
 import { LogModal } from './components/LogModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
@@ -17,7 +18,7 @@ import { ChevronLeft, Loader2, AlertCircle, Plus, ClipboardList } from 'lucide-r
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
-import { getLocalDateKey } from './utils/date';
+import { getLocalDateKey, getLocalDayBounds } from './utils/date';
 
 const App: React.FC = () => {
   // Auth State
@@ -550,6 +551,12 @@ const App: React.FC = () => {
           exercise={selectedExercise}
           todaysLogs={getTodaysLogs(selectedExercise.id)}
           lastSessionLogs={getLastSessionLogs(selectedExercise.id)}
+          suggestion={recommendFor(
+            selectedExercise,
+            groupSessions(getLogsForExercise(selectedExercise.id), selectedExercise.id),
+            slotFor(workoutDay, selectedExercise.id),
+            getLocalDayBounds().start
+          )}
           onClose={() => setActiveModal(null)}
           onSave={handleAddSet}
           onDelete={handleDeleteLog}
