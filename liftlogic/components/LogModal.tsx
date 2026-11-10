@@ -7,6 +7,12 @@ interface LogModalProps {
   exercise: ExerciseDef;
   todaysLogs: WorkoutLog[];
   lastSessionLogs?: WorkoutLog[]; // Logs from the previous session (not today)
+  /**
+   * What the progression maths says to do today. Used to fill the fields
+   * before the first set, so the common case is one tap; once a set is in,
+   * the set you just did is the better guess for the next one.
+   */
+  suggestion?: { weight: number; reps: number };
   onClose: () => void;
   onSave: (data: { weight: number; reps: number; sets: number }) => void;
   onDelete: (logId: string) => void;
@@ -72,6 +78,7 @@ export const LogModal: React.FC<LogModalProps> = ({
   exercise,
   todaysLogs,
   lastSessionLogs,
+  suggestion,
   onClose,
   onSave,
   onDelete
@@ -86,7 +93,8 @@ export const LogModal: React.FC<LogModalProps> = ({
     return null;
   };
 
-  const defaults = getLastLog();
+  const defaults =
+    todaysLogs.length === 0 && suggestion ? suggestion : getLastLog();
 
   const [weightInput, setWeightInput] = useState((defaults ? defaults.weight : exercise.defaultWeight).toString());
   const [repsInput, setRepsInput] = useState((defaults ? defaults.reps : exercise.targetReps).toString());

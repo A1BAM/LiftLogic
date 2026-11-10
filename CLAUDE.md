@@ -41,6 +41,9 @@ MCP tools are never invoked autonomously.
 - `liftlogic/App.tsx` — the whole UI shell: auth gate, day selection, workout view.
 - `liftlogic/workoutPlan.ts` — the fixed Push/Pull running order, keyed on
   exercise IDs (never names, so renaming a lift cannot detach its history).
+- `liftlogic/progression.ts` — what to put on the bar next: pure arithmetic on
+  logged sets (Epley e1RM, time-off decay, loadable steps). No network, no
+  model. The header comment is the spec; change the two together.
 - `liftlogic/worker.ts` — the Cloudflare Worker: auth, CORS, and the `/gym-api`
   endpoints over Neon.
 - `liftlogic/hooks/` — data fetching, log and exercise state.
