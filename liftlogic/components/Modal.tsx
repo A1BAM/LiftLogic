@@ -113,10 +113,10 @@ export const Modal: React.FC<ModalProps> = ({
             {/* A long title wraps; the icon beside it must not be squashed to
                 make room, which is what happened when each dialog rolled its
                 own header. */}
-            <h2 id={titleId} className="flex items-center gap-2 text-[19px] font-semibold tracking-[-0.01em] text-white [&>svg]:shrink-0">
+            <h2 id={titleId} className="display flex items-center gap-2 text-[21px] [&>svg]:shrink-0">
               {title}
             </h2>
-            {subtitle && <p className="mt-1 text-[14px] text-zinc-400">{subtitle}</p>}
+            {subtitle && <p className="mt-1 text-[14px] text-cream-400">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {headerActions}

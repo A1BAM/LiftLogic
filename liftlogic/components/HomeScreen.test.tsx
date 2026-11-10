@@ -39,6 +39,18 @@ describe('HomeScreen', () => {
 
   it('says plainly when the week is empty, rather than showing zeroes', () => {
     render(<HomeScreen {...props} week={{ sets: 0, volume: 0, days: 0 }} />);
-    expect(screen.getByText('Nothing logged this week yet.')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Nothing logged this week yet — pick a day and start it off\./)
+    ).toBeInTheDocument();
+  });
+
+  it('greets you and names the day that has rested longest', () => {
+    render(<HomeScreen {...props} />);
+    // Push was 3 days ago, Pull yesterday, Legs never — so Legs is the pick.
+    expect(screen.getByText(/^Good (morning|afternoon|evening)\.$/)).toBeInTheDocument();
+    const legs = screen.getByRole('button', { name: /^Legs/ });
+    expect(legs.textContent).toContain('rested longest');
+    // And only that one is marked.
+    expect(screen.getByRole('button', { name: /^Push/ }).textContent).not.toContain('rested longest');
   });
 });

@@ -28,18 +28,18 @@ export const ExerciseRow: React.FC<ExerciseRowProps> = ({
     >
       <span className="w-6 shrink-0">
         {isComplete ? (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-done">
-            <Check size={11} strokeWidth={3} className="text-black" />
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sage">
+            <Check size={11} strokeWidth={3} className="text-ink-950" />
           </span>
         ) : (
-          <span className="nums text-[14px] text-zinc-400">{String(position).padStart(2, '0')}</span>
+          <span className="nums text-[14px] text-cream-400">{String(position).padStart(2, '0')}</span>
         )}
       </span>
-      <span className={`flex-1 truncate text-[15px] ${isComplete ? 'text-zinc-400 line-through' : 'text-white'}`}>
+      <span className={`flex-1 truncate text-[16px] ${isComplete ? 'text-cream-400 line-through' : 'display'}`}>
         {exercise.name}
       </span>
       {slot && (
-        <span className="nums shrink-0 text-[14px] text-zinc-400">
+        <span className="nums shrink-0 text-[14px] text-cream-400">
           {slot.sets} × {formatReps(slot).replace(' reps', '')}
         </span>
       )}

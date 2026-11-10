@@ -11,11 +11,11 @@
   }
 
   html {
-    background-color: #000;
+    background-color: #0d0c0b;
   }
 
   body {
-    @apply bg-ink-950 text-white antialiased;
+    @apply bg-ink-950 text-cream-200 antialiased;
     min-height: 100dvh;
   }
 
@@ -23,7 +23,7 @@
      the number beside it. */
   .nums {
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   /* The number fields are typed into as often as they are tapped, so the
@@ -45,51 +45,55 @@
     font-size: max(16px, 1em);
   }
 
-  /* Dark fields get the dark keyboard and a white caret rather than a white
-     autofill block. */
   :root {
     color-scheme: dark;
   }
 }
 
 @layer components {
-  /* A panel is the black page lifted by one step, outlined by a hairline.
-     No blur, no shadow, no gradient: on an OLED screen in a dim gym those
-     read as haze, and they were most of the glare. */
-  .panel {
-    @apply rounded-2xl border border-ink-700 bg-ink-900;
+  /* Names, days, and the weight on the bar. The serif is what stops this
+     looking like a dashboard someone configured for you. */
+  .display {
+    @apply font-display text-cream-50;
+    letter-spacing: -0.005em;
   }
 
-  /* The one control you came to press. White on black is the brightest thing
-     the screen can draw, so nothing else needs to compete. */
+  /* A panel is the page lifted by one step, outlined by a hairline. No
+     gradient, no blur, no shadow: those read as glare in a dim room. */
+  .panel {
+    @apply rounded-[20px] border border-ink-700 bg-ink-900;
+  }
+
+  /* The one control you came to press. Warm white rather than pure white —
+     at 6am the difference is the whole point. */
   .btn-primary {
-    @apply rounded-xl bg-white font-semibold text-black
-           active:bg-zinc-300 disabled:bg-ink-800 disabled:text-zinc-400
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
-           focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-colors;
+    @apply rounded-2xl bg-cream-50 font-semibold text-ink-950
+           active:bg-cream-200 disabled:bg-ink-800 disabled:text-cream-400
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream-50
+           focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 transition-colors;
   }
 
   /* Its quieter twin, for an action that is no longer the point — reading
      back sets you have already finished, say. */
   .btn-secondary {
-    @apply rounded-xl border border-ink-700 bg-ink-800 font-semibold text-white
+    @apply rounded-2xl border border-ink-700 bg-ink-800 font-semibold text-cream-200
            active:bg-ink-700
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white;
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream-50;
   }
 
   /* Icon buttons and text links. Sized to the 44px Apple asks for, and never
-     dimmer than zinc-400, which is where grey on black stops being readable
-     at arm's length. */
+     dimmer than cream-400, which is where grey on this background stops being
+     readable at arm's length. */
   .btn-quiet {
-    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl
-           border border-transparent text-zinc-400
-           active:border-ink-700 active:bg-ink-800 active:text-white
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
+    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl
+           border border-transparent text-cream-400
+           active:border-ink-700 active:bg-ink-800 active:text-cream-50
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream-50
            transition-colors;
   }
 
   /* A recessed field for numbers you type into. */
   .well {
-    @apply rounded-xl border border-ink-700 bg-ink-800;
+    @apply rounded-2xl border border-ink-700 bg-ink-800;
   }
 }

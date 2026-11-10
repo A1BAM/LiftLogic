@@ -376,7 +376,7 @@ const App: React.FC = () => {
   // 2. LOADING STATE
   if (isLoading && !workoutDay && logs.length === 0) {
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-zinc-400">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-cream-400">
         <Loader2 className="animate-spin" size={20} />
         <p className="text-[14px]">Syncing…</p>
       </div>
@@ -387,9 +387,9 @@ const App: React.FC = () => {
   if (error && logs.length === 0) {
     return (
       <div className="mx-auto flex min-h-[100dvh] max-w-sm flex-col justify-center px-7">
-        <AlertCircle className="mb-4 text-zinc-400" size={20} />
-        <p className="text-[17px] font-medium text-white">Could not reach your workouts</p>
-        <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">{error}</p>
+        <AlertCircle className="mb-4 text-cream-400" size={20} />
+        <p className="text-[17px] font-medium text-cream-50">Could not reach your workouts</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-cream-400">{error}</p>
         <button onClick={fetchDataAndSync} className="btn-primary mt-6 w-full py-3.5 text-[15px]">
           Try again
         </button>
@@ -440,7 +440,7 @@ const App: React.FC = () => {
   ).length;
 
   return (
-    <div className="min-h-[100dvh] selection:bg-ink-700 selection:text-white">
+    <div className="min-h-[100dvh] selection:bg-ink-700 selection:text-cream-50">
       <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-950">
         <div className="mx-auto flex max-w-md items-center gap-1 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)]">
           <button
@@ -450,11 +450,11 @@ const App: React.FC = () => {
           >
             <ChevronLeft size={22} />
           </button>
-          <h1 className="flex-1 text-[17px] font-semibold capitalize tracking-[-0.01em] text-white">
+          <h1 className="display flex-1 text-[20px] capitalize">
             {workoutDay.toLowerCase()}
           </h1>
           {hasPlan && (
-            <span className="nums mr-1 text-[14px] font-medium text-zinc-400">
+            <span className="nums mr-1 text-[14px] font-medium text-cream-400">
               {doneCount}/{plannedExercises.length}
             </span>
           )}
@@ -471,7 +471,7 @@ const App: React.FC = () => {
         {hasPlan && (
           <div className="mx-auto h-0.5 max-w-md bg-ink-700">
             <div
-              className="h-0.5 bg-done transition-[width] duration-500"
+              className="h-0.5 bg-ember transition-[width] duration-500"
               style={{ width: `${(doneCount / plannedExercises.length) * 100}%` }}
             />
           </div>
@@ -510,7 +510,7 @@ const App: React.FC = () => {
         {hasPlan && (
           <div className="mt-8">
             {currentIndex !== null && (
-              <p className="mb-2 px-1 text-[13px] uppercase tracking-wider text-zinc-400">Up next</p>
+              <p className="mb-2 px-1 text-[13px] uppercase tracking-[0.14em] text-cream-400">Up next</p>
             )}
             <div className="panel px-4">
             {plannedExercises.map(({ exercise, slot, position }, i) => {
@@ -529,7 +529,7 @@ const App: React.FC = () => {
             })}
             </div>
             {currentIndex === null && (
-              <p className="pt-6 text-center text-[16px] font-medium text-done">
+              <p className="display pt-7 text-center text-[19px] text-sage">
                 That is the whole day. Well done.
               </p>
             )}

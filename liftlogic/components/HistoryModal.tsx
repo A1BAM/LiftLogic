@@ -28,7 +28,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {/* Logs List */}
           {logs.length === 0 ? (
-            <p className="py-5 text-[14px] text-zinc-400">Nothing logged for this one yet.</p>
+            <p className="py-5 text-[14px] text-cream-400">Nothing logged for this one yet.</p>
           ) : (
             <ul>
               {logs.map(log => {
@@ -43,16 +43,16 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 return (
                   <li key={log.id} className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0">
                     <div className="min-w-0 flex-1">
-                      <p className="nums text-[15px] text-white">
+                      <p className="nums text-[15px] text-cream-50">
                         {log.weight}
-                        <span className="text-zinc-400"> lbs × </span>
+                        <span className="text-cream-400"> lbs × </span>
                         {log.reps}
-                        <span className="text-zinc-400"> reps</span>
+                        <span className="text-cream-400"> reps</span>
                         {(log.sets || 1) > 1 && (
-                          <span className="text-zinc-400"> · {log.sets} sets</span>
+                          <span className="text-cream-400"> · {log.sets} sets</span>
                         )}
                       </p>
-                      <p className="text-[13px] text-zinc-400">{dateStr}</p>
+                      <p className="text-[13px] text-cream-400">{dateStr}</p>
                     </div>
                     <button
                       type="button"
@@ -69,7 +69,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                         navigator.vibrate?.(10);
                         if (window.confirm('Delete this log?')) onDelete(log.id);
                       }}
-                      className="btn-quiet shrink-0 p-2 active:text-red-400"
+                      className="btn-quiet shrink-0 p-2 active:text-red-300"
                       aria-label="Delete set"
                     >
                       <Trash2 size={16} />

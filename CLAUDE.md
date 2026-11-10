@@ -63,28 +63,40 @@ CI runs the same thing. Dependencies are pnpm; CI installs with
 
 ## Look and feel
 
-White on black, and almost nothing else. The page is true black (`ink-950`),
-which an OLED phone simply turns off; a panel is one step up (`ink-900`) with
-an `ink-700` hairline around it. No gradients, no glass, no blur, no shadows —
-those were tried and they read as glare in a dim gym.
+Warm dark, not neutral dark. The page is `ink-950`, a near-black with a little
+brown in it — still dark enough for an OLED phone at 6am, but it reads as a room
+with a lamp on rather than an instrument panel. A panel is one step up
+(`ink-900`) with an `ink-700` hairline. No gradients, no glass, no blur, no
+shadows — those were tried twice and they read as glare in a dim gym.
+
+Text is `cream`, not white: `cream-50` for headlines and numbers, `cream-200`
+for body, `cream-400` for anything secondary. `cream-600` is for rules and
+disabled glyphs only, never for text.
+
+Two faces. `font-sans` is the UI voice; `.display` (a system serif — Iowan,
+Palatino, Georgia) carries the personal things: the greeting, day and lift
+names, and the weight on the bar. Every face ships with the OS, so there is
+nothing to download and nothing to reflow when it arrives.
 
 - `.panel` holds content. `.well` is a field you type into.
-- `.btn-primary` is white on black: the brightest thing the screen can draw,
+- `.btn-primary` is `cream-50` on dark: the brightest thing the screen draws,
   so only one per screen. `.btn-secondary` is its outlined twin for an action
   that is no longer the point. `.btn-quiet` is everything else.
-- `done` (a soft green) is the only colour, and only for what is finished:
-  the sets-done dots, a completed row's tick, the day's progress line.
+- Two colours, each with one job. `ember` is what is happening now — the day
+  the screen suggests, the progress line, the pip for the set you are on.
+  `sage` is what is finished — a completed pip, a row's tick, the closing line.
 - Micro-labels are uppercase and tracked at 13px; body copy is 14–16px.
   Numbers use `.nums` so columns line up.
 
 ## Readability
 
 This is the thing that has been got wrong twice, in both directions — once too
-dim, once too bright. The rule now: **nothing dimmer than `zinc-400`.**
+dim, once too bright. The rule now: **nothing dimmer than `cream-400`.**
 
-`zinc-500` measures 3.93:1 on a panel and 4.35:1 on black, both under the 4.5:1
-target; `zinc-400` is around 8:1 and still reads as clearly secondary. Primary
-text is plain `white`. Never put an alpha on text.
+`cream-400` (`#b9afa1`) measures around 8:1 on a panel and still reads as
+clearly secondary; the step below it fails the 4.5:1 target on both the page
+and a panel, which is why it is barred from text. Primary text is `cream-50`.
+Never put an alpha on text.
 
 Verify it rather than trusting it: render the screens and walk every text node,
 comparing its computed colour against what is actually painted behind it. The

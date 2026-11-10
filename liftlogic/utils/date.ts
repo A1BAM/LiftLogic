@@ -30,3 +30,15 @@ export function daysAgoLabel(timestamp: number, now = Date.now()): string {
   if (days < 14) return 'last week';
   return `${Math.floor(days / 7)} weeks ago`;
 }
+
+/**
+ * Morning, afternoon or evening, by the clock on the phone. The app says it
+ * once on the home screen, which is the difference between being greeted and
+ * being presented with a menu.
+ */
+export function partOfDay(now = Date.now()): 'morning' | 'afternoon' | 'evening' {
+  const hour = new Date(now).getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  return 'evening';
+}

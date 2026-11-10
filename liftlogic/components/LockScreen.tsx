@@ -17,16 +17,16 @@ export const LockScreen: React.FC<LockScreenProps> = ({ password, onPasswordChan
   return (
     <div className="flex min-h-[100dvh] flex-col justify-center px-6">
       <div className="mx-auto w-full max-w-sm">
-        <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-white">LiftLogic</h1>
-        <p className="mt-1 text-[14px] text-zinc-400">Locked</p>
+        <h1 className="display text-[26px]">LiftLogic</h1>
+        <p className="mt-1.5 text-[14px] text-cream-400">Locked for now.</p>
 
         <form onSubmit={onSubmit} className="mt-7">
-          <div className="well relative flex items-center px-4 focus-within:border-zinc-500">
+          <div className="well relative flex items-center px-4 focus-within:border-cream-600">
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={e => onPasswordChange(e.target.value)}
-              className="w-full bg-transparent py-3.5 pr-10 text-[16px] text-white placeholder-zinc-500 focus:outline-none"
+              className="w-full bg-transparent py-3.5 pr-10 text-[16px] text-cream-50 placeholder-cream-600 focus:outline-none"
               placeholder="Enter password to unlock"
               autoFocus
               required
