@@ -1,7 +1,8 @@
 import React from 'react';
 import { WorkoutLog, ExerciseDef } from '../types';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 import { Modal } from './Modal';
+import { DeleteButton } from './DeleteButton';
 
 interface HistoryModalProps {
   exercise: ExerciseDef;
@@ -62,18 +63,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                     >
                       <Edit2 size={16} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        navigator.vibrate?.(10);
-                        if (window.confirm('Delete this log?')) onDelete(log.id);
-                      }}
-                      className="btn-quiet shrink-0 p-2 active:text-red-300"
-                      aria-label="Delete set"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <DeleteButton what="set" onConfirm={() => onDelete(log.id)} />
                   </li>
                 );
               })}

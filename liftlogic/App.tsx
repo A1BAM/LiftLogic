@@ -6,6 +6,8 @@ import { ExerciseRow } from './components/ExerciseRow';
 import { planExercisesForDay, isSlotComplete, switchOptionsFor, slotFor, WORKOUT_PLAN } from './workoutPlan';
 import { groupSessions, recommendFor } from './progression';
 import { LogModal } from './components/LogModal';
+import { EditSetModal } from './components/EditSetModal';
+import { confirmDialog, notify, DialogHost } from './components/dialogs';
 import { HistoryModal } from './components/HistoryModal';
 import { GlobalHistoryModal } from './components/GlobalHistoryModal';
 import { AddExerciseModal } from './components/AddExerciseModal';
@@ -21,7 +23,7 @@ import { authService } from './services/authService';
 import { logger } from './utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from './utils/date';
 
-const App: React.FC = () => {
+const AppScreens: React.FC = () => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -31,10 +33,12 @@ const App: React.FC = () => {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
+  const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
 
   // The back gesture walks out the way you walked in: sheet, then workout.
   useBackToClose(workoutDay !== null, () => setWorkoutDay(null));
   useBackToClose(activeModal !== null, () => setActiveModal(null));
+  useBackToClose(editingLog !== null, () => setEditingLog(null));
 
   // Stable identities: the timer keeps these in its effect dependencies, so
   // fresh arrows would tear down and restart the countdown on every render.
@@ -94,15 +98,15 @@ const App: React.FC = () => {
         const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
         const message = err instanceof Error ? err.message : undefined;
         if (status === 401 || message === '401' || String(err).includes('401')) {
-          alert("Wrong Password");
+          notify("Wrong password");
         } else {
-          alert("Connection Error. Please check your network or server status.");
+          notify("Could not connect", "Check your network and try again.");
         }
         setPasswordInput("");
       }
     } catch (err) {
       logger.error("Crypto error:", err);
-      alert("Secure context required for login.");
+      notify("Cannot log in here", "This page needs a secure (https) connection.");
     }
   };
 
@@ -140,7 +144,7 @@ const App: React.FC = () => {
       )?.slot?.restSeconds ?? 90;
       setRestEndTime(Date.now() + restSeconds * 1000);
     } catch (err) {
-      alert("Failed to save to cloud.");
+      notify("Not saved", "That set did not reach the cloud. Check your connection and log it again.");
     }
   }, [selectedExercise, addLog]);
 
@@ -148,48 +152,28 @@ const App: React.FC = () => {
     try {
       await removeLog(logId);
     } catch (err) {
-      alert("Failed to delete from cloud.");
+      notify("Not deleted", "The cloud did not accept the delete, so the set is still there.");
     }
   }, [removeLog]);
   
   const handleEditLog = useCallback(async (log: WorkoutLog) => {
-    setActiveModal(null);
+    setEditingLog(null);
     try {
       await updateLog(log);
     } catch (err) {
       // The hook has already re-synced, so the list shows what was really
       // saved; this says why the edit is not in it.
-      alert("Failed to save the edit to cloud.");
+      notify("Edit not saved", "The cloud did not accept the change, so the set is as it was.");
     }
   }, [updateLog]);
-
-  const handleEditInit = useCallback((log: WorkoutLog) => {
-    const newWeight = prompt("Enter new weight:", log.weight.toString());
-    if (newWeight === null) return;
-    const newReps = prompt("Enter new reps:", log.reps.toString());
-    if (newReps === null) return;
-
-    // prompt() hands back whatever was typed. Number("abc") is NaN and
-    // Number("") is 0, and either would have been written over a real set.
-    const weight = Number(newWeight);
-    const reps = Number(newReps);
-    const valid =
-      newWeight.trim() !== '' && Number.isFinite(weight) && weight >= 0 && weight <= 2000 &&
-      newReps.trim() !== '' && Number.isInteger(reps) && reps >= 1 && reps <= 1000;
-    if (!valid) {
-      alert("That is not a valid weight and whole number of reps. Nothing was changed.");
-      return;
-    }
-    handleEditLog({ ...log, weight, reps });
-  }, [handleEditLog]);
 
   const handleImportLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     try {
       await importLogs(importedLogs);
-      alert("Import successful!");
+      notify("Import successful");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      alert(message);
+      notify("Import failed", message);
     }
   }, [importLogs]);
 
@@ -198,7 +182,7 @@ const App: React.FC = () => {
     try {
       await saveExercise(newExercise);
     } catch (e) {
-      alert("Saved locally, but failed to sync to cloud. It will sync next time you open the app.");
+      notify("Saved on this phone", "It could not reach the cloud just now and will sync next time you open the app.");
     }
   }, [saveExercise]);
 
@@ -209,9 +193,12 @@ const App: React.FC = () => {
    * of them.
    */
   const handleArchiveClick = useCallback(async (exercise: ExerciseDef) => {
-    if (!window.confirm(`Archive ${exercise.name}? It will be hidden from your daily list.`)) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: `Archive ${exercise.name}?`,
+      message: 'It will be hidden from your daily list. You can bring it back from Exercises.',
+      confirmLabel: 'Archive'
+    });
+    if (!confirmed) return;
     navigator.vibrate?.(10);
     const updatedExercise = { ...exercise, isArchived: true };
     // Archiving an option leaves the picker open so another can be chosen, but
@@ -263,14 +250,26 @@ const App: React.FC = () => {
   }, [saveExercise]);
 
   const handleDeleteExercisePermanently = useCallback(async (exerciseId: string) => {
-    if (window.confirm("WARNING: This will delete ALL HISTORY for this exercise.")) {
-      if (window.confirm("FINAL WARNING: This action cannot be undone. Are you absolutely sure?")) {
-         try {
-             await deleteExercisePermanently(exerciseId);
-         } catch (err) {
-             logger.error("Failed to delete exercise logs from cloud", err);
-         }
-      }
+    // Two questions on purpose: this is the one action in the app that
+    // cannot be undone, and it takes every logged set with it.
+    const first = await confirmDialog({
+      title: 'Delete this exercise?',
+      message: 'This deletes ALL of its history.',
+      confirmLabel: 'Delete',
+      destructive: true
+    });
+    if (!first) return;
+    const second = await confirmDialog({
+      title: 'This cannot be undone',
+      message: 'Every set ever logged for it will be gone for good.',
+      confirmLabel: 'Delete everything',
+      destructive: true
+    });
+    if (!second) return;
+    try {
+      await deleteExercisePermanently(exerciseId);
+    } catch (err) {
+      logger.error("Failed to delete exercise logs from cloud", err);
     }
   }, [deleteExercisePermanently]);
 
@@ -585,7 +584,7 @@ const App: React.FC = () => {
           logs={getLogsForExercise(selectedExercise.id)}
           onClose={() => setActiveModal(null)}
           onDelete={handleDeleteLog}
-          onEdit={handleEditInit}
+          onEdit={setEditingLog}
         />
       )}
 
@@ -599,6 +598,10 @@ const App: React.FC = () => {
         />
       )}
 
+
+      {editingLog && (
+        <EditSetModal log={editingLog} onClose={() => setEditingLog(null)} onSave={handleEditLog} />
+      )}
 
       {activeModal === 'addExercise' && workoutDay && (
         <AddExerciseModal 
@@ -631,5 +634,13 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+/** The screens, plus the one place in-app dialogs are drawn from. */
+const App: React.FC = () => (
+  <>
+    <AppScreens />
+    <DialogHost />
+  </>
+);
 
 export default App;

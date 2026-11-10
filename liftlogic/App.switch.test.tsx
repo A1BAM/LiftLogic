@@ -113,12 +113,13 @@ describe('switching from a workout day', () => {
   });
 
   it('archives an option from the picker and drops it from the list', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await unlockAndOpenPush();
     fireEvent.click(screen.getByLabelText('Switch Exercise'));
     await screen.findByRole('dialog', {}, { timeout: 5000 });
 
     fireEvent.click(screen.getByLabelText('Archive Smith Bench'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
 
     // Parking the option it offers is not a reason to throw the picker away,
     // but the archived lift itself is gone from it.
@@ -127,12 +128,13 @@ describe('switching from a workout day', () => {
   });
 
   it('closes the picker when the lift it is about gets archived', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await unlockAndOpenPush();
     fireEvent.click(screen.getByLabelText('Switch Exercise'));
     await screen.findByRole('dialog', {}, { timeout: 5000 });
 
     fireEvent.click(screen.getByLabelText('Archive Incline Chest Dumbbells'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });

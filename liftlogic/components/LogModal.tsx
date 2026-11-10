@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ExerciseDef, WorkoutLog } from '../types';
-import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { Modal } from './Modal';
+import { DeleteButton } from './DeleteButton';
 
 interface LogModalProps {
   exercise: ExerciseDef;
@@ -19,7 +20,7 @@ interface LogModalProps {
 }
 
 /** A number you can either type into or nudge with a thumb. */
-const Stepper: React.FC<{
+export const Stepper: React.FC<{
   id: string;
   /** Shown above the field, so it can carry the unit. */
   label: string;
@@ -50,6 +51,9 @@ const Stepper: React.FC<{
         type="number"
         inputMode={inputMode}
         min={min}
+        // Without this a number field only accepts whole numbers, and the
+        // browser quietly refuses to submit 27.5.
+        step="any"
         aria-label={label}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -141,23 +145,14 @@ export const LogModal: React.FC<LogModalProps> = ({
                   {log.reps}
                   <span className="font-normal text-cream-400"> reps</span>
                 </span>
-                <button
-                  onClick={() => {
-                    navigator.vibrate?.(10);
-                    if (window.confirm('Delete this set?')) onDelete(log.id);
-                  }}
-                  className="btn-quiet p-2"
-                  aria-label={`Delete set ${index + 1}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <DeleteButton what={`set ${index + 1}`} onConfirm={() => onDelete(log.id)} />
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <form onSubmit={handleAddSet} className="border-t border-ink-700 px-5 pt-5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
+      <form onSubmit={handleAddSet} noValidate className="border-t border-ink-700 px-5 pt-5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
         <div className="grid grid-cols-2 gap-3">
           <Stepper
             id="weight-input"
