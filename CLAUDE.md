@@ -108,8 +108,9 @@ nothing to download and nothing to reflow when it arrives.
   return without ever being drawn, which is how "delete does nothing"
   happened. Use `confirmDialog` / `notify` from `components/dialogs.tsx`, or
   `DeleteButton` for a row.
-- A number field that takes a weight needs `step="any"`, or the browser
-  refuses 27.5.
+- Never `<input type="number">`. Safari validates it itself and put up
+  "Enter a valid value" over 27.5 even with `step="any"`. Use `type="text"`
+  with `inputMode` and the cleaners in `utils/number.ts`.
 
 ## Readability
 

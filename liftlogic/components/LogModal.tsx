@@ -3,6 +3,7 @@ import { ExerciseDef, WorkoutLog } from '../types';
 import { Plus, Minus } from 'lucide-react';
 import { Modal } from './Modal';
 import { DeleteButton } from './DeleteButton';
+import { cleanDecimal, cleanInteger } from '../utils/number';
 
 interface LogModalProps {
   exercise: ExerciseDef;
@@ -30,9 +31,8 @@ export const Stepper: React.FC<{
   onChange: (next: string) => void;
   onStep: (delta: number) => void;
   step: number;
-  min: number;
   inputMode: 'decimal' | 'numeric';
-}> = ({ id, label, name, value, onChange, onStep, step, min, inputMode }) => (
+}> = ({ id, label, name, value, onChange, onStep, step, inputMode }) => (
   <div>
     <label htmlFor={id} className="mb-2 block text-[13px] uppercase tracking-[0.14em] text-cream-400">{label}</label>
     <div className="well flex items-center gap-1 p-1.5">
@@ -48,15 +48,19 @@ export const Stepper: React.FC<{
       </button>
       <input
         id={id}
-        type="number"
+        // Deliberately not type="number": Safari validates that itself and
+        // refused 27.5 with its own "Enter a valid value" bubble. A text
+        // field with a numeric keypad takes exactly what utils/number allows.
+        type="text"
         inputMode={inputMode}
-        min={min}
-        // Without this a number field only accepts whole numbers, and the
-        // browser quietly refuses to submit 27.5.
-        step="any"
+        autoComplete="off"
+        autoCorrect="off"
+        enterKeyHint="done"
         aria-label={label}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e =>
+          onChange(inputMode === 'decimal' ? cleanDecimal(e.target.value) : cleanInteger(e.target.value))
+        }
         // Typing is the fast path for a big jump; selecting on focus means the
         // first keystroke replaces the number instead of appending to it.
         onFocus={e => e.target.select()}
@@ -162,7 +166,6 @@ export const LogModal: React.FC<LogModalProps> = ({
             onChange={setWeightInput}
             onStep={adjustWeight}
             step={5}
-            min={0}
             inputMode="decimal"
           />
           <Stepper
@@ -173,7 +176,6 @@ export const LogModal: React.FC<LogModalProps> = ({
             onChange={setRepsInput}
             onStep={adjustReps}
             step={1}
-            min={1}
             inputMode="numeric"
           />
         </div>
