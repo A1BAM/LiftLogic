@@ -10,7 +10,7 @@ describe('App', () => {
   it('renders the locked screen initially', () => {
     render(<App />);
     expect(screen.getByText('LiftLogic')).toBeTruthy();
-    expect(screen.getByText('Locked')).toBeTruthy();
+    expect(screen.getByText('Locked for now.')).toBeTruthy();
   });
 
   it('toggles password visibility when the show/hide password button is clicked', () => {

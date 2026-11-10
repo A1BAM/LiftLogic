@@ -194,26 +194,26 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
     <section className="panel mt-5 px-5 py-5">
       <header className="flex items-baseline gap-3">
         {position !== undefined && (
-          <span className="nums pt-1 text-[14px] text-zinc-400">
+          <span className="nums pt-1 text-[14px] text-cream-400">
             {String(position).padStart(2, '0')}
           </span>
         )}
         <div className="min-w-0 flex-1">
           <h2
-            className={`text-[23px] leading-[1.18] font-semibold tracking-[-0.02em] ${
-              isCompletedToday ? 'text-zinc-400' : 'text-white'
+            className={`display text-[25px] leading-[1.16] ${
+              isCompletedToday ? 'opacity-55' : ''
             }`}
           >
             {exercise.name}
           </h2>
-          <p className="mt-1.5 text-[14px] text-zinc-400">
+          <p className="mt-1.5 text-[14px] text-cream-400">
             {slot
               ? `${slot.sets} × ${formatReps(slot)} · ${formatRest(slot)}`
               : exercise.muscleGroup}
           </p>
         </div>
         {isCompletedToday && (
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-done/40 px-2.5 py-1 text-[12px] font-semibold text-done">
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-sage/40 px-2.5 py-1 text-[12px] font-semibold text-sage">
             <Check size={12} strokeWidth={3} /> Done
           </span>
         )}
@@ -223,15 +223,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           gym, so it is the only thing set at this size. */}
       <div className="mt-6 flex items-end justify-between gap-4">
         <div>
-          <p className="text-[13px] uppercase tracking-wider text-zinc-400">{barLabel}</p>
-          <p className="nums mt-1 text-white">
-            <span className="text-[46px] font-semibold leading-none tracking-[-0.03em] text-white">
+          <p className="text-[13px] uppercase tracking-[0.14em] text-cream-400">{barLabel}</p>
+          <p className="nums mt-1 text-cream-50">
+            <span className="display nums text-[48px] leading-none">
               {onTheBar}
             </span>
-            <span className="ml-1.5 text-base text-zinc-400">lbs</span>
-            <span className="mx-2.5 text-zinc-400">×</span>
-            <span className="text-[26px] leading-none font-medium">{recommendation.reps}</span>
-            <span className="ml-1.5 text-base text-zinc-400">reps</span>
+            <span className="ml-1.5 text-base text-cream-400">lbs</span>
+            <span className="mx-2.5 text-cream-400">×</span>
+            <span className="display nums text-[28px] leading-none">{recommendation.reps}</span>
+            <span className="ml-1.5 text-base text-cream-400">reps</span>
           </p>
         </div>
 
@@ -244,7 +244,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             <span
               key={i}
               className={`h-3 w-3 rounded-full border ${
-                done ? 'border-done bg-done' : 'border-ink-600'
+                done
+                  ? isCompletedToday
+                    ? 'border-sage bg-sage'
+                    : 'border-ember bg-ember'
+                  : 'border-ink-600'
               }`}
             />
           ))}
@@ -254,15 +258,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
       {/* The advice is for deciding what to load. Once a set is in, that
           decision is made, so it gives the space back. */}
       {!todaySession && (
-        <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
+        <p className="mt-3 text-[14px] leading-relaxed text-cream-400">
           {recommendation.reason}
         </p>
       )}
 
       {lastTime && (
-        <p className="nums mt-3 text-[14px] text-zinc-400">
-          <span className="text-zinc-400">Last time</span> {lastTime.text}
-          <span className="text-zinc-400"> · {lastTime.when}</span>
+        <p className="nums mt-3 text-[14px] text-cream-400">
+          <span className="text-cream-400">Last time</span> {lastTime.text}
+          <span className="text-cream-400"> · {lastTime.when}</span>
         </p>
       )}
 
@@ -270,7 +274,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
           logged: it is guidance for right now, not history. */}
       {showWarmup && !isCompletedToday && (
         <div className="mt-5 border-t border-ink-700 pt-4">
-          <p className="mb-2 text-[13px] uppercase tracking-wider text-zinc-400">Warm up first</p>
+          <p className="mb-2 text-[13px] uppercase tracking-[0.14em] text-cream-400">Warm up first</p>
           {[
             { key: 'cardio', text: WARMUP.cardioLabel },
             { key: 'set', text: `One set at ${warmupWeight(recommendation.weight)} lbs — not logged` }
@@ -283,12 +287,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = React.memo(({
             >
               <span
                 className={`shrink-0 w-[18px] h-[18px] rounded-md border flex items-center justify-center ${
-                  warmupDone[item.key] ? 'border-done bg-done' : 'border-ink-600'
+                  warmupDone[item.key] ? 'border-sage bg-sage' : 'border-ink-600'
                 }`}
               >
-                {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-black" />}
+                {warmupDone[item.key] && <Check size={12} strokeWidth={3} className="text-ink-950" />}
               </span>
-              <span className={`text-[14px] ${warmupDone[item.key] ? 'text-zinc-400 line-through' : 'text-zinc-400'}`}>
+              <span className={`text-[14px] ${warmupDone[item.key] ? 'text-cream-400 line-through' : 'text-cream-400'}`}>
                 {item.text}
               </span>
             </button>

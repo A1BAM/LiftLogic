@@ -33,16 +33,16 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
     >
         {/* List */}
         <div className="flex-1 overflow-y-auto px-5">
-          <p className="pb-1 text-[13px] text-zinc-400">Archived</p>
+          <p className="pb-1 text-[13px] text-cream-400">Archived</p>
           {exercises.length === 0 ? (
-            <p className="py-4 text-[14px] text-zinc-400">Nothing archived.</p>
+            <p className="py-4 text-[14px] text-cream-400">Nothing archived.</p>
           ) : (
             <ul>
               {exercises.map(ex => (
                 <li key={ex.id} className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] text-zinc-400">{ex.name}</p>
-                    <p className="text-[13px] text-zinc-400">
+                    <p className="truncate text-[15px] text-cream-400">{ex.name}</p>
+                    <p className="text-[13px] text-cream-400">
                       {ex.muscleGroup} · {ex.dayType.toLowerCase()}
                     </p>
                   </div>
@@ -56,7 +56,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
                   </button>
                   <button
                     onClick={() => onDelete(ex.id)}
-                    className="btn-quiet shrink-0 p-2 active:text-red-400"
+                    className="btn-quiet shrink-0 p-2 active:text-red-300"
                     title="Delete Permanently"
                     aria-label="Delete Exercise Permanently"
                   >
@@ -69,16 +69,16 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
 
           {onArchive && (
             <>
-              <p className="pb-1 pt-6 text-[13px] text-zinc-400">In use</p>
+              <p className="pb-1 pt-6 text-[13px] text-cream-400">In use</p>
               {(activeExercises ?? []).length === 0 ? (
-                <p className="py-4 text-[14px] text-zinc-400">Nothing in use.</p>
+                <p className="py-4 text-[14px] text-cream-400">Nothing in use.</p>
               ) : (
                 <ul>
                   {(activeExercises ?? []).map(ex => (
                     <li key={ex.id} className="flex items-center gap-3 border-b border-ink-700 py-3 last:border-b-0">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] text-white">{ex.name}</p>
-                        <p className="text-[13px] text-zinc-400">
+                        <p className="truncate text-[15px] text-cream-50">{ex.name}</p>
+                        <p className="text-[13px] text-cream-400">
                           {ex.muscleGroup} · {ex.dayType.toLowerCase()}
                         </p>
                       </div>
@@ -99,7 +99,7 @@ export const ArchivedExercisesModal: React.FC<ArchivedExercisesModalProps> = ({
         </div>
 
         <div className="px-5 pb-6 pt-4">
-          <p className="text-[13px] leading-relaxed text-zinc-400">
+          <p className="text-[13px] leading-relaxed text-cream-400">
             Archiving hides an exercise everywhere except this list. Restoring brings it back.
           </p>
         </div>

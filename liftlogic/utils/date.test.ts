@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysAgoLabel, getLocalDateKey, getLocalDayBounds } from './date';
+import { daysAgoLabel, getLocalDateKey, getLocalDayBounds, partOfDay } from './date';
 
 describe('local date utilities', () => {
   it('returns the boundaries of the local calendar day', () => {
@@ -34,5 +34,18 @@ describe('daysAgoLabel', () => {
 
   it('never reads as being in the future', () => {
     expect(daysAgoLabel(at(2026, 8, 21), now)).toBe('today');
+  });
+});
+
+describe('partOfDay', () => {
+  const at = (h: number) => new Date(2026, 8, 20, h).getTime();
+
+  it('splits the day where a person would', () => {
+    expect(partOfDay(at(5))).toBe('morning');
+    expect(partOfDay(at(11))).toBe('morning');
+    expect(partOfDay(at(12))).toBe('afternoon');
+    expect(partOfDay(at(17))).toBe('afternoon');
+    expect(partOfDay(at(18))).toBe('evening');
+    expect(partOfDay(at(23))).toBe('evening');
   });
 });
