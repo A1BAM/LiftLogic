@@ -11,8 +11,25 @@ import { useEffect, useRef } from 'react';
  */
 let depth = 0;
 
+/**
+ * Marks entries pushed by this page load. History outlives a reload — and iOS
+ * reloads the page whenever it has thrown the tab away — but the layers those
+ * old entries stood for are gone. Without this, an entry left over from before
+ * the reload reads as "still inside the workout" and swallows a back swipe.
+ */
+const LOAD_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+interface LayerState {
+  liftlogic?: unknown;
+  load?: unknown;
+}
+
+const isLayer = (state: unknown): state is LayerState =>
+  !!state && typeof state === 'object' && 'liftlogic' in (state as object);
+
+/** Depth of an entry from this load; anything else counts as the page itself. */
 const depthOf = (state: unknown): number =>
-  (state && typeof state === 'object' && Number((state as { liftlogic?: unknown }).liftlogic)) || 0;
+  isLayer(state) && state.load === LOAD_ID ? Number(state.liftlogic) || 0 : 0;
 
 export function useBackToClose(isOpen: boolean, onClose: () => void): void {
   // The latest handler without re-running the effect: a new entry must only
@@ -24,7 +41,14 @@ export function useBackToClose(isOpen: boolean, onClose: () => void): void {
     if (!isOpen) return;
 
     const mine = ++depth;
-    window.history.pushState({ liftlogic: mine }, '');
+    const entry = { liftlogic: mine, load: LOAD_ID };
+    // Sitting on a leftover entry from before a reload: take it over rather
+    // than stack a second one the user would have to swipe through.
+    if (isLayer(window.history.state) && depthOf(window.history.state) === 0) {
+      window.history.replaceState(entry, '');
+    } else {
+      window.history.pushState(entry, '');
+    }
     let closedByNavigation = false;
 
     const onPopState = (e: PopStateEvent) => {

@@ -104,6 +104,10 @@ nothing to download and nothing to reflow when it arrives.
 - Long lists render a page at a time. The journal builds 14 days, not the
   whole history.
 - `theme-color` in `index.html` must equal `ink-950`.
+- iOS throws the tab away when you switch apps and reloads it on return.
+  The app has to come back to the same place: the open workout and the rest
+  timer's end time live in `utils/resume.ts`. Anything else that would be
+  painful to lose on a reload belongs there too.
 - Never `confirm()`, `alert()` or `prompt()`. From the Home Screen they can
   return without ever being drawn, which is how "delete does nothing"
   happened. Use `confirmDialog` / `notify` from `components/dialogs.tsx`, or

@@ -22,6 +22,7 @@ import { useBackToClose } from './hooks/useBackToClose';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from './utils/date';
+import { loadResume, saveResume } from './utils/resume';
 
 const AppScreens: React.FC = () => {
   // Auth State
@@ -31,8 +32,14 @@ const AppScreens: React.FC = () => {
   // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
-  const [workoutDay, setWorkoutDay] = useState<DayType | null>(null);
-  const [restEndTime, setRestEndTime] = useState<number | null>(null);
+  // Read once, on the first render: where the last page load left off.
+  const [resumed] = useState(loadResume);
+  const [workoutDay, setWorkoutDay] = useState<DayType | null>(resumed.day);
+  const [restEndTime, setRestEndTime] = useState<number | null>(resumed.restEndTime);
+  // True until the session check answers, and only when the cookie was good
+  // last time. It keeps a reload from flashing the lock screen at someone who
+  // is, in a moment, going to turn out to be logged in.
+  const [isResuming, setIsResuming] = useState(resumed.signedIn);
   const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
 
   // The back gesture walks out the way you walked in: sheet, then workout.
@@ -53,6 +60,7 @@ const AppScreens: React.FC = () => {
     logs,
     syncedExercises,
     isLoading,
+    hasLoaded,
     error,
     fetchDataAndSync,
     addLog,
@@ -75,10 +83,20 @@ const AppScreens: React.FC = () => {
         if (await authService.checkSession()) setIsAuthenticated(true);
       } catch (err) {
         // Offline or server down; the lock screen is the safe default.
+      } finally {
+        setIsResuming(false);
       }
     };
     checkAuth();
   }, []);
+
+  // Keep the place up to date, so a reload at any moment comes back to it.
+  useEffect(() => {
+    // Not while the answer is still pending: writing "signed out" here would
+    // throw away the hint that is suppressing the lock screen.
+    if (isResuming) return;
+    saveResume({ day: workoutDay, restEndTime, signedIn: isAuthenticated });
+  }, [workoutDay, restEndTime, isAuthenticated, isResuming]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,6 +396,16 @@ const AppScreens: React.FC = () => {
   // --- RENDERING ---
 
   // 1. LOCK SCREEN
+  // 0. COMING BACK: the page was reloaded and the session check is in flight.
+  if (isResuming && !isAuthenticated) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-cream-400">
+        <Loader2 className="animate-spin" size={20} />
+        <p className="text-[14px]">Picking up where you left off…</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <LockScreen
@@ -389,7 +417,10 @@ const AppScreens: React.FC = () => {
   }
 
   // 2. LOADING STATE
-  if (isLoading && !workoutDay && logs.length === 0) {
+  // Also covers coming back into a workout after a reload: until the history
+  // is in, the card would otherwise be drawn from nothing and claim it was
+  // your first time on a lift you have done for a year.
+  if ((isLoading || !hasLoaded) && logs.length === 0 && syncedExercises.length === 0) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-cream-400">
         <Loader2 className="animate-spin" size={20} />
