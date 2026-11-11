@@ -58,6 +58,9 @@ const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<s
 
 export const useWorkoutData = (isAuthenticated: boolean) => {
   const [isLoading, setIsLoading] = useState(false);
+  // False until the first fetch has answered, one way or the other. Before
+  // that there is no history to show, only the absence of one.
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // The logs hook re-syncs from the cloud when a write fails, and the sync
@@ -116,6 +119,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       setError(err instanceof Error ? err.message : "Could not load workout history.");
     } finally {
       setIsLoading(false);
+      setHasLoaded(true);
     }
   }, [saveDefinitionsToCloud, setSyncedExercises, setLogs]);
 
@@ -132,6 +136,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     logs,
     syncedExercises,
     isLoading,
+    hasLoaded,
     error,
     fetchDataAndSync,
     addLog,
