@@ -32,7 +32,6 @@ Routing is configured in `wrangler.jsonc`: `run_worker_first` lists the
 | `POST /gym-api/login` · `POST /gym-api/logout` | Session auth |
 | `GET /gym-api` | Fetch all workout rows |
 | `POST /gym-api/bulk` | Upsert many rows in one call |
-| `GET` · `POST /gym-api/profile` | Height, weight, age |
 
 Exercise definitions are stored in the same `workouts` table as rows whose
 `exercise_id` is the sentinel `DEFINITION_ID`, with the definition JSON in
@@ -40,7 +39,7 @@ Exercise definitions are stored in the same `workouts` table as rows whose
 
 ## Database schema
 
-Two tables, as used by `worker.ts`:
+One table, as used by `worker.ts`:
 
 ```sql
 CREATE TABLE workouts (
@@ -52,13 +51,6 @@ CREATE TABLE workouts (
   sets        INTEGER NOT NULL,
   notes       TEXT
 );
-
-CREATE TABLE user_profile (
-  id         TEXT PRIMARY KEY,
-  height_cm  NUMERIC,
-  weight_lbs NUMERIC,
-  age        INTEGER
-);
 ```
 
 ## Worker configuration
@@ -68,7 +60,7 @@ Set as secrets in the Cloudflare dashboard, never in `wrangler.jsonc`:
 | Name | Purpose |
 |---|---|
 | `DATABASE_URL` | Neon connection string |
-| `TARGET_HASH` | Hash of the login password |
+| `TARGET_HASH` | SHA-256 of the login password, as hex. The server hashes what is typed and compares; the hash itself does not log anyone in |
 | `PASSWORD` | Login password |
 | `ALLOWED_ORIGIN` | Exact origin allowed by CORS |
 | `SESSION_SECRET` | Optional. Signs session cookies. Unset, the key is derived from the password hash |

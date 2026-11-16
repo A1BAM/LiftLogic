@@ -44,6 +44,9 @@ describe('deployed asset security', () => {
     expect(headers).toContain("frame-ancestors 'none'");
     expect(headers).toContain("script-src 'self'");
     expect(headers).not.toContain("'unsafe-inline'");
+    // Nothing off-origin may run or load: no CDN, no remote scheme at all.
+    expect(headers).not.toContain('cdn.tailwindcss.com');
+    expect(headers).not.toContain('https:');
     expect(headers).toContain('X-Frame-Options: DENY');
     expect(headers).toContain('Strict-Transport-Security:');
     expect(headers).toMatch(/\/assets\/\*\n\s+Cache-Control: public, max-age=31536000, immutable/);

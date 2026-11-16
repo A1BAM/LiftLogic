@@ -20,6 +20,12 @@ vi.mock('@neondatabase/serverless', () => {
 // this the way the browser does, as a cookie; the hash itself is never a
 // credential outside /login.
 const SESSION = await mintSession({}, 'testsecret');
+
+// Login is the one place a real password meets its real hash.
+const PASSWORD = 'correct horse battery staple';
+const PASSWORD_HASH = Array.from(
+  new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(PASSWORD)))
+).map(b => b.toString(16).padStart(2, '0')).join('');
 const cookieFor = (token: string) => `liftlogic_auth_token=${token}`;
 
 describe('Worker', () => {
@@ -57,10 +63,10 @@ describe('Worker', () => {
     });
 
     it('handles successful login', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { password: PASSWORD }, null as any);
       const env = {
         DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
+        TARGET_HASH: PASSWORD_HASH,
         LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
         ASSETS: { fetch: vi.fn() } as any
       };
@@ -70,7 +76,7 @@ describe('Worker', () => {
       const cookie = response.headers.get('Set-Cookie')!;
       expect(cookie).toMatch(/^liftlogic_auth_token=v1\.\d+\.[0-9a-f]{64};/);
       // The cookie must not carry the password hash any more.
-      expect(cookie).not.toContain('testsecret');
+      expect(cookie).not.toContain(PASSWORD_HASH);
       expect(cookie).toContain('HttpOnly');
       expect(cookie).toContain('Secure');
       expect(cookie).toContain('SameSite=Strict');
@@ -82,7 +88,7 @@ describe('Worker', () => {
     });
 
     it('handles failed login', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'wrong' }, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { password: 'wrong' }, null as any);
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
@@ -102,7 +108,7 @@ describe('Worker', () => {
           'Content-Type': 'application/json',
           'CF-Connecting-IP': '203.0.113.10'
         },
-        body: JSON.stringify({ hash: 'wrong' })
+        body: JSON.stringify({ password: 'wrong' })
       });
       const env = {
         DATABASE_URL: 'dummy',
@@ -123,7 +129,7 @@ describe('Worker', () => {
     });
 
     it('fails closed when the login rate-limit binding is missing', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { password: PASSWORD }, null as any);
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
@@ -133,7 +139,7 @@ describe('Worker', () => {
     });
 
     it('fails closed when login rate limiting is unavailable', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: 'testsecret' }, null as any);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { password: PASSWORD }, null as any);
       const env = {
         DATABASE_URL: 'dummy',
         TARGET_HASH: 'testsecret',
@@ -160,6 +166,38 @@ describe('Worker', () => {
     });
 
 
+
+    describe('what counts as a password', () => {
+      const env = () => ({
+        DATABASE_URL: 'dummy',
+        TARGET_HASH: PASSWORD_HASH,
+        LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
+        ASSETS: { fetch: vi.fn() } as any
+      });
+      const login = (body: unknown, e: any = env()) =>
+        worker.fetch(createRequest('POST', 'http://localhost/gym-api/login', body, null), e, {} as any);
+
+      it('does not let the stored hash stand in for the password', async () => {
+        // Knowing the stored hash must not be enough to get in.
+        expect((await login({ password: PASSWORD_HASH })).status).toBe(401);
+      });
+
+      it('no longer accepts a hash field at all', async () => {
+        const response = await login({ hash: PASSWORD_HASH });
+        expect(response.status).toBe(400);
+        expect(response.headers.get('Set-Cookie')).toBeNull();
+      });
+
+      it('accepts the password when TARGET_HASH was stored in upper case', async () => {
+        expect((await login({ password: PASSWORD }, { ...env(), TARGET_HASH: PASSWORD_HASH.toUpperCase() })).status).toBe(200);
+      });
+
+      it('works from PASSWORD alone when no hash is configured', async () => {
+        const { TARGET_HASH: _unused, ...rest } = env();
+        expect((await login({ password: PASSWORD }, { ...rest, PASSWORD })).status).toBe(200);
+        expect((await login({ password: 'not it' }, { ...rest, PASSWORD })).status).toBe(401);
+      });
+    });
 
     describe('session cookies', () => {
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
@@ -219,35 +257,15 @@ describe('Worker', () => {
 
   describe('CORS and Security Headers', () => {
 
-    it('does not allow the Tailwind CDN to execute in the application origin', async () => {
+    it('hands a non-API request straight to the asset store', async () => {
+      // The page's own headers come from public/_headers, not from here.
+      const page = new Response('<!doctype html>');
+      const assets = { fetch: vi.fn().mockResolvedValue(page) };
       const request = new Request('http://localhost/');
-      const env = {
-        DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
-        ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<!doctype html>')) } as any
-      };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: assets as any };
 
-      const response = await worker.fetch(request, env, {} as any);
-      const csp = response.headers.get('Content-Security-Policy');
-
-      expect(csp).not.toContain('cdn.tailwindcss.com');
-      expect(csp).not.toContain('https:');
-    });
-
-    it('applies strict Permissions-Policy and hardened CSP on static assets', async () => {
-      const request = new Request('http://localhost/');
-      const env = {
-        DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
-        ASSETS: { fetch: vi.fn().mockResolvedValue(new Response('<!doctype html>')) } as any
-      };
-
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.headers.get('Permissions-Policy')).toBe('camera=(), microphone=(), geolocation=(), interest-cohort=()');
-
-      const csp = response.headers.get('Content-Security-Policy');
-      expect(csp).toContain("object-src 'none'");
-      expect(csp).toContain("base-uri 'self'");
+      expect(await worker.fetch(request, env, {} as any)).toBe(page);
+      expect(assets.fetch).toHaveBeenCalledWith(request);
     });
 
     it('handles OPTIONS preflight request', async () => {
@@ -582,68 +600,6 @@ describe('Worker', () => {
     });
   });
 
-  describe('Profile Requests', () => {
-    it('returns 400 for invalid heightCm (> 300)', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 301, weightLbs: 150
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid heightCm' });
-    });
-
-    it('returns 400 for invalid weightLbs (> 1000)', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 180, weightLbs: 1001
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid weightLbs' });
-    });
-
-    it('returns 400 for invalid age (< 0)', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 180, weightLbs: 150, age: -1
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid age' });
-    });
-
-    it('returns 400 for invalid age (> 150)', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 180, weightLbs: 150, age: 151
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid age' });
-    });
-
-    it('returns 400 for invalid age (string)', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 180, weightLbs: 150, age: '30'
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid age' });
-    });
-
-    it('successfully saves profile with valid age', async () => {
-      const request = createRequest('POST', 'http://localhost/gym-api/profile', {
-        heightCm: 180, weightLbs: 150, age: 30
-      });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ success: true });
-    });
-  });
-
   describe('DELETE Requests', () => {
     it('returns 400 if body is empty', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', {});
@@ -707,14 +663,14 @@ describe('Worker', () => {
       expect(await response.json()).toEqual({ error: 'Unauthorized' });
     });
 
-    it('rejects overly long login hash payload to prevent CPU exhaustion', async () => {
-      const longHash = 'a'.repeat(1000);
-      const request = createRequest('POST', 'http://localhost/gym-api/login', { hash: longHash }, null as any);
+    it('rejects an overly long login password to prevent CPU exhaustion', async () => {
+      const longPassword = 'a'.repeat(1000);
+      const request = createRequest('POST', 'http://localhost/gym-api/login', { password: longPassword }, null as any);
       const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ error: 'Invalid hash' });
+      expect(await response.json()).toEqual({ error: 'Invalid password' });
     });
 
     it('rejects non-object or array payloads for endpoints expecting an object', async () => {
@@ -726,11 +682,11 @@ describe('Worker', () => {
       expect(loginResponse.status).toBe(400);
       expect(await loginResponse.json()).toEqual({ error: 'Invalid payload' });
 
-      // 2. Profile with primitive string instead of object
-      const profileRequest = createRequest('POST', 'http://localhost/gym-api/profile', 'not-an-object');
+      // 2. The profile endpoint is gone: nothing in the app ever called it.
+      const profileRequest = createRequest('POST', 'http://localhost/gym-api/profile', { heightCm: 180, weightLbs: 170 });
       const profileResponse = await worker.fetch(profileRequest, env, {} as any);
-      expect(profileResponse.status).toBe(400);
-      expect(await profileResponse.json()).toEqual({ error: 'Invalid payload' });
+      expect(profileResponse.status).toBe(405);
+      expect(mockQuery).not.toHaveBeenCalled();
 
       // 3. Delete with array instead of object
       const deleteRequest = createRequest('DELETE', 'http://localhost/gym-api', [1, 2, 3]);
