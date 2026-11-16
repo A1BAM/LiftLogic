@@ -15,10 +15,14 @@ export const authService = {
     return res.ok;
   },
 
-  async login(hashHex: string) {
+  /**
+   * Sends the password itself; the server does the hashing. Hashing it here
+   * first only turned the hash into the thing you log in with.
+   */
+  async login(password: string) {
     const res = await apiFetch(`${API_URL}/login`, {
       method: 'POST',
-      body: JSON.stringify({ hash: hashHex })
+      body: JSON.stringify({ password })
     });
     if (!res.ok) {
       const err = new Error('Login failed');

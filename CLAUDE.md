@@ -46,6 +46,9 @@ MCP tools are never invoked autonomously.
   model. The header comment is the spec; change the two together.
 - `liftlogic/worker.ts` — the Cloudflare Worker: auth, CORS, and the `/gym-api`
   endpoints over Neon.
+- Login: the browser sends the password and the Worker hashes it. Never hash
+  on the client — that makes the stored hash the thing you log in with. The
+  session cookie is a signed, expiring token, not the hash.
 - `liftlogic/public/_headers` — the security and caching headers for the page
   and its files. Cloudflare serves those without running the Worker, so a
   header set in `worker.ts` only ever reaches `/gym-api`. Check with

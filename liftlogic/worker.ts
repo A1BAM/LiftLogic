@@ -259,7 +259,7 @@ export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // Default security headers for all responses
+    // Security headers for every API response
     const securityHeaders: Record<string, string> = {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
@@ -268,22 +268,12 @@ export default {
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
     };
 
-    // Static assets. In production Cloudflare serves a matching file without
-    // running this Worker at all, so the headers that actually protect the
-    // page live in public/_headers. This branch is the fallback for a request
-    // that does reach here, and is kept in step with that file.
+    // Not an API request. Cloudflare serves the page and its files itself,
+    // without running this Worker, and public/_headers is what puts the
+    // security headers on them. Anything that does land here is handed
+    // straight to the same asset store, so it gets the same treatment.
     if (!url.pathname.startsWith('/gym-api')) {
-      const response = await env.ASSETS.fetch(request);
-      const newHeaders = new Headers(response.headers);
-      Object.entries(securityHeaders).forEach(([k, v]) => newHeaders.set(k, v));
-      // Asset specific CSP: application JavaScript and styles are bundled locally.
-      newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self';");
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newHeaders
-      });
+      return env.ASSETS.fetch(request);
     }
 
     const allowedOrigins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map(o => o.trim()) : [];
@@ -419,9 +409,13 @@ export default {
         if (typeof body !== 'object' || body === null || Array.isArray(body)) {
           return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
         }
-        const { hash } = (body as Record<string, unknown>);
-        if (typeof hash !== 'string' || hash.length === 0 || hash.length > 100) {
-          return new Response(JSON.stringify({ error: "Invalid hash" }), { status: 400, headers });
+        // The password itself, hashed HERE. The browser used to hash it and
+        // send the result, which made the stored hash a password in its own
+        // right: anyone who ever saw it could log in without knowing the word
+        // behind it. A hash offered as a login is now just a wrong password.
+        const { password } = (body as Record<string, unknown>);
+        if (typeof password !== 'string' || password.length === 0 || password.length > 200) {
+          return new Response(JSON.stringify({ error: "Invalid password" }), { status: 400, headers });
         }
 
         if (!env.LOGIN_RATE_LIMITER) {
@@ -447,7 +441,8 @@ export default {
         }
 
         const targetHash = await getTargetHash(env);
-        if (!hash || !targetHash || !await timingSafeEqual(`Bearer ${hash}`, `Bearer ${targetHash}`)) {
+        const offered = toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+        if (!targetHash || !await timingSafeEqual(offered, targetHash.toLowerCase())) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
@@ -463,58 +458,6 @@ export default {
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
-      }
-
-      // GET Profile
-      if (request.method === 'GET' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
-        try {
-          const { rows } = await pool.query('SELECT id, height_cm, weight_lbs, age FROM user_profile LIMIT 1');
-          if (rows.length === 0) {
-            return new Response(JSON.stringify(null), { status: 200, headers });
-          }
-          return new Response(JSON.stringify({
-            id: rows[0].id,
-            heightCm: Number(rows[0].height_cm),
-            weightLbs: Number(rows[0].weight_lbs),
-            age: rows[0].age ? Number(rows[0].age) : undefined
-          }), { status: 200, headers });
-        } catch (err: unknown) {
-          if (connectionString.includes('dummy')) {
-            return new Response(JSON.stringify(null), { status: 200, headers });
-          }
-          throw err;
-        }
-      }
-
-      // POST Profile
-      if (request.method === 'POST' && (url.pathname === '/gym-api/profile' || url.pathname === '/gym-api/profile/')) {
-        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-          return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
-        }
-        const { heightCm, weightLbs, age } = (body as Record<string, unknown>);
-
-        if (typeof heightCm !== 'number' || isNaN(heightCm) || heightCm <= 0 || heightCm > 300) {
-          return new Response(JSON.stringify({ error: "Invalid heightCm" }), { status: 400, headers });
-        }
-        if (typeof weightLbs !== 'number' || isNaN(weightLbs) || weightLbs <= 0 || weightLbs > 1000) {
-          return new Response(JSON.stringify({ error: "Invalid weightLbs" }), { status: 400, headers });
-        }
-        if (age !== undefined && age !== null && (typeof age !== 'number' || !Number.isInteger(age) || age < 0 || age > 150)) {
-          return new Response(JSON.stringify({ error: "Invalid age" }), { status: 400, headers });
-        }
-
-        const id = "global_user"; // Single user setup
-        const query = `
-          INSERT INTO user_profile (id, height_cm, weight_lbs, age)
-          VALUES ($1, $2, $3, $4)
-          ON CONFLICT (id) DO UPDATE SET
-            height_cm = EXCLUDED.height_cm,
-            weight_lbs = EXCLUDED.weight_lbs,
-            age = EXCLUDED.age;
-        `;
-
-        await pool.query(query, [id, heightCm, weightLbs, age || null]);
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
       }
 
       // GET: Fetch all logs

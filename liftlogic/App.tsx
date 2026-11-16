@@ -101,31 +101,21 @@ const AppScreens: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const msgBuffer = new TextEncoder().encode(passwordInput);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-      
-      try {
-        // Logging in is enough; the history download follows from
-        // isAuthenticated, so there is no point fetching it here as well.
-        await authService.login(hashHex);
-        setIsAuthenticated(true);
-        setPasswordInput("");
-      } catch (err: unknown) {
-        const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
-        const message = err instanceof Error ? err.message : undefined;
-        if (status === 401 || message === '401' || String(err).includes('401')) {
-          notify("Wrong password");
-        } else {
-          notify("Could not connect", "Check your network and try again.");
-        }
-        setPasswordInput("");
+      // Logging in is enough; the history download follows from
+      // isAuthenticated, so there is no point fetching it here as well.
+      await authService.login(passwordInput);
+      setIsAuthenticated(true);
+    } catch (err: unknown) {
+      const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
+      if (status === 401) {
+        notify("Wrong password");
+      } else if (status === 429) {
+        notify("Too many attempts", "Wait a minute, then try again.");
+      } else {
+        notify("Could not connect", "Check your network and try again.");
       }
-    } catch (err) {
-      logger.error("Crypto error:", err);
-      notify("Cannot log in here", "This page needs a secure (https) connection.");
     }
+    setPasswordInput("");
   };
 
   const handleLogout = async () => {

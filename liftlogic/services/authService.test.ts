@@ -32,19 +32,19 @@ describe('authService', () => {
   });
 
   describe('login', () => {
-    it('should send a POST request with the hash and return data on success', async () => {
-      const mockHash = 'deadbeef';
+    it('should send the password and return data on success', async () => {
+      const password = 'correct horse';
       const mockResponse = { success: true };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse
       });
 
-      const result = await authService.login(mockHash);
+      const result = await authService.login(password);
 
       expect(mockFetch).toHaveBeenCalledWith(`${API_URL}/login`, expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ hash: mockHash }),
+        body: JSON.stringify({ password }),
         headers: expect.objectContaining({
           'Content-Type': 'application/json'
         })
@@ -55,7 +55,7 @@ describe('authService', () => {
     it('should throw "Login failed" with status when response is not ok', async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
 
-      const promise = authService.login('badhash');
+      const promise = authService.login('wrong');
       await expect(promise).rejects.toThrow('Login failed');
       await promise.catch(e => expect(e.status).toBe(401));
     });
