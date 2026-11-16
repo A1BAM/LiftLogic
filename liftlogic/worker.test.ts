@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import worker from './worker';
+import worker, { mintSession } from './worker';
 
 const { mockQuery } = vi.hoisted(() => {
   return { mockQuery: vi.fn().mockResolvedValue({ rows: [] }) };
@@ -16,10 +16,17 @@ vi.mock('@neondatabase/serverless', () => {
   };
 });
 
+// A real session for the password hash the tests' env uses. Requests carry
+// this the way the browser does, as a cookie; the hash itself is never a
+// credential outside /login.
+const SESSION = await mintSession({}, 'testsecret');
+const cookieFor = (token: string) => `liftlogic_auth_token=${token}`;
+
 describe('Worker', () => {
-  const createRequest = (method: string, url: string, body?: any, targetHash?: string) => {
+  /** `session`: omitted = a valid session, null = no cookie, a string = that cookie value verbatim. */
+  const createRequest = (method: string, url: string, body?: any, session?: string | null) => {
     const headers = new Headers({
-      ...(targetHash !== null ? { 'Authorization': `Bearer ${targetHash || 'testsecret'}` } : {})
+      ...(session !== null ? { Cookie: cookieFor(session ?? SESSION) } : {})
     });
     if (body) {
       headers.set('Content-Type', 'application/json');
@@ -60,8 +67,18 @@ describe('Worker', () => {
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
-      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=testsecret');
-      expect(response.headers.get('Set-Cookie')).toContain('HttpOnly');
+      const cookie = response.headers.get('Set-Cookie')!;
+      expect(cookie).toMatch(/^liftlogic_auth_token=v1\.\d+\.[0-9a-f]{64};/);
+      // The cookie must not carry the password hash any more.
+      expect(cookie).not.toContain('testsecret');
+      expect(cookie).toContain('HttpOnly');
+      expect(cookie).toContain('Secure');
+      expect(cookie).toContain('SameSite=Strict');
+
+      // And what it carries is good for the next request.
+      const token = cookie.split(';')[0].split('=')[1];
+      const next = await worker.fetch(createRequest('GET', 'http://localhost/gym-api/session', undefined, token), env, {} as any);
+      expect(next.status).toBe(200);
     });
 
     it('handles failed login', async () => {
@@ -144,18 +161,59 @@ describe('Worker', () => {
 
 
 
-    it('authenticates using cookie', async () => {
-      const request = new Request('http://localhost/gym-api', {
-        method: 'GET',
-        headers: new Headers({
-          'Content-Type': 'application/json',
-          'Cookie': 'liftlogic_auth_token=testsecret'
-        })
-      });
+    describe('session cookies', () => {
       const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const probe = (session: string | null) =>
+        worker.fetch(createRequest('GET', 'http://localhost/gym-api/session', undefined, session), env, {} as any);
 
-      const response = await worker.fetch(request, env, {} as any);
-      expect(response.status).toBe(200); // Because it authenticates and hits the 'dummy' db fallback
+      it('accepts a signed session', async () => {
+        expect((await probe(SESSION)).status).toBe(200);
+      });
+
+      it('no longer accepts the password hash itself as a cookie', async () => {
+        expect((await probe('testsecret')).status).toBe(401);
+      });
+
+      it('does not accept the password hash as a bearer token either', async () => {
+        const request = new Request('http://localhost/gym-api/session', {
+          headers: { Authorization: 'Bearer testsecret' }
+        });
+        expect((await worker.fetch(request, env, {} as any)).status).toBe(401);
+      });
+
+      it('rejects a session that has expired', async () => {
+        const ninetyOneDaysAgo = Date.now() - 91 * 24 * 60 * 60 * 1000;
+        expect((await probe(await mintSession({}, 'testsecret', ninetyOneDaysAgo))).status).toBe(401);
+      });
+
+      it('rejects a session whose expiry was edited', async () => {
+        const [version, , signature] = SESSION.split('.');
+        const farFuture = Date.now() + 10 * 365 * 24 * 60 * 60 * 1000;
+        expect((await probe(`${version}.${farFuture}.${signature}`)).status).toBe(401);
+      });
+
+      it('rejects a session signed for a different password', async () => {
+        expect((await probe(await mintSession({}, 'the-old-password-hash'))).status).toBe(401);
+      });
+
+      it('rejects a session signed without the configured secret', async () => {
+        const withSecret = { ...env, SESSION_SECRET: 'a-dedicated-secret' };
+        const good = await mintSession(withSecret, 'testsecret');
+        const request = (t: string) => createRequest('GET', 'http://localhost/gym-api/session', undefined, t);
+        expect((await worker.fetch(request(good), withSecret, {} as any)).status).toBe(200);
+        expect((await worker.fetch(request(SESSION), withSecret, {} as any)).status).toBe(401);
+      });
+
+      it('renews the session each time the app opens', async () => {
+        const response = await probe(SESSION);
+        expect(response.headers.get('Set-Cookie')).toMatch(/^liftlogic_auth_token=v1\.\d+\.[0-9a-f]{64}; .*Max-Age=7776000/);
+      });
+
+      it('marks responses as never to be cached', async () => {
+        const response = await worker.fetch(createRequest('GET', 'http://localhost/gym-api'), env, {} as any);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+      });
     });
   });
 
@@ -235,8 +293,8 @@ describe('Worker', () => {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-      // Create request with the hash in Authorization header
-      const request = createRequest('GET', 'http://localhost/gym-api', undefined, hashHex);
+      // A session signed for that password's hash is what gets in.
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, await mintSession({}, hashHex));
       const env = { DATABASE_URL: 'dummy', PASSWORD: password, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
 
@@ -338,7 +396,7 @@ describe('Worker', () => {
       const body = JSON.stringify({ ...set, ...patch }).replace('null', '1e400');
       const request = new Request('http://localhost/gym-api', {
         method: 'POST',
-        headers: { Authorization: 'Bearer testsecret', 'Content-Type': 'application/json' },
+        headers: { Cookie: cookieFor(SESSION), 'Content-Type': 'application/json' },
         body
       });
 
@@ -630,7 +688,7 @@ describe('Worker', () => {
     });
 
     it('returns 400 for invalid JSON payload', async () => {
-      const request = new Request('http://localhost/gym-api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer testsecret' }, body: '{ invalid json: ' });
+      const request = new Request('http://localhost/gym-api', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookieFor(SESSION) }, body: '{ invalid json: ' });
       const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -639,7 +697,7 @@ describe('Worker', () => {
   });
 
   describe('Security and DoS Mitigation', () => {
-    it('rejects overly long Authorization header to prevent CPU exhaustion', async () => {
+    it('rejects an overly long session cookie to prevent CPU exhaustion', async () => {
       const longSecret = 'a'.repeat(1000);
       const request = createRequest('GET', 'http://localhost/gym-api', undefined, longSecret);
       const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };

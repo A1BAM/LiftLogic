@@ -169,6 +169,70 @@ async function getTargetHash(env: Env): Promise<string | null> {
   return null;
 }
 
+/**
+ * Sessions.
+ *
+ * The cookie used to BE the password hash: the one permanent credential, kept
+ * on every phone that had ever logged in, valid for ever, and accepted on
+ * every endpoint. Now the hash is only ever presented to /login, and what the
+ * browser holds is a signed token that says nothing but "logged in until
+ * <time>". It cannot be turned back into the password, it expires, and
+ * changing the password invalidates every one of them at once.
+ */
+const SESSION_COOKIE = 'liftlogic_auth_token';
+const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+const toHex = (bytes: ArrayBuffer) =>
+  Array.from(new Uint8Array(bytes)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+/**
+ * The signing key. A dedicated SESSION_SECRET is used when one is configured;
+ * otherwise the key is derived from the password hash, which needs no setup
+ * and still rotates with the password.
+ */
+async function sessionKey(env: Pick<Env, 'SESSION_SECRET'>, targetHash: string): Promise<CryptoKey> {
+  const material = env.SESSION_SECRET || `liftlogic-session-v1:${targetHash}`;
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(material),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+}
+
+export async function mintSession(
+  env: Pick<Env, 'SESSION_SECRET'>,
+  targetHash: string,
+  now = Date.now()
+): Promise<string> {
+  const payload = `v1.${now + SESSION_TTL_MS}`;
+  const key = await sessionKey(env, targetHash);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return `${payload}.${toHex(signature)}`;
+}
+
+async function verifySession(
+  token: string,
+  env: Pick<Env, 'SESSION_SECRET'>,
+  targetHash: string,
+  now = Date.now()
+): Promise<boolean> {
+  // Shape first, so garbage costs nothing: v1.<expiry ms>.<64 hex>
+  const match = /^v1\.(\d{10,16})\.([0-9a-f]{64})$/.exec(token);
+  if (!match) return false;
+  if (Number(match[1]) <= now) return false;
+
+  const signature = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) signature[i] = parseInt(match[2].slice(i * 2, i * 2 + 2), 16);
+  const key = await sessionKey(env, targetHash);
+  // subtle.verify compares in constant time.
+  return crypto.subtle.verify('HMAC', key, signature, new TextEncoder().encode(`v1.${match[1]}`));
+}
+
+const sessionCookie = (token: string, maxAgeSeconds: number) =>
+  `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}`;
+
 async function getRateLimitKey(request: Request, scope: 'login' | 'api'): Promise<string> {
   const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
@@ -183,6 +247,8 @@ export interface Env {
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
   PASSWORD?: string;
+  /** Optional. Signs session cookies; falls back to a key derived from the password hash. */
+  SESSION_SECRET?: string;
   LOGIN_RATE_LIMITER?: RateLimit;
   API_RATE_LIMITER?: RateLimit;
   ASSETS: { fetch: typeof fetch };
@@ -202,7 +268,10 @@ export default {
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
     };
 
-    // Handle static assets
+    // Static assets. In production Cloudflare serves a matching file without
+    // running this Worker at all, so the headers that actually protect the
+    // page live in public/_headers. This branch is the fallback for a request
+    // that does reach here, and is kept in step with that file.
     if (!url.pathname.startsWith('/gym-api')) {
       const response = await env.ASSETS.fetch(request);
       const newHeaders = new Headers(response.headers);
@@ -222,12 +291,16 @@ export default {
 
     const headers: { [key: string]: string } = {
       ...securityHeaders,
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Credentials': 'true',
       'Vary': 'Origin',
       'Content-Type': 'application/json',
-      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';"
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none';",
+      // Workout history is private: it must not sit in a browser or proxy
+      // cache, or come back out of the page cache after logging out.
+      'Cache-Control': 'no-store',
+      'Cross-Origin-Resource-Policy': 'same-origin'
     };
 
     if (allowedOrigins.length > 0) {
@@ -239,15 +312,11 @@ export default {
       }
     }
 
-// Security Check: Verify Bearer Token or Cookie
-    let authHeader = request.headers.get('Authorization');
-    const cookieHeader = request.headers.get('Cookie');
-    if (!authHeader && cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)liftlogic_auth_token=([^;]*)/);
-      if (match && match[1]) {
-        authHeader = `Bearer ${match[1]}`;
-      }
-    }
+// Security check: a signed session cookie, and nothing else. The password
+    // hash is not accepted here in any form — only /login takes it.
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const cookieMatch = cookieHeader.match(/(?:^|;\s*)liftlogic_auth_token=([^;]*)/);
+    const sessionToken = cookieMatch ? cookieMatch[1] : '';
 
     const isLoginEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/');
     const isLogoutEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/');
@@ -286,7 +355,7 @@ export default {
         });
       }
 
-      if (!authHeader || authHeader.length > 200 || !await timingSafeEqual(authHeader, `Bearer ${targetHash}`)) {
+      if (!sessionToken || sessionToken.length > 200 || !await verifySession(sessionToken, env, targetHash)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: headers
@@ -304,7 +373,14 @@ export default {
     // database pool is opened: the app asks this on every load purely to find
     // out whether it is logged in, and that question costs no query.
     if (request.method === 'GET' && (url.pathname === '/gym-api/session' || url.pathname === '/gym-api/session/')) {
-      return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers });
+      // Asked on every app load, so this is also where the session slides:
+      // use the app at least once in ninety days and it never asks again.
+      const targetHash = await getTargetHash(env);
+      const resHeaders = new Headers(headers);
+      if (targetHash) {
+        resHeaders.set('Set-Cookie', sessionCookie(await mintSession(env, targetHash), SESSION_TTL_MS / 1000));
+      }
+      return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: resHeaders });
     }
 
     // Use the environment variable for Cloudflare
@@ -375,7 +451,7 @@ export default {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
-        const cookie = `liftlogic_auth_token=${hash}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000`;
+        const cookie = sessionCookie(await mintSession(env, targetHash), SESSION_TTL_MS / 1000);
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
@@ -383,7 +459,7 @@ export default {
 
       // Handle Logout
       if (request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/')) {
-        const cookie = `liftlogic_auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
+        const cookie = sessionCookie('', 0);
         const resHeaders = new Headers(headers);
         resHeaders.set('Set-Cookie', cookie);
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });

@@ -71,9 +71,16 @@ Set as secrets in the Cloudflare dashboard, never in `wrangler.jsonc`:
 | `TARGET_HASH` | Hash of the login password |
 | `PASSWORD` | Login password |
 | `ALLOWED_ORIGIN` | Exact origin allowed by CORS |
+| `SESSION_SECRET` | Optional. Signs session cookies. Unset, the key is derived from the password hash |
 
-Two bindings come from `wrangler.jsonc` rather than secrets: `ASSETS`
-(static files) and `LOGIN_RATE_LIMITER`.
+Three bindings come from `wrangler.jsonc` rather than secrets: `ASSETS`
+(static files), `LOGIN_RATE_LIMITER` and `API_RATE_LIMITER`.
+
+Logging in sets a signed session cookie that expires after 90 days without
+use. The password hash is accepted by `/gym-api/login` and nowhere else.
+
+The page and its files are served by Cloudflare without running the Worker,
+so their security and caching headers live in `liftlogic/public/_headers`.
 
 If `TARGET_HASH` is missing the Worker fails closed with a 500 rather than
 degrading to unauthenticated access.

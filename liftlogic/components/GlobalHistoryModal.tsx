@@ -36,13 +36,19 @@ export function calculateGlobalHistoryStats(
 
   let totalVolume = 0;
   let todayVolume = 0;
+  // The long-form date is formatted once per day, not once per set.
+  const displayDates = new Map<string, string>();
 
   for (const log of logs) {
     const vol = log.weight * log.reps * (log.sets || 1);
     totalVolume += vol;
 
     const localDateKey = getLocalDateKey(log.timestamp);
-    const displayDate = dateFormatter.format(log.timestamp);
+    let displayDate = displayDates.get(localDateKey);
+    if (displayDate === undefined) {
+      displayDate = dateFormatter.format(log.timestamp);
+      displayDates.set(localDateKey, displayDate);
+    }
     uniqueDays.add(localDateKey);
 
     if (!groups[displayDate]) groups[displayDate] = [];
