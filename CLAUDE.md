@@ -46,6 +46,10 @@ MCP tools are never invoked autonomously.
   model. The header comment is the spec; change the two together.
 - `liftlogic/worker.ts` — the Cloudflare Worker: auth, CORS, and the `/gym-api`
   endpoints over Neon.
+- `liftlogic/public/_headers` — the security and caching headers for the page
+  and its files. Cloudflare serves those without running the Worker, so a
+  header set in `worker.ts` only ever reaches `/gym-api`. Check with
+  `wrangler dev` and `curl -I`, not by reading the code.
 - `liftlogic/hooks/` — data fetching, log and exercise state.
 - `liftlogic/components/` — screens and dialogs. Dialogs share the shell in
   `Modal.tsx`; `LockScreen` and `HomeScreen` are the two screens outside a

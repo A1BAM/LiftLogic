@@ -31,4 +31,21 @@ describe('deployed asset security', () => {
       expect(html).not.toMatch(/<script[^>]+src=["']https:\/\//i);
     }
   });
+
+  it('ships the headers file that protects the page itself', async () => {
+    // Cloudflare serves the page without running the Worker, so this file is
+    // the only thing that puts a CSP or framing protection on it. If it stops
+    // being copied into the build, the page silently goes out bare.
+    const headers = await readFile(resolve('dist/_headers'), 'utf8').catch(() => {
+      throw new Error('dist/_headers is missing. Run `npm run build` first; it is copied from public/_headers.');
+    });
+
+    expect(headers).toMatch(/^\/\*$/m);
+    expect(headers).toContain("frame-ancestors 'none'");
+    expect(headers).toContain("script-src 'self'");
+    expect(headers).not.toContain("'unsafe-inline'");
+    expect(headers).toContain('X-Frame-Options: DENY');
+    expect(headers).toContain('Strict-Transport-Security:');
+    expect(headers).toMatch(/\/assets\/\*\n\s+Cache-Control: public, max-age=31536000, immutable/);
+  });
 });

@@ -1,10 +1,15 @@
-const dateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
-  year: 'numeric', month: '2-digit', day: '2-digit'
-});
+const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
 
-/** Returns a stable key for the calendar day in the user's local timezone. */
+/**
+ * A stable YYYY-MM-DD key for the calendar day in the user's local timezone.
+ *
+ * Built by hand rather than with Intl.DateTimeFormat: this runs once per
+ * logged set, on every load and every journal open, and the formatter was
+ * most of that cost.
+ */
 export function getLocalDateKey(timestamp: number): string {
-  return dateKeyFormatter.format(timestamp);
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 export function getLocalDayBounds(timestamp = Date.now()): { start: number; end: number } {
