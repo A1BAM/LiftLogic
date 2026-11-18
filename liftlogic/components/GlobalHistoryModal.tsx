@@ -1,18 +1,26 @@
-import { useMemo, useState } from 'react';
-import { Copy, Check, Download, AlertCircle } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Modal } from './Modal';
-import { notify } from './dialogs';
 import { WorkoutLog, ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
-import { validateWorkoutLogs } from '../utils/validation';
 import { EXERCISES } from '../constants';
 import { getLocalDateKey } from '../utils/date';
+import {
+  ParsedBackup,
+  buildBackup,
+  buildCsv,
+  deliverFile,
+  formatBytes,
+  parseBackup,
+  serializeBackup
+} from '../utils/backup';
 
 interface GlobalHistoryModalProps {
   logs: WorkoutLog[];
   currentDayType: string | null;
   onClose: () => void;
-  onImport: (logs: WorkoutLog[]) => void;
+  /** Restores a backup. Resolves once it is saved; rejects if it was not. */
+  onImport: (backup: ParsedBackup) => Promise<void> | void;
   customExercises: ExerciseDef[];
 }
 
@@ -80,41 +88,154 @@ export function calculateGlobalHistoryStats(
 
 
 
-function ImportLogsView({
-  importText,
-  setImportText,
-  error,
-  onImportSubmit
+/** Largest file a restore will read; a decade of daily training is under 2 MB. */
+const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
+
+const today = () => getLocalDateKey(Date.now());
+
+function BackupView({
+  logs,
+  exercises,
+  exercisesById,
+  onImport
 }: {
-  importText: string;
-  setImportText: (t: string) => void;
-  error: string | null;
-  onImportSubmit: () => void;
+  logs: WorkoutLog[];
+  exercises: ExerciseDef[];
+  exercisesById: Record<string, ExerciseDef>;
+  onImport: (backup: ParsedBackup) => Promise<void> | void;
 }) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  // Only exercises the sets refer to, plus any you made yourself: the built-in
+  // ones you never logged are part of the app, not of your history.
+  const backupText = useMemo(() => {
+    const used = new Set(logs.map(l => l.exerciseId));
+    const wanted = exercises.filter(e => used.has(e.id) || e.isCustom);
+    return serializeBackup(buildBackup(logs, wanted));
+  }, [logs, exercises]);
+  const size = formatBytes(new TextEncoder().encode(backupText).length);
+
+  const save = async (kind: 'backup' | 'csv') => {
+    setError(null);
+    try {
+      if (kind === 'backup') {
+        await deliverFile(`liftlogic-backup-${today()}.json`, 'application/json', backupText);
+      } else {
+        await deliverFile(`liftlogic-sets-${today()}.csv`, 'text/csv', buildCsv(logs, exercisesById));
+      }
+    } catch (err) {
+      logger.error('Export failed:', err);
+      setError('The file could not be saved. Try again from Safari.');
+    }
+  };
+
+  const restore = async (text: string) => {
+    setError(null);
+    let parsed: ParsedBackup;
+    try {
+      parsed = parseBackup(text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "That isn't a LiftLogic backup.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onImport(parsed);
+      setPasted('');
+      setPasting(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // so choosing the same file again still fires
+    if (!file) return;
+    if (file.size > MAX_BACKUP_BYTES) {
+      setError('That file is too large to be a LiftLogic backup.');
+      return;
+    }
+    await restore(await file.text());
+  };
+
   return (
-    <div className="p-6 flex-1 flex flex-col gap-4">
-      <div className="rounded-xl border border-ink-700 bg-ink-800 p-4 text-[14px] leading-relaxed text-cream-400">
-        Paste your previously exported JSON data below to restore your history. This will merge with your current logs.
-      </div>
-      <textarea
-        autoFocus
-        aria-label="Workout history JSON"
-        className="flex-1 bg-ink-800 border border-ink-700 rounded-xl p-4 text-[16px] font-mono text-cream-400 focus:outline-none focus:border-cream-600 focus-visible:ring-2 focus-visible:ring-cream-50 resize-none min-h-[200px]"
-        placeholder='[{"id":"...", "weight": 20, ...}]'
-        value={importText}
-        onChange={(e) => setImportText(e.target.value)}
+    <div className="flex-1 overflow-y-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+      <p className="text-[13px] uppercase tracking-[0.14em] text-cream-400">Save a copy</p>
+      <button
+        onClick={() => save('backup')}
+        className="btn-primary mt-3 w-full py-3.5 text-[15px]"
+      >
+        Save backup file
+      </button>
+      <p className="nums mt-2 text-[14px] leading-relaxed text-cream-400">
+        Every set and exercise, in one file you can restore from ·{' '}
+        {logs.length.toLocaleString()} sets · {size}
+      </p>
+      <button
+        onClick={() => save('csv')}
+        className="btn-quiet mt-3 w-full border-ink-700 py-3 text-[15px]"
+      >
+        Export for a spreadsheet (CSV)
+      </button>
+
+      <p className="mt-8 text-[13px] uppercase tracking-[0.14em] text-cream-400">Restore</p>
+      <p className="mt-2 text-[14px] leading-relaxed text-cream-400">
+        Adds anything in the backup that is not already here. Nothing you have
+        now is changed or removed.
+      </p>
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".json,application/json,text/plain"
+        onChange={onFile}
+        className="hidden"
+        aria-label="Backup file"
       />
-      {error && (
-        <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
-          <AlertCircle size={16} /> {error}
+      <button
+        onClick={() => fileInput.current?.click()}
+        disabled={busy}
+        className="btn-quiet mt-3 w-full border-ink-700 py-3 text-[15px]"
+      >
+        {busy ? 'Restoring…' : 'Restore from a file'}
+      </button>
+
+      {!pasting ? (
+        <button
+          onClick={() => setPasting(true)}
+          className="btn-quiet mt-1 w-full py-3 text-[14px]"
+        >
+          Paste an older backup instead
+        </button>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          <textarea
+            autoFocus
+            aria-label="Backup text"
+            className="well min-h-[160px] resize-none p-4 font-mono text-[16px] text-cream-200 focus:border-cream-600 focus:outline-none"
+            placeholder="Paste the copied backup here"
+            value={pasted}
+            onChange={e => setPasted(e.target.value)}
+          />
+          <button
+            onClick={() => (pasted.trim() ? restore(pasted) : setError('Paste a backup first.'))}
+            disabled={busy}
+            className="btn-quiet w-full border-ink-700 py-3 text-[15px]"
+          >
+            Restore pasted backup
+          </button>
         </div>
       )}
-      <button
-        onClick={onImportSubmit}
-        className="btn-primary w-full py-3.5 text-[15px]"
-      >
-        Import Logs
-      </button>
+
+      {error && (
+        <p role="alert" className="mt-4 flex items-start gap-2 text-[14px] text-red-300">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" /> {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -214,50 +335,18 @@ function ChronologicalLogList({
 }
 
 
-/** The journal's own header controls; the shell supplies the close button. */
+/** The journal's own header control; the shell supplies the close button. */
 function JournalHeaderActions({
-  isImporting,
-  setIsImporting,
-  handleExport,
-  copied,
-  setError
+  inBackup,
+  setInBackup
 }: {
-  isImporting: boolean;
-  setIsImporting: (val: boolean) => void;
-  handleExport: () => void;
-  copied: boolean;
-  setError: (val: string | null) => void;
+  inBackup: boolean;
+  setInBackup: (val: boolean) => void;
 }) {
   return (
-    <>
-      {!isImporting ? (
-        <>
-          <button
-            onClick={() => setIsImporting(true)}
-            className="btn-quiet p-2"
-            aria-label="Import Data"
-            title="Import Data"
-          >
-            <Download size={20} />
-          </button>
-          <button
-            onClick={handleExport}
-            className="btn-quiet flex items-center gap-1.5 px-2 py-1.5 text-[14px]"
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Copied' : 'Export'}
-          </button>
-        </>
-      ) : (
-        <button
-          onClick={() => { setIsImporting(false); setError(null); }}
-          className="btn-quiet px-3 text-[14px]"
-          aria-label="Cancel import"
-        >
-          Cancel
-        </button>
-      )}
-    </>
+    <button onClick={() => setInBackup(!inBackup)} className="btn-quiet px-3 text-[14px]">
+      {inBackup ? 'Journal' : 'Backup'}
+    </button>
   );
 }
 
@@ -269,10 +358,7 @@ export function GlobalHistoryModal({
   customExercises
 }: GlobalHistoryModalProps) {
 
-  const [copied, setCopied] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [inBackup, setInBackup] = useState(false);
 
   const allExercisesMap = useMemo(() => {
     const combined: Record<string, ExerciseDef> = { ...EXERCISES };
@@ -287,57 +373,18 @@ export function GlobalHistoryModal({
     return calculateGlobalHistoryStats(logs, currentDayType, allExercisesMap);
   }, [logs, currentDayType, allExercisesMap]);
 
-  const handleExport = async () => {
-    try {
-      const dataStr = JSON.stringify(logs, null, 2);
-      await navigator.clipboard.writeText(dataStr);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      logger.error('Failed to copy:', err);
-      notify('Could not copy', 'The clipboard refused the export. Try again from Safari.');
-    }
-  };
-
-  const handleImportSubmit = () => {
-    setError(null);
-    if (!importText.trim()) {
-      setError("Please paste data first.");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(importText);
-      const validatedLogs = validateWorkoutLogs(parsed);
-
-      onImport(validatedLogs);
-      setIsImporting(false);
-      setImportText('');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid JSON data.");
-    }
-  };
-
   return (
     <Modal
       onClose={onClose}
-      title={isImporting ? 'Import data' : 'Journal'}
-      headerActions={
-        <JournalHeaderActions
-          isImporting={isImporting}
-          setIsImporting={setIsImporting}
-          handleExport={handleExport}
-          copied={copied}
-          setError={setError}
-        />
-      }
+      title={inBackup ? 'Backup' : 'Journal'}
+      headerActions={<JournalHeaderActions inBackup={inBackup} setInBackup={setInBackup} />}
     >
-        {isImporting ? (
-          <ImportLogsView
-            importText={importText}
-            setImportText={setImportText}
-            error={error}
-            onImportSubmit={handleImportSubmit}
+        {inBackup ? (
+          <BackupView
+            logs={logs}
+            exercises={Object.values(allExercisesMap)}
+            exercisesById={allExercisesMap}
+            onImport={onImport}
           />
         ) : (
           <>
