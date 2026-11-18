@@ -33,23 +33,38 @@ Routing is configured in `wrangler.jsonc`: `run_worker_first` lists the
 | `GET /gym-api` | Fetch all workout rows |
 | `POST /gym-api/bulk` | Upsert many rows in one call |
 
-Exercise definitions are stored in the same `workouts` table as rows whose
-`exercise_id` is the sentinel `DEFINITION_ID`, with the definition JSON in
-`notes`.
+On the wire the app still sends an exercise as a "definition row" (exercise
+id `__DEFINITION__`, row id `def_<id>`, the exercise as JSON in `notes`). The
+Worker translates that to and from the `exercises` table, so older copies of
+the app keep working.
 
 ## Database schema
 
-One table, as used by `worker.ts`:
+Two tables, as used by `worker.ts`:
 
 ```sql
+-- One row per logged set.
 CREATE TABLE workouts (
   id          TEXT PRIMARY KEY,
   exercise_id TEXT    NOT NULL,
-  timestamp   BIGINT  NOT NULL,
+  timestamp   BIGINT  NOT NULL,   -- ms since epoch
   weight      NUMERIC NOT NULL,
-  reps        INTEGER NOT NULL,
-  sets        INTEGER NOT NULL,
-  notes       TEXT
+  reps        INTEGER NOT NULL
+);
+
+-- One row per exercise: the built-ins you have changed, and your own.
+CREATE TABLE exercises (
+  id             TEXT PRIMARY KEY,
+  name           TEXT NOT NULL,
+  muscle_group   TEXT NOT NULL DEFAULT '',
+  day_type       TEXT NOT NULL CHECK (day_type IN ('PUSH', 'PULL', 'LEGS')),
+  default_weight NUMERIC NOT NULL,
+  increment      NUMERIC NOT NULL,
+  target_reps    INTEGER NOT NULL,
+  is_custom      BOOLEAN NOT NULL DEFAULT false,
+  is_archived    BOOLEAN NOT NULL DEFAULT false,
+  is_slot_choice BOOLEAN NOT NULL DEFAULT false,
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 

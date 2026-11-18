@@ -631,6 +631,73 @@ describe('Worker', () => {
     });
   });
 
+  describe('Storage: sets in workouts, exercises in their own table', () => {
+    const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+    const curl = { id: 'DUMBBELL_CURL', name: 'Dumbbell Bicep Curls', muscleGroup: 'Biceps', defaultWeight: 25, increment: 5, targetReps: 12, dayType: 'PULL' };
+    const definitionRow = (ex: object, id = 'def_DUMBBELL_CURL') =>
+      ({ id, exerciseId: '__DEFINITION__', timestamp: 1, weight: 0, reps: 0, sets: 0, notes: JSON.stringify(ex) });
+    const sqlOf = (call: unknown[]) => String(call[0]).replace(/\s+/g, ' ');
+
+    it('reads exercises from their table and hands them to the app in the shape it expects', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ id: 's1', exercise_id: 'DUMBBELL_CURL', timestamp: '1700000000000', weight: '27.5', reps: 10 }] })
+        .mockResolvedValueOnce({ rows: [{
+          id: 'DUMBBELL_CURL', name: 'Dumbbell Bicep Curls', muscle_group: 'Biceps', day_type: 'PULL',
+          default_weight: '25', increment: '5', target_reps: 12, is_custom: false, is_archived: true, is_slot_choice: false
+        }] });
+
+      const response = await worker.fetch(createRequest('GET', 'http://localhost/gym-api'), env, {} as any);
+      const body = await response.json() as any[];
+
+      expect(body[0]).toEqual({ id: 's1', exerciseId: 'DUMBBELL_CURL', timestamp: 1700000000000, weight: 27.5, reps: 10, sets: 1 });
+      expect(body[1]).toMatchObject({ id: 'def_DUMBBELL_CURL', exerciseId: '__DEFINITION__' });
+      expect(JSON.parse(body[1].notes)).toEqual({ ...curl, isArchived: true });
+      // Neither query touches the columns that are being dropped.
+      expect(mockQuery.mock.calls.map(sqlOf).join(' ')).not.toMatch(/\b(notes|sets)\b/);
+    });
+
+    it('stores an exercise in the exercises table and a set without notes or sets', async () => {
+      const items = [
+        { id: 's1', exerciseId: 'DUMBBELL_CURL', timestamp: 1700000000000, weight: 27.5, reps: 10, sets: 1 },
+        definitionRow({ ...curl, isArchived: true })
+      ];
+      const response = await worker.fetch(createRequest('POST', 'http://localhost/gym-api/bulk', items), env, {} as any);
+
+      expect(response.status).toBe(200);
+      const [exerciseCall, setCall] = mockQuery.mock.calls;
+      expect(sqlOf(exerciseCall)).toMatch(/^INSERT INTO exercises/);
+      expect(exerciseCall[1][0]).toEqual(['DUMBBELL_CURL']);
+      expect(exerciseCall[1][8]).toEqual([true]); // is_archived
+      expect(sqlOf(setCall)).toMatch(/^INSERT INTO workouts \(id, exercise_id, timestamp, weight, reps\)/);
+      expect(setCall[1]).toEqual([['s1'], ['DUMBBELL_CURL'], [1700000000000], [27.5], [10]]);
+      expect(mockQuery.mock.calls.map(sqlOf).join(' ')).not.toMatch(/\b(notes|sets)\b/);
+    });
+
+    it('refuses an exercise that does not validate, and saves nothing', async () => {
+      for (const bad of [
+        definitionRow({ ...curl, dayType: 'ARMS' }),
+        definitionRow(curl, 'def_SOMETHING_ELSE'),
+        { ...definitionRow(curl), notes: 'not json' }
+      ]) {
+        const response = await worker.fetch(createRequest('POST', 'http://localhost/gym-api', bad), env, {} as any);
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: 'Invalid exercise definition' });
+      }
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('deletes an exercise from its own table', async () => {
+      await worker.fetch(createRequest('DELETE', 'http://localhost/gym-api', { id: 'def_custom-9' }), env, {} as any);
+      expect(sqlOf(mockQuery.mock.calls[0])).toBe('DELETE FROM exercises WHERE id = $1');
+      expect(mockQuery.mock.calls[0][1]).toEqual(['custom-9']);
+    });
+
+    it('still deletes an ordinary set from workouts', async () => {
+      await worker.fetch(createRequest('DELETE', 'http://localhost/gym-api', { id: 'abc' }), env, {} as any);
+      expect(sqlOf(mockQuery.mock.calls[0])).toBe('DELETE FROM workouts WHERE id = $1');
+    });
+  });
+
   describe('Error Handling', () => {
     it('returns 500 without leaking DB details on generic error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('Super secret DB credentials failed'));

@@ -1,5 +1,8 @@
 import { Pool } from '@neondatabase/serverless';
 import { timingSafeEqual } from './utils/security';
+import { validateExercise } from './utils/exercise';
+import { DEFINITION_ID } from './constants';
+import type { ExerciseDef } from './types';
 
 /**
  * The shared logger goes quiet in production, which is right for the browser
@@ -44,7 +47,13 @@ async function deleteLogsByExercise(pool: Pool, exerciseId: string, headers: Rec
 }
 
 async function deleteLogById(pool: Pool, id: string, headers: Record<string, string>): Promise<Response> {
-  await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+  // "def_<id>" is how the app has always named an exercise; it lives in its
+  // own table now.
+  if (id.startsWith(DEFINITION_ROW_PREFIX)) {
+    await pool.query('DELETE FROM exercises WHERE id = $1', [id.slice(DEFINITION_ROW_PREFIX.length)]);
+  } else {
+    await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
+  }
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
 
@@ -114,40 +123,94 @@ async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<st
 
 
 
-async function executeBulkInsert(pool: Pool, items: unknown[]): Promise<void> {
-  if (items.length === 0) return;
+/**
+ * Storage.
+ *
+ * `workouts` holds one row per set: id, exercise, time, weight, reps.
+ * `exercises` holds one row per exercise.
+ *
+ * The app still speaks the original wire format, in which an exercise travels
+ * as a "definition row" — exerciseId "__DEFINITION__", id "def_<exercise id>",
+ * the exercise as JSON in `notes`. That shape is translated here, at the edge,
+ * so the database no longer has to carry it, and a phone still running an
+ * older copy of the app keeps working against the new tables.
+ */
+const DEFINITION_ROW_PREFIX = 'def_';
 
-  const ids: string[] = [];
-  const exerciseIds: string[] = [];
-  const timestamps: number[] = [];
-  const weights: number[] = [];
-  const reps: number[] = [];
-  const sets: number[] = [];
-  const notes: (string | null)[] = [];
-
-  for (let i = 0; i < items.length; i++) {
-    const item = (items[i] as Record<string, unknown>) || {};
-    ids.push(item.id as string);
-    exerciseIds.push(item.exerciseId as string);
-    timestamps.push(item.timestamp as number);
-    weights.push(item.weight as number);
-    reps.push(item.reps as number);
-    sets.push((item.sets as number) || 1);
-    notes.push((item.notes as string) || null);
+/** Splits a validated payload into exercises and sets. Returns an error string for a bad exercise. */
+function splitPayload(items: unknown[]): { exercises: ExerciseDef[]; sets: Record<string, unknown>[] } | string {
+  const exercises: ExerciseDef[] = [];
+  const sets: Record<string, unknown>[] = [];
+  for (const raw of items) {
+    const item = raw as Record<string, unknown>;
+    if (item.exerciseId !== DEFINITION_ID) {
+      sets.push(item);
+      continue;
+    }
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(String(item.notes ?? ''));
+    } catch {
+      // falls through to the error below
+    }
+    const exercise = validateExercise(parsed);
+    if (!exercise || item.id !== `${DEFINITION_ROW_PREFIX}${exercise.id}`) {
+      return 'Invalid exercise definition';
+    }
+    exercises.push(exercise);
   }
+  return { exercises, sets };
+}
 
-  const query = `
-    INSERT INTO workouts (id, exercise_id, timestamp, weight, reps, sets, notes)
-    SELECT * FROM UNNEST ($1::text[], $2::text[], $3::bigint[], $4::numeric[], $5::integer[], $6::integer[], $7::text[])
-    AS t(id, exercise_id, timestamp, weight, reps, sets, notes)
-    ON CONFLICT (id) DO UPDATE SET
-      weight = EXCLUDED.weight,
-      reps = EXCLUDED.reps,
-      sets = EXCLUDED.sets,
-      notes = EXCLUDED.notes;
-  `;
+async function saveExercises(pool: Pool, exercises: ExerciseDef[]): Promise<void> {
+  if (exercises.length === 0) return;
+  const col = <T>(f: (e: ExerciseDef) => T) => exercises.map(f);
+  await pool.query(
+    `INSERT INTO exercises
+       (id, name, muscle_group, day_type, default_weight, increment, target_reps, is_custom, is_archived, is_slot_choice)
+     SELECT * FROM UNNEST ($1::text[], $2::text[], $3::text[], $4::text[], $5::numeric[], $6::numeric[], $7::integer[], $8::boolean[], $9::boolean[], $10::boolean[])
+     ON CONFLICT (id) DO UPDATE SET
+       name = EXCLUDED.name,
+       muscle_group = EXCLUDED.muscle_group,
+       day_type = EXCLUDED.day_type,
+       default_weight = EXCLUDED.default_weight,
+       increment = EXCLUDED.increment,
+       target_reps = EXCLUDED.target_reps,
+       is_custom = EXCLUDED.is_custom,
+       is_archived = EXCLUDED.is_archived,
+       is_slot_choice = EXCLUDED.is_slot_choice,
+       updated_at = now()`,
+    [
+      col(e => e.id), col(e => e.name), col(e => e.muscleGroup), col(e => e.dayType),
+      col(e => e.defaultWeight), col(e => e.increment), col(e => e.targetReps),
+      col(e => !!e.isCustom), col(e => !!e.isArchived), col(e => !!e.isSlotChoice)
+    ]
+  );
+}
 
-  await pool.query(query, [ids, exerciseIds, timestamps, weights, reps, sets, notes]);
+async function saveSets(pool: Pool, sets: Record<string, unknown>[]): Promise<void> {
+  if (sets.length === 0) return;
+  const col = (key: string) => sets.map(s => s[key]);
+  await pool.query(
+    `INSERT INTO workouts (id, exercise_id, timestamp, weight, reps)
+     SELECT * FROM UNNEST ($1::text[], $2::text[], $3::bigint[], $4::numeric[], $5::integer[])
+     ON CONFLICT (id) DO UPDATE SET
+       weight = EXCLUDED.weight,
+       reps = EXCLUDED.reps`,
+    [col('id'), col('exerciseId'), col('timestamp'), col('weight'), col('reps')]
+  );
+}
+
+/** Validates, splits and stores a payload. Returns an error string, or null once saved. */
+async function savePayload(pool: Pool, items: unknown[], inArray: boolean): Promise<string | null> {
+  const invalid = validateWorkoutLogs(items, inArray);
+  if (invalid) return invalid;
+  const split = splitPayload(items);
+  if (typeof split === 'string') return split;
+  // Exercises first, so a set is never stored ahead of the exercise it names.
+  await saveExercises(pool, split.exercises);
+  await saveSets(pool, split.sets);
+  return null;
 }
 
 let cachedTargetHash: string | null = null;
@@ -463,17 +526,45 @@ export default {
       // GET: Fetch all logs
       if (request.method === 'GET' && (url.pathname === '/gym-api' || url.pathname === '/gym-api/')) {
         try {
-          const { rows } = await pool.query('SELECT id, exercise_id, timestamp, weight, reps, sets, notes FROM workouts ORDER BY timestamp DESC');
+          const [{ rows }, { rows: exerciseRows }] = await Promise.all([
+            pool.query('SELECT id, exercise_id, timestamp, weight, reps FROM workouts ORDER BY timestamp DESC'),
+            pool.query(
+              'SELECT id, name, muscle_group, day_type, default_weight, increment, target_reps, is_custom, is_archived, is_slot_choice FROM exercises'
+            )
+          ]);
 
-          const logs = rows.map((row: any) => ({
+          // Every row is one set: the app logs them one at a time.
+          const logs: unknown[] = rows.map((row: any) => ({
             id: row.id,
             exerciseId: row.exercise_id,
             timestamp: Number(row.timestamp),
             weight: Number(row.weight),
             reps: row.reps,
-            sets: row.sets,
-            notes: row.notes
+            sets: 1
           }));
+          for (const row of exerciseRows as any[]) {
+            const exercise: ExerciseDef = {
+              id: row.id,
+              name: row.name,
+              muscleGroup: row.muscle_group,
+              defaultWeight: Number(row.default_weight),
+              increment: Number(row.increment),
+              targetReps: row.target_reps,
+              dayType: row.day_type
+            };
+            if (row.is_custom) exercise.isCustom = true;
+            if (row.is_archived) exercise.isArchived = true;
+            if (row.is_slot_choice) exercise.isSlotChoice = true;
+            logs.push({
+              id: `${DEFINITION_ROW_PREFIX}${row.id}`,
+              exerciseId: DEFINITION_ID,
+              timestamp: 0,
+              weight: 0,
+              reps: 0,
+              sets: 0,
+              notes: JSON.stringify(exercise)
+            });
+          }
 
           return new Response(JSON.stringify(logs), {
             status: 200,
@@ -506,11 +597,8 @@ export default {
            return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
         }
 
-        // Validate items
-        const bulkError = validateWorkoutLogs(body, true);
+        const bulkError = await savePayload(pool, body, true);
         if (bulkError) return new Response(JSON.stringify({ error: bulkError }), { status: 400, headers });
-
-        await executeBulkInsert(pool, body);
 
 
         return new Response(JSON.stringify({ success: true, count: body.length }), { status: 200, headers });
@@ -528,11 +616,8 @@ export default {
           return new Response(JSON.stringify({ success: true, count: 0 }), { status: 200, headers });
         }
 
-        // Validate all items before inserting
-        const upsertError = validateWorkoutLogs(items, false);
+        const upsertError = await savePayload(pool, items, false);
         if (upsertError) return new Response(JSON.stringify({ error: upsertError }), { status: 400, headers });
-
-        await executeBulkInsert(pool, items);
 
 
         return new Response(JSON.stringify({ success: true, count: items.length }), { status: 200, headers });
