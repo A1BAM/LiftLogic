@@ -22,6 +22,7 @@ import { useBackToClose } from './hooks/useBackToClose';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from './utils/date';
+import { ParsedBackup } from './utils/backup';
 import { loadResume, saveResume } from './utils/resume';
 
 const AppScreens: React.FC = () => {
@@ -175,16 +176,6 @@ const AppScreens: React.FC = () => {
     }
   }, [updateLog]);
 
-  const handleImportLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
-    try {
-      await importLogs(importedLogs);
-      notify("Import successful");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      notify("Import failed", message);
-    }
-  }, [importLogs]);
-
   const handleSaveNewExercise = useCallback(async (newExercise: ExerciseDef) => {
     setActiveModal(null);
     try {
@@ -294,6 +285,37 @@ const AppScreens: React.FC = () => {
     });
     return Object.values(combined);
   }, [syncedExercises]);
+
+  /**
+   * Restores a backup by adding what is missing, never by overwriting: a set
+   * edited since the backup was taken keeps its edit, and an exercise you have
+   * since archived stays archived.
+   */
+  const handleImportBackup = useCallback(async ({ logs: incoming, exercises }: ParsedBackup) => {
+    const knownExercises = new Set(allExercises.map(e => e.id));
+    const knownLogs = new Set(logs.map(l => l.id));
+    const newExercises = exercises.filter(e => !knownExercises.has(e.id));
+    const newLogs = incoming.filter(l => !knownLogs.has(l.id));
+
+    if (newExercises.length === 0 && newLogs.length === 0) {
+      notify('Nothing new', 'Everything in that backup is already here.');
+      return;
+    }
+    try {
+      // Exercises first, so no restored set ever points at one that is missing.
+      if (newExercises.length > 0) await saveExercises(newExercises);
+      if (newLogs.length > 0) await importLogs(newLogs);
+      const parts = [
+        newLogs.length > 0 && `${newLogs.length.toLocaleString()} ${newLogs.length === 1 ? 'set' : 'sets'}`,
+        newExercises.length > 0 && `${newExercises.length} ${newExercises.length === 1 ? 'exercise' : 'exercises'}`
+      ].filter(Boolean);
+      notify('Restored', `Added ${parts.join(' and ')}.`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      notify('Restore failed', message);
+    }
+  }, [allExercises, logs, saveExercises, importLogs]);
+
 
   // Filter exercises based on selected day AND archive status
   // Optimization: Memoize filtering to prevent recalculation on every render (e.g., when timer ticks)
@@ -451,7 +473,7 @@ const AppScreens: React.FC = () => {
             logs={logs}
             currentDayType={workoutDay}
             onClose={() => setActiveModal(null)}
-            onImport={handleImportLogs}
+            onImport={handleImportBackup}
             customExercises={syncedExercises}
           />
         )}
@@ -614,7 +636,7 @@ const AppScreens: React.FC = () => {
           logs={logs}
           currentDayType={workoutDay}
           onClose={() => setActiveModal(null)}
-          onImport={handleImportLogs}
+          onImport={handleImportBackup}
           customExercises={syncedExercises}
         />
       )}

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
-import { logger } from '../utils/logger';
 import { GlobalHistoryModal, calculateGlobalHistoryStats } from './GlobalHistoryModal';
 
 describe('calculateGlobalHistoryStats', () => {
@@ -40,57 +39,68 @@ describe('GlobalHistoryModal', () => {
     cleanup();
   });
 
-  it('handles clipboard export failure gracefully', async () => {
-    // Mock logger.error to verify it gets called and to prevent console noise
-    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+  const sets = [
+    { id: 'a', exerciseId: 'DUMBBELL_CURL', timestamp: Date.UTC(2026, 10, 1, 17), weight: 30, reps: 12, sets: 1 }
+  ];
+  const openBackup = (props = {}) => {
+    render(<GlobalHistoryModal {...defaultProps} logs={sets} {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Backup' }));
+  };
 
-    // It must not fall back to a system alert, which the phone can swallow.
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('saves a complete backup as a file, not to the clipboard', async () => {
+    const writeText = vi.fn();
+    Object.assign(navigator, { clipboard: { writeText } });
+    let saved: Blob | null = null;
+    const createObjectURL = vi.fn((b: Blob) => { saved = b; return 'blob:x'; });
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    // Mock clipboard writeText to reject
-    const clipboardError = new Error('Clipboard access denied');
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn().mockRejectedValue(clipboardError),
-      },
-    });
+    openBackup();
+    expect(screen.getByText(/1 sets ·/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save backup file' }));
 
-    render(<GlobalHistoryModal {...defaultProps} logs={[{ id: '1', exerciseId: 'ex1', timestamp: Date.now(), weight: 100, reps: 5, sets: 1, notes: '' }]} />);
-
-    // Click Export button
-    const exportBtn = screen.getByRole('button', { name: 'Export' });
-    fireEvent.click(exportBtn);
-
-    // Verify error handling
-    await waitFor(() => {
-      expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to copy:', clipboardError);
-    });
-
-    expect(alertSpy).not.toHaveBeenCalled();
-    loggerErrorSpy.mockRestore();
-    alertSpy.mockRestore();
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(writeText).not.toHaveBeenCalled();
+    const backup = JSON.parse(await saved!.text());
+    expect(backup).toMatchObject({ app: 'liftlogic', version: 2 });
+    expect(backup.sets).toHaveLength(1);
+    // The exercise the set belongs to travels with it.
+    expect(backup.exercises.map((e: { id: string }) => e.id)).toEqual(['DUMBBELL_CURL']);
+    click.mockRestore();
   });
 
-  it('shows error message when importing invalid JSON', () => {
-    render(<GlobalHistoryModal {...defaultProps} />);
+  it('uses the share sheet where the phone offers one', async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { canShare: () => true, share });
 
-    // Click Import Data button to enter import mode
-    const importDataBtn = screen.getByLabelText('Import Data');
-    fireEvent.click(importDataBtn);
+    openBackup();
+    fireEvent.click(screen.getByRole('button', { name: /spreadsheet/i }));
 
-    // Find the textarea and enter invalid JSON
-    const textarea = screen.getByLabelText('Workout history JSON');
-    fireEvent.change(textarea, { target: { value: 'invalid json text' } });
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const file: File = share.mock.calls[0][0].files[0];
+    expect(file.name).toMatch(/^liftlogic-sets-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(await file.text()).toContain('Dumbbell Bicep Curls,30,12');
+    Object.assign(navigator, { canShare: undefined, share: undefined });
+  });
 
-    // Click Import Logs button
-    const submitBtn = screen.getByRole('button', { name: 'Import Logs' });
-    fireEvent.click(submitBtn);
+  it('restores a pasted old-style backup', async () => {
+    const onImport = vi.fn().mockResolvedValue(undefined);
+    openBackup({ onImport });
+    fireEvent.click(screen.getByRole('button', { name: /Paste an older backup/ }));
+    fireEvent.change(screen.getByLabelText('Backup text'), { target: { value: JSON.stringify(sets, null, 2) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Restore pasted backup' }));
 
-    // Verify error is displayed (we check by regex since the browser error message is included)
-    const errorMessage = screen.getByText(/is not valid JSON|Unexpected token/i);
-    expect(errorMessage).toBeTruthy();
+    await waitFor(() => expect(onImport).toHaveBeenCalled());
+    expect(onImport.mock.calls[0][0].logs.map((l: { id: string }) => l.id)).toEqual(['a']);
+  });
 
-    // Verify onImport was not called
+  it('says what is wrong with a bad backup and imports nothing', () => {
+    openBackup();
+    fireEvent.click(screen.getByRole('button', { name: /Paste an older backup/ }));
+    fireEvent.change(screen.getByLabelText('Backup text'), { target: { value: 'invalid json text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Restore pasted backup' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/not valid JSON/);
     expect(defaultProps.onImport).not.toHaveBeenCalled();
   });
 });
