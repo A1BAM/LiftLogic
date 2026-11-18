@@ -46,6 +46,10 @@ MCP tools are never invoked autonomously.
   model. The header comment is the spec; change the two together.
 - `liftlogic/worker.ts` — the Cloudflare Worker: auth, CORS, and the `/gym-api`
   endpoints over Neon.
+- Neon has two tables: `workouts` (one row per set) and `exercises`. The app
+  still sends exercises as `__DEFINITION__` rows; `worker.ts` translates at
+  the edge. Change the schema with a Neon backup branch first, additive steps
+  before the code that needs them, destructive ones only after it is live.
 - Login: the browser sends the password and the Worker hashes it. Never hash
   on the client — that makes the stored hash the thing you log in with. The
   session cookie is a signed, expiring token, not the hash.

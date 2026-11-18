@@ -1,6 +1,9 @@
-import { DayType, ExerciseDef, WorkoutLog } from '../types';
+import { ExerciseDef, WorkoutLog } from '../types';
 import { DEFINITION_ID } from '../constants';
 import { validateWorkoutLogs } from './validation';
+import { validateExercise } from './exercise';
+
+export { validateExercise };
 
 /**
  * Backups and spreadsheet exports.
@@ -14,8 +17,6 @@ import { validateWorkoutLogs } from './validation';
  * those sets belong to. Compact — no indentation, no fields that are always
  * the same — and with real dates, so it can be read as well as restored.
  */
-
-const DAYS: DayType[] = ['PUSH', 'PULL', 'LEGS'];
 
 export interface BackupSet {
   id: string;
@@ -170,36 +171,6 @@ export function parseBackup(text: string): ParsedBackup {
     if (ex) exercises.push(ex);
   }
   return { logs, exercises };
-}
-
-/**
- * An exercise from a file, or null if it is not one. Only known fields are
- * kept, and only within the limits the server enforces: the definition is
- * stored as JSON in a 500-character column under the id `def_<id>`.
- */
-export function validateExercise(raw: unknown): ExerciseDef | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const e = raw as Record<string, unknown>;
-  const text = (v: unknown, max: number) =>
-    typeof v === 'string' && v.trim() !== '' && v.length <= max ? v : null;
-
-  const id = text(e.id, 46);
-  const name = text(e.name, 80);
-  const muscleGroup = text(e.muscleGroup, 80) ?? '';
-  const dayType = DAYS.includes(e.dayType as DayType) ? (e.dayType as DayType) : null;
-  const defaultWeight = Number(e.defaultWeight);
-  const increment = Number(e.increment);
-  const targetReps = Number(e.targetReps);
-  if (!id || !name || !dayType) return null;
-  if (!Number.isFinite(defaultWeight) || defaultWeight < 0 || defaultWeight > 2000) return null;
-  if (!Number.isFinite(increment) || increment <= 0 || increment > 100) return null;
-  if (!Number.isInteger(targetReps) || targetReps < 1 || targetReps > 100) return null;
-
-  const ex: ExerciseDef = { id, name, muscleGroup, defaultWeight, increment, targetReps, dayType };
-  if (e.isCustom === true) ex.isCustom = true;
-  if (e.isArchived === true) ex.isArchived = true;
-  if (e.isSlotChoice === true) ex.isSlotChoice = true;
-  return JSON.stringify(ex).length <= 500 ? ex : null;
 }
 
 /**
