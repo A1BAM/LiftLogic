@@ -74,7 +74,7 @@ Set as secrets in the Cloudflare dashboard, never in `wrangler.jsonc`:
 
 | Name | Purpose |
 |---|---|
-| `DATABASE_URL` | Neon connection string |
+| `DATABASE_URL` | Neon pooled connection string for the `liftlogic_app` role (read/write on `public` only) |
 | `TARGET_HASH` | SHA-256 of the login password, as hex. The server hashes what is typed and compares; the hash itself does not log anyone in |
 | `PASSWORD` | Login password |
 | `ALLOWED_ORIGIN` | Exact origin allowed by CORS |

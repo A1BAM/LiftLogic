@@ -50,6 +50,11 @@ MCP tools are never invoked autonomously.
   still sends exercises as `__DEFINITION__` rows; `worker.ts` translates at
   the edge. Change the schema with a Neon backup branch first, additive steps
   before the code that needs them, destructive ones only after it is live.
+- The Worker logs in to Neon as `liftlogic_app` (`DATABASE_URL`, a Cloudflare
+  secret): read and write rows in `public`, nothing else. `neondb_owner` owns
+  the tables and is for migrations only. Never delete or alter a Neon role
+  without first checking which role the app's own queries run as
+  (`pg_stat_activity`) — deleting the one it used took the site down once.
 - Login: the browser sends the password and the Worker hashes it. Never hash
   on the client — that makes the stored hash the thing you log in with. The
   session cookie is a signed, expiring token, not the hash.
