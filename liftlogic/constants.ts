@@ -1,6 +1,7 @@
 import { ExerciseId, ExerciseDef } from './types';
 
 export const API_URL = '/gym-api';
+export const DEFINITION_ROW_PREFIX = 'def_';
 export const DEFINITION_ID = '__DEFINITION__'; // Special ID to store exercise definitions in the DB
 
 export const EXERCISES: Record<ExerciseId, ExerciseDef> = {

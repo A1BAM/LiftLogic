@@ -5,7 +5,7 @@ import { workoutService } from '../services/workoutService';
 import { exerciseService } from '../services/exerciseService';
 import { logger } from '../utils/logger';
 
-export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction<import('../types').WorkoutLog[]>>) => {
+export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction<import('../types').WorkoutLog[]>>, signal: AbortSignal) => {
   const [syncedExercises, setSyncedExercises] = useState<ExerciseDef[]>([]);
 
   const saveDefinitionsToCloud = useCallback(async (exercises: ExerciseDef[]) => {
@@ -19,9 +19,9 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
       notes: JSON.stringify(exercise)
     }));
     if (payloads.length > 0) {
-      await workoutService.saveItems(payloads);
+      await workoutService.saveItems(payloads, signal);
     }
-  }, []);
+  }, [signal]);
 
   const saveExercises = useCallback(async (exercisesToSave: ExerciseDef[]) => {
     if (exercisesToSave.length === 0) return;
@@ -30,7 +30,7 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
       const updatedMap = new Map(prevSynced.map(ex => [ex.id, ex]));
       exercisesToSave.forEach(ex => updatedMap.set(ex.id, ex));
       const updatedSynced = Array.from(updatedMap.values());
-      exerciseService.setLocalExercises(updatedSynced);
+      if (!signal.aborted) exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
 
@@ -40,7 +40,7 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
       logger.error("Failed to sync exercises to cloud", err);
       throw err;
     }
-  }, [saveDefinitionsToCloud]);
+  }, [signal, saveDefinitionsToCloud]);
 
   const saveExercise = useCallback(async (exercise: ExerciseDef) => {
     await saveExercises([exercise]);
@@ -49,19 +49,19 @@ export const useWorkoutExercises = (setLogs: React.Dispatch<React.SetStateAction
   const deleteExercisePermanently = useCallback(async (exerciseId: string) => {
     setSyncedExercises(prevSynced => {
       const updatedSynced = prevSynced.filter(e => e.id !== exerciseId);
-      exerciseService.setLocalExercises(updatedSynced);
+      if (!signal.aborted) exerciseService.setLocalExercises(updatedSynced);
       return updatedSynced;
     });
     setLogs(prev => prev.filter(l => l.exerciseId !== exerciseId));
 
     try {
-      await workoutService.deleteItem({ exerciseId });
-      await workoutService.deleteItem({ id: `def_${exerciseId}` });
+      await workoutService.deleteItem({ exerciseId }, signal);
+      await workoutService.deleteItem({ definitionId: exerciseId }, signal);
     } catch (err) {
       logger.error("Failed to delete exercise from cloud", err);
       throw err;
     }
-  }, [setLogs]);
+  }, [setLogs, signal]);
 
   return {
     syncedExercises,

@@ -1,5 +1,5 @@
 import { ExerciseDef, WorkoutLog } from '../types';
-import { DEFINITION_ID } from '../constants';
+import { DEFINITION_ID, DEFINITION_ROW_PREFIX } from '../constants';
 import { validateWorkoutLogs } from './validation';
 import { validateExercise } from './exercise';
 
@@ -20,6 +20,8 @@ export { validateExercise };
 
 export interface BackupSet {
   id: string;
+  /** Present when a stored set had an ID reserved for exercise definitions. */
+  originalSetId?: string;
   exerciseId: string;
   /** ISO 8601, so the file reads as dates rather than milliseconds. */
   at: string;
@@ -35,21 +37,45 @@ export interface Backup {
   sets: BackupSet[];
 }
 
+/** Older Workers accepted set IDs reserved for exercise definitions. Give
+ * those stored sets stable, unused IDs when backing them up. Restoring the
+ * same backup on the original device must still recognize the original set.
+ */
+function legacySetBackupIds(logs: WorkoutLog[]): Map<string, string> {
+  const ids = new Set(logs.map(log => log.id));
+  const aliases = new Map<string, string>();
+  for (const id of [...ids].filter(id => id.startsWith(DEFINITION_ROW_PREFIX)).sort()) {
+    const base = 'set_' + id.slice(DEFINITION_ROW_PREFIX.length);
+    let alias = base;
+    let n = 0;
+    while (ids.has(alias)) {
+      const suffix = '~' + ++n;
+      alias = base.slice(0, 50 - suffix.length) + suffix;
+    }
+    ids.add(alias);
+    aliases.set(id, alias);
+  }
+  return aliases;
+}
+
 export function buildBackup(
   logs: WorkoutLog[],
   exercises: ExerciseDef[],
   now = Date.now()
 ): Backup {
   const sets: BackupSet[] = [];
+  const aliases = legacySetBackupIds(logs);
   // Oldest first: the order you would read a training log in.
   for (const log of [...logs].sort((a, b) => a.timestamp - b.timestamp)) {
     if (log.exerciseId === DEFINITION_ID || !Number.isFinite(log.timestamp)) continue;
     // A legacy row recording "3 sets" in one is written out as three sets, so
     // nothing in a backup depends on a field the app no longer uses.
     const count = Math.max(1, Math.floor(Number(log.sets)) || 1);
+    const id = aliases.get(log.id) ?? log.id;
     for (let i = 0; i < count; i++) {
       sets.push({
-        id: i === 0 ? log.id : `${log.id}~${i}`.slice(0, 50),
+        id: i === 0 ? id : `${id}~${i}`.slice(0, 50),
+        ...(i === 0 && id !== log.id ? { originalSetId: log.id } : {}),
         exerciseId: log.exerciseId,
         at: new Date(log.timestamp).toISOString(),
         weight: log.weight,
@@ -105,6 +131,7 @@ function csvField(value: string): string {
 }
 
 export interface ParsedBackup {
+  originalSetIds?: Map<string, string>;
   logs: WorkoutLog[];
   exercises: ExerciseDef[];
 }
@@ -151,9 +178,14 @@ export function parseBackup(text: string): ParsedBackup {
     throw new Error('This backup was made by a newer version of LiftLogic. Update the app, then try again.');
   }
 
+  const originalSetIds = new Map<string, string>();
   const logs = validateWorkoutLogs(
     backup.sets.map(s => {
       const set = (s ?? {}) as Partial<BackupSet>;
+      if (typeof set.id === 'string' && typeof set.originalSetId === 'string' &&
+          set.originalSetId.startsWith(DEFINITION_ROW_PREFIX) && set.originalSetId.length <= 50) {
+        originalSetIds.set(set.id, set.originalSetId);
+      }
       return {
         id: set.id,
         exerciseId: set.exerciseId,
@@ -170,7 +202,7 @@ export function parseBackup(text: string): ParsedBackup {
     const ex = validateExercise(raw);
     if (ex) exercises.push(ex);
   }
-  return { logs, exercises };
+  return { logs, exercises, ...(originalSetIds.size > 0 ? { originalSetIds } : {}) };
 }
 
 /**

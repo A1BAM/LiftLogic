@@ -57,7 +57,8 @@ MCP tools are never invoked autonomously.
   (`pg_stat_activity`) — deleting the one it used took the site down once.
 - Login: the browser sends the password and the Worker hashes it. Never hash
   on the client — that makes the stored hash the thing you log in with. The
-  session cookie is a signed, expiring token, not the hash.
+  session cookie is a random ID. The SESSIONS Durable Object checks its
+  digest, credential version and expiry and revokes it on logout.
 - `liftlogic/public/_headers` — the security and caching headers for the page
   and its files. Cloudflare serves those without running the Worker, so a
   header set in `worker.ts` only ever reaches `/gym-api`. Check with

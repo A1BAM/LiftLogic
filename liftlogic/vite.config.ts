@@ -9,7 +9,8 @@ export default defineConfig(() => {
         proxy: {
           '/gym-api': {
             target: 'http://127.0.0.1:8787',
-            changeOrigin: true,
+            // The Worker checks browser writes against their original Host.
+            changeOrigin: false,
           },
         },
       },

@@ -1,3 +1,4 @@
+import { DEFINITION_ID, DEFINITION_ROW_PREFIX } from '../constants';
 import { WorkoutLog } from '../types';
 
 function validateWorkoutLogItem(item: unknown, i: number): void {
@@ -15,6 +16,10 @@ function validateWorkoutLogItem(item: unknown, i: number): void {
   }
   if (obj.id.length > 50) {
     throw new Error(`Invalid data: Item ${indexStr} 'id' is too long (max 50 chars).`);
+  }
+
+  if (obj.id.startsWith(DEFINITION_ROW_PREFIX) || obj.exerciseId === DEFINITION_ID) {
+    throw new Error(`Invalid data: Item ${indexStr} uses a reserved workout identifier.`);
   }
 
   if (typeof obj.exerciseId !== 'string' || !obj.exerciseId.trim()) {

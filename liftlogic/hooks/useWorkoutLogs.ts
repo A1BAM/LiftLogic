@@ -5,7 +5,7 @@ import { generateId } from '../utils/id';
 import { logger } from '../utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from '../utils/date';
 
-export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
+export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>, signal: AbortSignal) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
 
   const addLog = useCallback(async (exerciseId: string, weight: number, reps: number) => {
@@ -22,35 +22,35 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
     setLogs(prev => [logToSave, ...prev]);
 
     try {
-      await workoutService.saveItem(logToSave);
+      await workoutService.saveItem(logToSave, signal);
     } catch (err) {
       logger.error("Failed to save log", err);
       fetchDataAndSync();
       throw err;
     }
-  }, [fetchDataAndSync]);
+  }, [fetchDataAndSync, signal]);
 
   const removeLog = useCallback(async (logId: string) => {
     setLogs(prev => prev.filter(l => l.id !== logId));
     try {
-      await workoutService.deleteItem({ id: logId });
+      await workoutService.deleteItem({ setId: logId }, signal);
     } catch (err) {
       logger.error("Failed to delete log", err);
       fetchDataAndSync();
       throw err;
     }
-  }, [fetchDataAndSync]);
+  }, [fetchDataAndSync, signal]);
 
   const updateLog = useCallback(async (log: WorkoutLog) => {
     setLogs(prev => prev.map(l => l.id === log.id ? log : l));
     try {
-      await workoutService.saveItem(log);
+      await workoutService.saveItem(log, signal);
     } catch (err) {
       logger.error("Failed to update log", err);
       fetchDataAndSync();
       throw err;
     }
-  }, [fetchDataAndSync]);
+  }, [fetchDataAndSync, signal]);
 
   const importLogs = useCallback(async (importedLogs: WorkoutLog[]) => {
     setLogs(prevLogs => {
@@ -60,11 +60,11 @@ export const useWorkoutLogs = (fetchDataAndSync: () => Promise<void>) => {
     });
 
     try {
-      await workoutService.saveItems(importedLogs);
+      await workoutService.saveItems(importedLogs, signal);
     } catch (err: unknown) {
       throw new Error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, []);
+  }, [signal]);
 
   // Memoize logs grouped by exercise ID for O(1) retrieval
   const logsByExercise = useMemo(() => {

@@ -137,7 +137,8 @@ describe('useWorkoutData fetching logic', () => {
     vi.spyOn(exerciseService, 'getLocalExercises').mockReturnValue([]);
     vi.spyOn(exerciseService, 'setLocalExercises').mockImplementation(() => {});
 
-    const { result } = renderHook(() => useWorkoutData(true));
+    const { signal } = new AbortController();
+    const { result } = renderHook(() => useWorkoutData(signal));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -157,7 +158,8 @@ describe('useWorkoutData fetching logic', () => {
 
     vi.spyOn(workoutService, 'saveItems').mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useWorkoutData(true));
+    const { signal } = new AbortController();
+    const { result } = renderHook(() => useWorkoutData(signal));
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

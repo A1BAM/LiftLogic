@@ -45,6 +45,23 @@ describe('parseBackup', () => {
     expect(parsed.exercises).toEqual([curl, custom]);
   });
 
+  it('round-trips existing reserved set IDs without colliding with ordinary sets', () => {
+    const logs = ['def_old', 'set_old', 'set_old~1'].map(id => log(id, custom.id, 0, 30, 10));
+    const backup = buildBackup(logs, [custom], T);
+    const imported = parseBackup(serializeBackup(backup));
+    expect(imported.logs.map(l => l.id)).toEqual(['set_old~2', 'set_old', 'set_old~1']);
+    expect(buildBackup([...logs].reverse(), [custom], T).sets.map(s => s.id).sort())
+      .toEqual(backup.sets.map(s => s.id).sort());
+  });
+
+  it('rejects reserved set IDs in both backup formats', () => {
+    const legacy = [log('def_old', custom.id, 0, 30, 10)];
+    expect(() => parseBackup(JSON.stringify(legacy))).toThrow(/reserved workout identifier/);
+    const backup = buildBackup([log('ordinary', custom.id, 0, 30, 10)], [custom], T);
+    backup.sets[0].id = 'def_old';
+    expect(() => parseBackup(serializeBackup(backup))).toThrow(/reserved workout identifier/);
+  });
+
   it('still reads the old clipboard export, a bare array of rows', () => {
     const old = [{ id: 'a', exerciseId: 'custom-1', timestamp: T, weight: 30, reps: 12, sets: 1, notes: null }];
     expect(parseBackup(JSON.stringify(old, null, 2)).logs).toEqual([{ ...old[0], notes: undefined }]);

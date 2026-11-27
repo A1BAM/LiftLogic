@@ -56,7 +56,7 @@ const getMissingLocalExercises = (localExercises: ExerciseDef[], cloudIds: Set<s
   return missingFromCloud;
 };
 
-export const useWorkoutData = (isAuthenticated: boolean) => {
+export const useWorkoutData = (signal: AbortSignal) => {
   const [isLoading, setIsLoading] = useState(false);
   // False until the first fetch has answered, one way or the other. Before
   // that there is no history to show, only the absence of one.
@@ -80,7 +80,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     getLogsForExercise,
     getTodaysLogs,
     getLastSessionLogs
-  } = useWorkoutLogs(resyncOnFailure);
+  } = useWorkoutLogs(resyncOnFailure, signal);
 
   const {
     syncedExercises,
@@ -89,12 +89,13 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
     saveExercise,
     saveExercises,
     deleteExercisePermanently
-  } = useWorkoutExercises(setLogs);
+  } = useWorkoutExercises(setLogs, signal);
 
   const fetchDataAndSync = useCallback(async () => {
     try {
       setIsLoading(true);
-      const allData = await workoutService.fetchWorkouts() as WorkoutLog[];
+      const allData = await workoutService.fetchWorkouts(signal) as WorkoutLog[];
+      if (signal.aborted) return;
 
       const { fetchedLogs, cloudExercises, cloudIds } = parseFetchedData(allData);
 
@@ -104,6 +105,7 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       if (missingFromCloud.length > 0) {
         logger.info("Syncing up exercises to cloud:", missingFromCloud.length);
         await saveDefinitionsToCloud(missingFromCloud);
+        if (signal.aborted) return;
       }
 
       const mergedExercises = [...cloudExercises, ...missingFromCloud];
@@ -115,22 +117,21 @@ export const useWorkoutData = (isAuthenticated: boolean) => {
       exerciseService.setLocalExercises(uniqueExercises);
       setError(null);
     } catch (err: unknown) {
+      if (signal.aborted) return;
       logger.error("Fetch and sync error:", err);
       setError(err instanceof Error ? err.message : "Could not load workout history.");
     } finally {
       setIsLoading(false);
       setHasLoaded(true);
     }
-  }, [saveDefinitionsToCloud, setSyncedExercises, setLogs]);
+  }, [signal, saveDefinitionsToCloud, setSyncedExercises, setLogs]);
 
   // Keep the ref pointing at the current sync for the next failed write.
   fetchDataAndSyncRef.current = fetchDataAndSync;
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchDataAndSync();
-    }
-  }, [isAuthenticated, fetchDataAndSync]);
+    fetchDataAndSync();
+  }, [fetchDataAndSync]);
 
   return {
     logs,

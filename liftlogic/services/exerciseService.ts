@@ -1,12 +1,13 @@
 import { ExerciseDef } from '../types';
 import { logger } from '../utils/logger';
 
+const STORAGE_KEY = 'liftlogic_custom_exercises';
 let cachedExercisesStr: string | null = null;
 let cachedExercisesObj: ExerciseDef[] | null = null;
 
 export const exerciseService = {
   getLocalExercises(): ExerciseDef[] {
-    const stored = localStorage.getItem('liftlogic_custom_exercises');
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
     if (stored === cachedExercisesStr && cachedExercisesObj) {
       return cachedExercisesObj;
@@ -22,9 +23,15 @@ export const exerciseService = {
     }
   },
 
+  clearLocalExercises() {
+    cachedExercisesStr = null;
+    cachedExercisesObj = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* Storage may be disabled. */ }
+  },
+
   setLocalExercises(exercises: ExerciseDef[]) {
     const str = JSON.stringify(exercises);
-    localStorage.setItem('liftlogic_custom_exercises', str);
+    localStorage.setItem(STORAGE_KEY, str);
     cachedExercisesStr = str;
     cachedExercisesObj = exercises;
   }
