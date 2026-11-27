@@ -26,7 +26,7 @@ vi.mock('./services/authService', () => ({
   }
 }));
 vi.mock('./services/exerciseService', () => ({
-  exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn() }
+  exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn(), clearLocalExercises: vi.fn() }
 }));
 vi.mock('./services/workoutService', () => ({
   workoutService: {
@@ -77,6 +77,31 @@ describe('restoring a backup', () => {
     expect(saved.map(i => i.id)).toEqual(['def_custom-9', 'lost']);
     // And the edited set was never sent back over itself.
     expect(saved.some(i => i.id === 'kept')).toBe(false);
+  });
+
+  it('distinguishes a backup alias for an old set from a different set with the same spelling', async () => {
+    vi.mocked(workoutService.fetchWorkouts).mockResolvedValueOnce([{ ...rows[0], id: 'def_old' }]);
+    render(<App />);
+    fireEvent.change(screen.getByPlaceholderText('Enter password to unlock'), { target: { value: 'pw' } });
+    fireEvent.click(screen.getByRole('button', { name: /unlock app/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Journal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Backup' }));
+    fireEvent.click(screen.getByRole('button', { name: /Paste an older backup/ }));
+    const restore = (set: object) => {
+      fireEvent.change(screen.getByLabelText('Backup text'), {
+        target: { value: JSON.stringify({ ...backup, exercises: [], sets: [set] }) }
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Restore pasted backup' }));
+    };
+    const set = { ...backup.sets[0], id: 'set_old' };
+    restore({ ...set, originalSetId: 'def_old' });
+    await screen.findByText('Nothing new');
+    expect(workoutService.saveItems).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+    fireEvent.click(screen.getByRole('button', { name: /Paste an older backup/ }));
+    restore(set);
+    await screen.findByText('Added 1 set.');
+    expect(workoutService.saveItems).toHaveBeenCalledOnce();
   });
 
   it('says so when there is nothing to add', async () => {

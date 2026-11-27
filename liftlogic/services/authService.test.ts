@@ -27,7 +27,7 @@ describe('authService', () => {
 
     it('does not mistake a dev server index.html for a session', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true, headers: headers('text/html; charset=utf-8') });
-      await expect(authService.checkSession()).resolves.toBe(false);
+      await expect(authService.checkSession()).rejects.toThrow('Session could not be checked');
     });
   });
 

@@ -30,8 +30,10 @@ Routing is configured in `wrangler.jsonc`: `run_worker_first` lists the
 | Route | Purpose |
 |---|---|
 | `POST /gym-api/login` · `POST /gym-api/logout` | Session auth |
+| `GET /gym-api/session` | Check and renew the current session |
 | `GET /gym-api` | Fetch all workout rows |
 | `POST /gym-api/bulk` | Upsert many rows in one call |
+| `DELETE /gym-api` | Delete a set by `setId`, an exercise definition by `definitionId`, or an exercise’s sets by `exerciseId` |
 
 On the wire the app still sends an exercise as a "definition row" (exercise
 id `__DEFINITION__`, row id `def_<id>`, the exercise as JSON in `notes`). The
@@ -70,27 +72,35 @@ CREATE TABLE exercises (
 
 ## Worker configuration
 
-Set as secrets in the Cloudflare dashboard, never in `wrangler.jsonc`:
+Configure secrets in the Cloudflare dashboard.
 
 | Name | Purpose |
 |---|---|
 | `DATABASE_URL` | Neon pooled connection string for the `liftlogic_app` role (read/write on `public` only) |
-| `TARGET_HASH` | SHA-256 of the login password, as hex. The server hashes what is typed and compares; the hash itself does not log anyone in |
-| `PASSWORD` | Login password |
-| `ALLOWED_ORIGIN` | Exact origin allowed by CORS |
-| `SESSION_SECRET` | Optional. Signs session cookies. Unset, the key is derived from the password hash |
+| `TARGET_HASH` | SHA-256 of the login password, as hex. Takes precedence when both password settings are present |
+| `PASSWORD` | Login password when `TARGET_HASH` is unset |
+| `ALLOWED_ORIGIN` | Optional comma-separated list of additional trusted origins. The app's own origin is allowed automatically |
+| `SESSION_SECRET` | Optional. Rotating this secret invalidates current sessions |
 
-Three bindings come from `wrangler.jsonc` rather than secrets: `ASSETS`
-(static files), `LOGIN_RATE_LIMITER` and `API_RATE_LIMITER`.
+Wrangler provisions the `SESSIONS` Durable Object alongside the static asset
+and rate-limiter bindings. Its SQLite storage holds a digest of each random
+session ID, its expiration times, and a version of the effective credentials.
+The first deployment of this version requires one fresh login on each device.
 
-Logging in sets a signed session cookie that expires after 90 days without
-use. The password hash is accepted by `/gym-api/login` and nowhere else.
+Opening the app renews the 90-day idle timeout, up to 180 days from login.
+Logout revokes the current session, clears private browser state, and locks
+other open tabs on that browser. Changing the effective password invalidates
+all sessions. If an older installation still uses the password previously
+embedded as a hash in the frontend, rotate the effective login credential in
+Cloudflare as well.
+
+Browser writes require JSON and a trusted origin. Older clients using an
+ambiguous prefixed ID to delete an item must reload to send a typed delete.
 
 The page and its files are served by Cloudflare without running the Worker,
 so their security and caching headers live in `liftlogic/public/_headers`.
 
-If `TARGET_HASH` is missing the Worker fails closed with a 500 rather than
-degrading to unauthenticated access.
+Configure at least one of `TARGET_HASH` and `PASSWORD` to enable login.
 
 ## Development
 

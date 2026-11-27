@@ -11,6 +11,12 @@
   "observability": {
     "enabled": true
   },
+  "durable_objects": {
+    "bindings": [{ "name": "SESSIONS", "class_name": "SessionStore" }]
+  },
+  "exports": {
+    "SessionStore": { "type": "durable-object", "storage": "sqlite" }
+  },
   "ratelimits": [
     {
       "name": "LOGIN_RATE_LIMITER",

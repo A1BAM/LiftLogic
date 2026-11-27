@@ -1,8 +1,11 @@
 import { Pool } from '@neondatabase/serverless';
 import { timingSafeEqual } from './utils/security';
 import { validateExercise } from './utils/exercise';
-import { DEFINITION_ID } from './constants';
+import { DEFINITION_ID, DEFINITION_ROW_PREFIX } from './constants';
+import { accessSession, getTargetHash, isSessionToken, newSessionToken, sha256 } from './sessions';
 import type { ExerciseDef } from './types';
+
+export { SessionStore } from './sessions';
 
 /**
  * The shared logger goes quiet in production, which is right for the browser
@@ -45,18 +48,6 @@ async function deleteLogsByExercise(pool: Pool, exerciseId: string, headers: Rec
   await pool.query('DELETE FROM workouts WHERE exercise_id = $1', [exerciseId]);
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 }
-
-async function deleteLogById(pool: Pool, id: string, headers: Record<string, string>): Promise<Response> {
-  // "def_<id>" is how the app has always named an exercise; it lives in its
-  // own table now.
-  if (id.startsWith(DEFINITION_ROW_PREFIX)) {
-    await pool.query('DELETE FROM exercises WHERE id = $1', [id.slice(DEFINITION_ROW_PREFIX.length)]);
-  } else {
-    await pool.query('DELETE FROM workouts WHERE id = $1', [id]);
-  }
-  return new Response(JSON.stringify({ success: true }), { status: 200, headers });
-}
-
 
 function validateWorkoutItem(item: unknown, inArray = false): string | null {
   const suffix = inArray ? " in array" : "";
@@ -102,20 +93,34 @@ async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<st
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
   }
-  const { id, exerciseId } = (body as Record<string, unknown>);
-
+  const { id, setId, definitionId, exerciseId } = body as Record<string, unknown>;
+  if ([id, setId, definitionId, exerciseId].filter(value => value !== undefined).length > 1) {
+    return new Response(JSON.stringify({ error: "Choose one delete target" }), { status: 400, headers });
+  }
   if (exerciseId !== undefined) {
-    if (typeof exerciseId !== 'string' || exerciseId.length === 0 || exerciseId.length > 50) {
+    if (typeof exerciseId !== 'string' || !exerciseId.length || exerciseId.length > 50) {
       return new Response(JSON.stringify({ error: "Invalid exerciseId" }), { status: 400, headers });
     }
-    return await deleteLogsByExercise(pool, exerciseId, headers);
+    return deleteLogsByExercise(pool, exerciseId, headers);
   }
-
-  if (id !== undefined) {
-    if (typeof id !== 'string' || id.length === 0 || id.length > 50) {
+  if (definitionId !== undefined) {
+    if (typeof definitionId !== 'string' || !definitionId.length || definitionId.length > 46) {
+      return new Response(JSON.stringify({ error: "Invalid definitionId" }), { status: 400, headers });
+    }
+    await pool.query('DELETE FROM exercises WHERE id = $1', [definitionId]);
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers });
+  }
+  if (id !== undefined || setId !== undefined) {
+    const target = setId === undefined ? id : setId;
+    if (typeof target !== 'string' || !target.length || target.length > 50) {
       return new Response(JSON.stringify({ error: "Invalid id" }), { status: 400, headers });
     }
-    return await deleteLogById(pool, id, headers);
+    if (id !== undefined && target.startsWith(DEFINITION_ROW_PREFIX)) {
+      // An older client could mean either table, even on a retried delete.
+      return new Response(JSON.stringify({ error: "Refresh LiftLogic to delete this item" }), { status: 409, headers });
+    }
+    await pool.query('DELETE FROM workouts WHERE id = $1', [target]);
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers });
   }
 
   return new Response(JSON.stringify({ error: "Missing ID or Exercise ID" }), { status: 400, headers });
@@ -135,7 +140,6 @@ async function handleDeleteRequest(body: unknown, pool: Pool, headers: Record<st
  * so the database no longer has to carry it, and a phone still running an
  * older copy of the app keeps working against the new tables.
  */
-const DEFINITION_ROW_PREFIX = 'def_';
 
 /** Splits a validated payload into exercises and sets. Returns an error string for a bad exercise. */
 function splitPayload(items: unknown[]): { exercises: ExerciseDef[]; sets: Record<string, unknown>[] } | string {
@@ -144,6 +148,7 @@ function splitPayload(items: unknown[]): { exercises: ExerciseDef[]; sets: Recor
   for (const raw of items) {
     const item = raw as Record<string, unknown>;
     if (item.exerciseId !== DEFINITION_ID) {
+      if ((item.id as string).startsWith(DEFINITION_ROW_PREFIX)) return 'Reserved workout id';
       sets.push(item);
       continue;
     }
@@ -213,96 +218,13 @@ async function savePayload(pool: Pool, items: unknown[], inArray: boolean): Prom
   return null;
 }
 
-let cachedTargetHash: string | null = null;
-let cachedPasswordForHash: string | null = null;
-
-async function getTargetHash(env: Env): Promise<string | null> {
-  if (env.TARGET_HASH) return env.TARGET_HASH;
-  if (env.PASSWORD) {
-    if (cachedTargetHash !== null && cachedPasswordForHash !== null && await timingSafeEqual(cachedPasswordForHash, env.PASSWORD)) {
-      return cachedTargetHash;
-    }
-    const msgBuffer = new TextEncoder().encode(env.PASSWORD);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    cachedTargetHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    cachedPasswordForHash = env.PASSWORD;
-    return cachedTargetHash;
-  }
-  return null;
-}
-
-/**
- * Sessions.
- *
- * The cookie used to BE the password hash: the one permanent credential, kept
- * on every phone that had ever logged in, valid for ever, and accepted on
- * every endpoint. Now the hash is only ever presented to /login, and what the
- * browser holds is a signed token that says nothing but "logged in until
- * <time>". It cannot be turned back into the password, it expires, and
- * changing the password invalidates every one of them at once.
- */
-const SESSION_COOKIE = 'liftlogic_auth_token';
-const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
-
-const toHex = (bytes: ArrayBuffer) =>
-  Array.from(new Uint8Array(bytes)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-/**
- * The signing key. A dedicated SESSION_SECRET is used when one is configured;
- * otherwise the key is derived from the password hash, which needs no setup
- * and still rotates with the password.
- */
-async function sessionKey(env: Pick<Env, 'SESSION_SECRET'>, targetHash: string): Promise<CryptoKey> {
-  const material = env.SESSION_SECRET || `liftlogic-session-v1:${targetHash}`;
-  return crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(material),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
-}
-
-export async function mintSession(
-  env: Pick<Env, 'SESSION_SECRET'>,
-  targetHash: string,
-  now = Date.now()
-): Promise<string> {
-  const payload = `v1.${now + SESSION_TTL_MS}`;
-  const key = await sessionKey(env, targetHash);
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  return `${payload}.${toHex(signature)}`;
-}
-
-async function verifySession(
-  token: string,
-  env: Pick<Env, 'SESSION_SECRET'>,
-  targetHash: string,
-  now = Date.now()
-): Promise<boolean> {
-  // Shape first, so garbage costs nothing: v1.<expiry ms>.<64 hex>
-  const match = /^v1\.(\d{10,16})\.([0-9a-f]{64})$/.exec(token);
-  if (!match) return false;
-  if (Number(match[1]) <= now) return false;
-
-  const signature = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) signature[i] = parseInt(match[2].slice(i * 2, i * 2 + 2), 16);
-  const key = await sessionKey(env, targetHash);
-  // subtle.verify compares in constant time.
-  return crypto.subtle.verify('HMAC', key, signature, new TextEncoder().encode(`v1.${match[1]}`));
-}
-
-const sessionCookie = (token: string, maxAgeSeconds: number) =>
-  `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}`;
+const SESSION_COOKIE = '__Host-liftlogic_session';
+const sessionCookie = (name: string, token: string, maxAgeSeconds: number) =>
+  `${name}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}`;
 
 async function getRateLimitKey(request: Request, scope: 'login' | 'api'): Promise<string> {
   const clientAddress = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientAddress));
-  const digestHex = Array.from(new Uint8Array(digest))
-    .map(byte => byte.toString(16).padStart(2, '0'))
-    .join('');
-  return `${scope}:${digestHex}`;
+  return `${scope}:${await sha256(clientAddress)}`;
 }
 
 export interface Env {
@@ -310,7 +232,8 @@ export interface Env {
   ALLOWED_ORIGIN?: string;
   TARGET_HASH?: string;
   PASSWORD?: string;
-  /** Optional. Signs session cookies; falls back to a key derived from the password hash. */
+  SESSIONS: DurableObjectNamespace;
+  /** An optional additional credential that can be rotated to invalidate sessions. */
   SESSION_SECRET?: string;
   LOGIN_RATE_LIMITER?: RateLimit;
   API_RATE_LIMITER?: RateLimit;
@@ -365,14 +288,32 @@ export default {
       }
     }
 
-// Security check: a signed session cookie, and nothing else. The password
-    // hash is not accepted here in any form — only /login takes it.
-    const cookieHeader = request.headers.get('Cookie') || '';
-    const cookieMatch = cookieHeader.match(/(?:^|;\s*)liftlogic_auth_token=([^;]*)/);
-    const sessionToken = cookieMatch ? cookieMatch[1] : '';
+    const isMutation = request.method === 'POST' || request.method === 'DELETE';
+    const path = url.pathname.replace(/\/$/, '');
+    const isLoginEndpoint = request.method === 'POST' && path === '/gym-api/login';
+    const isLogoutEndpoint = request.method === 'POST' && path === '/gym-api/logout';
+    const isSessionProbe = request.method === 'GET' && path === '/gym-api/session';
+    if (isMutation) {
+      const site = request.headers.get('Sec-Fetch-Site');
+      const trustedOrigin = requestOrigin === url.origin ||
+        (!!requestOrigin && requestOrigin !== 'null' && requestOrigin !== '*' && allowedOrigins.includes(requestOrigin));
+      // A native client may omit Origin. Browser requests with a suppressed
+      // origin must either be same-origin or pass the JSON preflight boundary.
+      const trustedSource = requestOrigin === null
+        ? !site || site === 'same-origin'
+        : trustedOrigin || (requestOrigin === 'null' && site === 'same-origin');
+      if (!trustedSource) {
+        return new Response(JSON.stringify({ error: "Untrusted origin" }), { status: 403, headers });
+      }
+      const mediaType = request.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase();
+      if (mediaType !== 'application/json') {
+        return new Response(JSON.stringify({ error: "Expected application/json" }), { status: 415, headers });
+      }
+    }
 
-    const isLoginEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/');
-    const isLogoutEndpoint = request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/');
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const cookie = cookieHeader.split(';').map(part => part.trim()).find(part => part.startsWith(SESSION_COOKIE + '='));
+    const sessionToken = cookie?.slice(SESSION_COOKIE.length + 1) ?? '';
 
     // Every credential check is a password guess to someone who does not have
     // the password, and until this was here only /login was limited: the same
@@ -398,42 +339,45 @@ export default {
       }
     }
 
-    if (request.method !== 'OPTIONS' && !isLoginEndpoint && !isLogoutEndpoint) {
-      const targetHash = await getTargetHash(env);
-      if (!targetHash) {
-        logger.error("TARGET_HASH or PASSWORD not set. Refusing to serve requests without authentication.");
-        return new Response(JSON.stringify({ error: "Server Configuration Error" }), {
-          status: 500,
-          headers: headers
-        });
-      }
-
-      if (!sessionToken || sessionToken.length > 200 || !await verifySession(sessionToken, env, targetHash)) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: headers
-        });
-      }
-    }
-
-    // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 200, headers });
     }
 
-    // Session probe. Everything above already rejected an unauthenticated
-    // request, so reaching here is the answer. Deliberately placed before the
-    // database pool is opened: the app asks this on every load purely to find
-    // out whether it is logged in, and that question costs no query.
-    if (request.method === 'GET' && (url.pathname === '/gym-api/session' || url.pathname === '/gym-api/session/')) {
-      // Asked on every app load, so this is also where the session slides:
-      // use the app at least once in ninety days and it never asks again.
-      const targetHash = await getTargetHash(env);
-      const resHeaders = new Headers(headers);
-      if (targetHash) {
-        resHeaders.set('Set-Cookie', sessionCookie(await mintSession(env, targetHash), SESSION_TTL_MS / 1000));
+    const targetHash = await getTargetHash(env);
+    const sessionUnavailable = () => new Response(JSON.stringify({ error: "Session service unavailable" }), { status: 503, headers });
+    const cookieResponse = (body: object, token: string, expiresAt: number) => {
+      const maxAge = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      const responseHeaders = new Headers(headers);
+      responseHeaders.append('Set-Cookie', sessionCookie(SESSION_COOKIE, token, maxAge));
+      if (/(?:^|;\s*)liftlogic_auth_token=/.test(cookieHeader)) {
+        responseHeaders.append('Set-Cookie', sessionCookie('liftlogic_auth_token', '', 0));
       }
-      return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: resHeaders });
+      return new Response(JSON.stringify(body), { headers: responseHeaders });
+    };
+
+    if (isLogoutEndpoint) {
+      try {
+        if (isSessionToken(sessionToken)) await accessSession(env, 'revoke', sessionToken, targetHash ?? '');
+        return cookieResponse({ success: true }, '', 0);
+      } catch {
+        return sessionUnavailable();
+      }
+    }
+    if (!targetHash) {
+      logger.error("TARGET_HASH or PASSWORD not set.");
+      return new Response(JSON.stringify({ error: "Server Configuration Error" }), { status: 500, headers });
+    }
+    if (!isLoginEndpoint) {
+      let expiresAt = 0;
+      try {
+        if (isSessionToken(sessionToken)) {
+          expiresAt = await accessSession(env, isSessionProbe ? 'renew' : 'check', sessionToken, targetHash);
+        }
+      } catch {
+        return sessionUnavailable();
+      }
+      if (!expiresAt) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
+      if (isSessionProbe) return cookieResponse({ authenticated: true }, sessionToken, expiresAt);
     }
 
     // Use the environment variable for Cloudflare
@@ -448,27 +392,24 @@ export default {
 
     try {
       let body: unknown = null;
-      if (request.method === 'POST' || request.method === 'DELETE') {
-        const contentType = request.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json') && !url.pathname.endsWith('/logout')) {
-            const contentLength = request.headers.get('Content-Length');
-            if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) {
-              return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
-            }
-            const raw = await readBodyCapped(request, MAX_BODY_BYTES);
-            if (raw === null) {
-              return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
-            }
-            try {
-              body = JSON.parse(raw);
-            } catch (e) {
-              return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
-            }
+      if (isMutation) {
+        const contentLength = request.headers.get('Content-Length');
+        if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
+          return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
+        }
+        const raw = await readBodyCapped(request, MAX_BODY_BYTES);
+        if (raw === null) {
+          return new Response(JSON.stringify({ error: "Payload Too Large" }), { status: 413, headers });
+        }
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers });
         }
       }
 
       // Handle Login
-      if (request.method === 'POST' && (url.pathname === '/gym-api/login' || url.pathname === '/gym-api/login/')) {
+      if (isLoginEndpoint) {
         if (typeof body !== 'object' || body === null || Array.isArray(body)) {
           return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400, headers });
         }
@@ -503,24 +444,18 @@ export default {
           return new Response(JSON.stringify({ error: "Login temporarily unavailable" }), { status: 503, headers });
         }
 
-        const targetHash = await getTargetHash(env);
-        const offered = toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
-        if (!targetHash || !await timingSafeEqual(offered, targetHash.toLowerCase())) {
+        const offered = await sha256(password);
+        if (!await timingSafeEqual(offered, targetHash)) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
         }
 
-        const cookie = sessionCookie(await mintSession(env, targetHash), SESSION_TTL_MS / 1000);
-        const resHeaders = new Headers(headers);
-        resHeaders.set('Set-Cookie', cookie);
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
-      }
-
-      // Handle Logout
-      if (request.method === 'POST' && (url.pathname === '/gym-api/logout' || url.pathname === '/gym-api/logout/')) {
-        const cookie = sessionCookie('', 0);
-        const resHeaders = new Headers(headers);
-        resHeaders.set('Set-Cookie', cookie);
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers: resHeaders });
+        const token = newSessionToken();
+        try {
+          const expiresAt = await accessSession(env, 'create', token, targetHash);
+          return cookieResponse({ success: true }, token, expiresAt);
+        } catch {
+          return sessionUnavailable();
+        }
       }
 
       // GET: Fetch all logs

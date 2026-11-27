@@ -1,6 +1,7 @@
-
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import worker, { mintSession } from './worker';
+// @vitest-environment node
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import entry, { type Env, SessionStore } from './worker';
 
 const { mockQuery } = vi.hoisted(() => {
   return { mockQuery: vi.fn().mockResolvedValue({ rows: [] }) };
@@ -16,17 +17,48 @@ vi.mock('@neondatabase/serverless', () => {
   };
 });
 
-// A real session for the password hash the tests' env uses. Requests carry
-// this the way the browser does, as a cookie; the hash itself is never a
-// credential outside /login.
-const SESSION = await mintSession({}, 'testsecret');
-
 // Login is the one place a real password meets its real hash.
 const PASSWORD = 'correct horse battery staple';
 const PASSWORD_HASH = Array.from(
   new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(PASSWORD)))
 ).map(b => b.toString(16).padStart(2, '0')).join('');
-const cookieFor = (token: string) => `liftlogic_auth_token=${token}`;
+const cookieFor = (token: string) => `__Host-liftlogic_session=${token}`;
+
+type TestEnv = Omit<Env, 'SESSIONS'> & Partial<Pick<Env, 'SESSIONS'>>;
+let database: DatabaseSync;
+let SESSION: string;
+function sessionBinding(env: TestEnv): DurableObjectNamespace {
+  const sql = {
+    exec(statement: string, ...values: SQLInputValue[]) {
+      const rows = database.prepare(statement).all(...values);
+      return { toArray: () => rows };
+    }
+  };
+  const store = new SessionStore({ storage: { sql } } as unknown as DurableObjectState, env);
+  return {
+    idFromName: (name: string) => name,
+    get: () => ({ fetch: (url: string, init: RequestInit) => store.fetch(new Request(url, init)) })
+  } as unknown as DurableObjectNamespace;
+}
+
+const worker = {
+  fetch: (request: Request, env: TestEnv, ctx: ExecutionContext) =>
+    entry.fetch(request, { ...env, SESSIONS: env.SESSIONS ?? sessionBinding(env) }, ctx)
+};
+
+const loginEnv = (): TestEnv => ({
+  TARGET_HASH: PASSWORD_HASH, DATABASE_URL: 'dummy', ASSETS: { fetch: vi.fn() },
+  LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) }
+});
+
+async function signIn(env: TestEnv = loginEnv(), password = PASSWORD) {
+  const request = new Request('http://localhost/gym-api/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password })
+  });
+  const response = await worker.fetch(request, env, {} as ExecutionContext);
+  expect(response.status).toBe(200);
+  return response.headers.get('Set-Cookie')!.split(';')[0].split('=')[1];
+}
 
 describe('Worker', () => {
   /** `session`: omitted = a valid session, null = no cookie, a string = that cookie value verbatim. */
@@ -44,7 +76,14 @@ describe('Worker', () => {
     });
   };
 
+  beforeEach(async () => {
+    database = new DatabaseSync(':memory:');
+    SESSION = await signIn();
+  });
+
   afterEach(() => {
+    database.close();
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -53,7 +92,7 @@ describe('Worker', () => {
     it('blocks GET requests on login/logout paths without auth', async () => {
       const loginRequest = createRequest('GET', 'http://localhost/gym-api/login', undefined, null as any);
       const logoutRequest = createRequest('GET', 'http://localhost/gym-api/logout', undefined, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const loginRes = await worker.fetch(loginRequest, env, {} as any);
       expect(loginRes.status).toBe(401);
@@ -74,7 +113,7 @@ describe('Worker', () => {
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       const cookie = response.headers.get('Set-Cookie')!;
-      expect(cookie).toMatch(/^liftlogic_auth_token=v1\.\d+\.[0-9a-f]{64};/);
+      expect(cookie).toMatch(/^__Host-liftlogic_session=v2\.[0-9a-f]{64};/);
       // The cookie must not carry the password hash any more.
       expect(cookie).not.toContain(PASSWORD_HASH);
       expect(cookie).toContain('HttpOnly');
@@ -91,7 +130,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { password: 'wrong' }, null as any);
       const env = {
         DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
+        TARGET_HASH: PASSWORD_HASH,
         LOGIN_RATE_LIMITER: { limit: vi.fn().mockResolvedValue({ success: true }) },
         ASSETS: { fetch: vi.fn() } as any
       };
@@ -112,7 +151,7 @@ describe('Worker', () => {
       });
       const env = {
         DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
+        TARGET_HASH: PASSWORD_HASH,
         LOGIN_RATE_LIMITER: { limit },
         ASSETS: { fetch: vi.fn() } as any
       };
@@ -130,7 +169,7 @@ describe('Worker', () => {
 
     it('fails closed when the login rate-limit binding is missing', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { password: PASSWORD }, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -142,7 +181,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api/login', { password: PASSWORD }, null as any);
       const env = {
         DATABASE_URL: 'dummy',
-        TARGET_HASH: 'testsecret',
+        TARGET_HASH: PASSWORD_HASH,
         LOGIN_RATE_LIMITER: { limit: vi.fn().mockRejectedValue(new Error('rate-limit outage')) },
         ASSETS: { fetch: vi.fn() } as any
       };
@@ -157,11 +196,11 @@ describe('Worker', () => {
 
     it('handles logout', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/logout', {}, null as any);
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
-      expect(response.headers.get('Set-Cookie')).toContain('liftlogic_auth_token=;');
+      expect(response.headers.get('Set-Cookie')).toContain('__Host-liftlogic_session=;');
       expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
     });
 
@@ -200,16 +239,16 @@ describe('Worker', () => {
     });
 
     describe('session cookies', () => {
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const probe = (session: string | null) =>
         worker.fetch(createRequest('GET', 'http://localhost/gym-api/session', undefined, session), env, {} as any);
 
-      it('accepts a signed session', async () => {
+      it('accepts a registered session', async () => {
         expect((await probe(SESSION)).status).toBe(200);
       });
 
       it('no longer accepts the password hash itself as a cookie', async () => {
-        expect((await probe('testsecret')).status).toBe(401);
+        expect((await probe(PASSWORD_HASH)).status).toBe(401);
       });
 
       it('does not accept the password hash as a bearer token either', async () => {
@@ -219,32 +258,84 @@ describe('Worker', () => {
         expect((await worker.fetch(request, env, {} as any)).status).toBe(401);
       });
 
-      it('rejects a session that has expired', async () => {
-        const ninetyOneDaysAgo = Date.now() - 91 * 24 * 60 * 60 * 1000;
-        expect((await probe(await mintSession({}, 'testsecret', ninetyOneDaysAgo))).status).toBe(401);
+      it('rejects expired, altered, unregistered and legacy sessions', async () => {
+        const altered = SESSION.slice(0, -1) + (SESSION.endsWith('0') ? '1' : '0');
+        expect((await probe(altered)).status).toBe(401);
+        expect((await probe('v1.legacy-cookie')).status).toBe(401);
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(Date.now() + 91 * 86400000);
+        expect((await probe(SESSION)).status).toBe(401);
       });
 
-      it('rejects a session whose expiry was edited', async () => {
-        const [version, , signature] = SESSION.split('.');
-        const farFuture = Date.now() + 10 * 365 * 24 * 60 * 60 * 1000;
-        expect((await probe(`${version}.${farFuture}.${signature}`)).status).toBe(401);
+      it('revokes only the session that logged out, including copies handed to another client', async () => {
+        const other = await signIn();
+        expect(other).not.toBe(SESSION);
+        expect((await probe(SESSION)).status).toBe(200);
+        const logout = () => worker.fetch(createRequest('POST', 'http://localhost/gym-api/logout/', {}, SESSION), env, {} as any);
+        expect((await logout()).status).toBe(200);
+        expect((await probe(SESSION)).status).toBe(401);
+        expect((await worker.fetch(createRequest('GET', 'http://localhost/gym-api', undefined, SESSION), env, {} as any)).status).toBe(401);
+        expect((await logout()).status).toBe(200);
+        expect((await probe(other)).status).toBe(200);
       });
 
-      it('rejects a session signed for a different password', async () => {
-        expect((await probe(await mintSession({}, 'the-old-password-hash'))).status).toBe(401);
+      it.each([undefined, 'an-independent-secret'])('invalidates sessions after credential rotation (%s)', async secret => {
+        const config = { ...loginEnv(), SESSION_SECRET: secret };
+        const token = await signIn(config);
+        const check = (change: Partial<TestEnv>) => worker.fetch(
+          createRequest('GET', 'http://localhost/gym-api/session', undefined, token), { ...config, ...change }, {} as any
+        );
+        expect((await check({})).status).toBe(200);
+        expect((await check({ TARGET_HASH: 'rotated' })).status).toBe(401);
+        expect((await check({})).status).toBe(401);
       });
 
-      it('rejects a session signed without the configured secret', async () => {
-        const withSecret = { ...env, SESSION_SECRET: 'a-dedicated-secret' };
-        const good = await mintSession(withSecret, 'testsecret');
-        const request = (t: string) => createRequest('GET', 'http://localhost/gym-api/session', undefined, t);
-        expect((await worker.fetch(request(good), withSecret, {} as any)).status).toBe(200);
-        expect((await worker.fetch(request(SESSION), withSecret, {} as any)).status).toBe(401);
+      it('keeps current sessions when an older Worker reaches the new store', async () => {
+        const config = loginEnv();
+        const token = await signIn(config);
+        const stale = { ...config, TARGET_HASH: 'previous', SESSIONS: sessionBinding(config) };
+        expect((await worker.fetch(createRequest('GET', 'http://localhost/gym-api/session', undefined, token), stale, {} as any)).status).toBe(401);
+        expect((await probe(token)).status).toBe(200);
       });
 
-      it('renews the session each time the app opens', async () => {
-        const response = await probe(SESSION);
-        expect(response.headers.get('Set-Cookie')).toMatch(/^liftlogic_auth_token=v1\.\d+\.[0-9a-f]{64}; .*Max-Age=7776000/);
+      it('revokes the host-only session even if the legacy cookie is also present', async () => {
+        const logout = new Request('https://app.example/gym-api/logout', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: 'liftlogic_auth_token=legacy; ' + cookieFor(SESSION) }
+        });
+        const response = await worker.fetch(logout, env, {} as any);
+        expect(response.status).toBe(200);
+        expect(response.headers.getSetCookie()).toHaveLength(2);
+        expect((await probe(SESSION)).status).toBe(401);
+      });
+
+      it('also invalidates sessions when the optional session secret changes', async () => {
+        const req = createRequest('GET', 'http://localhost/gym-api/session', undefined, SESSION);
+        expect((await worker.fetch(req, { ...env, SESSION_SECRET: 'rotated' }, {} as any)).status).toBe(401);
+      });
+
+      it('renews the idle expiry up to the original 180-day limit', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        const start = Date.now();
+        const token = await signIn();
+        for (const days of [70, 140]) {
+          vi.setSystemTime(start + days * 86400000);
+          const response = await probe(token);
+          expect(response.status).toBe(200);
+          const maxAge = Math.min(90, 180 - days) * 86400;
+          expect(response.headers.get('Set-Cookie')).toContain(`Max-Age=${maxAge}`);
+        }
+        vi.setSystemTime(start + 180 * 86400000);
+        expect((await probe(token)).status).toBe(401);
+      });
+
+      it('fails closed on a storage outage and lets the browser retry logout', async () => {
+        const down = { ...loginEnv(), SESSIONS: { idFromName() { throw new Error('unavailable'); } } as unknown as DurableObjectNamespace };
+        for (const [method, path, body] of [['GET', 'session', undefined], ['POST', 'logout', {}], ['POST', 'login', { password: PASSWORD }]] as const) {
+          const response = await worker.fetch(createRequest(method, `http://localhost/gym-api/${path}`, body), down, {} as any);
+          expect(response.status).toBe(503);
+          expect(response.headers.get('Set-Cookie')).toBeNull();
+        }
+        expect((await probe(SESSION)).status).toBe(200);
       });
 
       it('marks responses as never to be cached', async () => {
@@ -262,7 +353,7 @@ describe('Worker', () => {
       const page = new Response('<!doctype html>');
       const assets = { fetch: vi.fn().mockResolvedValue(page) };
       const request = new Request('http://localhost/');
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ASSETS: assets as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: assets as any };
 
       expect(await worker.fetch(request, env, {} as any)).toBe(page);
       expect(assets.fetch).toHaveBeenCalledWith(request);
@@ -270,7 +361,7 @@ describe('Worker', () => {
 
     it('handles OPTIONS preflight request', async () => {
       const request = createRequest('OPTIONS', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ALLOWED_ORIGIN: '*' as any, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -280,11 +371,40 @@ describe('Worker', () => {
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
     });
 
+    it('checks the origin for every mutation, including login, logout and trailing-slash routes', async () => {
+      const env = { ...loginEnv(), ALLOWED_ORIGIN: '*' };
+      for (const [method, path] of [['POST', ''], ['POST', '/bulk/'], ['POST', '/login'], ['POST', '/logout/'], ['DELETE', '']]) {
+        const request = new Request('https://app.example/gym-api' + path, {
+          method, headers: { Origin: 'https://other.example', 'Content-Type': 'application/json', Cookie: cookieFor(SESSION) },
+          body: '{}'
+        });
+        expect((await worker.fetch(request, env, {} as any)).status).toBe(403);
+      }
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('accepts JSON writes from same and explicitly trusted origins, rejects other media types', async () => {
+      const env = { ...loginEnv(), ALLOWED_ORIGIN: 'https://client.example' };
+      const post = (origin: string | null, contentType: string, site?: string) => {
+        const headers = new Headers({ 'Content-Type': contentType, Cookie: cookieFor(SESSION) });
+        if (origin !== null) headers.set('Origin', origin);
+        if (site) headers.set('Sec-Fetch-Site', site);
+        return worker.fetch(new Request('https://app.example/gym-api/bulk', { method: 'POST', headers, body: '[]' }), env, {} as any);
+      };
+      for (const origin of ['https://app.example', 'https://client.example']) {
+        expect((await post(origin, 'Application/JSON; charset=utf-8')).status).toBe(200);
+        expect((await post(origin, 'text/plain')).status).toBe(415);
+        expect((await post(origin, 'application/json-extra')).status).toBe(415);
+      }
+      expect((await post(null, 'application/json', 'same-site')).status).toBe(403);
+      expect((await post('null', 'application/json', 'cross-site')).status).toBe(403);
+    });
+
     it('reflects origin if in ALLOWED_ORIGIN whitelist', async () => {
       const request = new Request('http://localhost/gym-api', {
         headers: new Headers({ 'Origin': 'https://liftlogic.app' })
       });
-      const env = { DATABASE_URL: 'dummy', TARGET_HASH: 'testsecret', ALLOWED_ORIGIN: 'https://liftlogic.app,http://localhost:3000' as any, ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'dummy', TARGET_HASH: PASSWORD_HASH, ALLOWED_ORIGIN: 'https://liftlogic.app,http://localhost:3000' as any, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://liftlogic.app');
@@ -304,16 +424,8 @@ describe('Worker', () => {
 
 
     it('authenticates using dynamically hashed PASSWORD if TARGET_HASH is not set', async () => {
-      // Create a test password and hash it locally
-      const password = 'mytestpassword';
-      const msgBuffer = new TextEncoder().encode(password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-      // A session signed for that password's hash is what gets in.
-      const request = createRequest('GET', 'http://localhost/gym-api', undefined, await mintSession({}, hashHex));
-      const env = { DATABASE_URL: 'dummy', PASSWORD: password, ASSETS: { fetch: vi.fn() } as any };
+      const env = { ...loginEnv(), TARGET_HASH: undefined, PASSWORD: 'mytestpassword' };
+      const request = createRequest('GET', 'http://localhost/gym-api', undefined, await signIn(env, 'mytestpassword'));
       const response = await worker.fetch(request, env, {} as any);
 
       expect(response.status).toBe(200);
@@ -334,7 +446,7 @@ describe('Worker', () => {
   describe('Session probe', () => {
     it('confirms a valid session without touching the database', async () => {
       const request = createRequest('GET', 'http://localhost/gym-api/session');
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -347,7 +459,7 @@ describe('Worker', () => {
 
     it('rejects an unauthenticated probe', async () => {
       const request = createRequest('GET', 'http://localhost/gym-api/session', undefined, null as any);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -357,7 +469,7 @@ describe('Worker', () => {
   });
 
   describe('Hardening', () => {
-    const base = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+    const base = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
     const set = { id: 'a', exerciseId: 'ex', timestamp: 1700000000000, weight: 100, reps: 8, sets: 1 };
 
     it('limits credential guesses against the data endpoints, not just /login', async () => {
@@ -453,7 +565,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Connection failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'postgres://dummy:dummy@localhost:5432/dummy', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -469,7 +581,7 @@ describe('Worker', () => {
       mockQuery.mockResolvedValueOnce({ rows: mockRows });
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
 
@@ -480,7 +592,7 @@ describe('Worker', () => {
   describe('POST Bulk Requests (Validation)', () => {
     it('returns 400 for non-array payload', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', { id: '1' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -489,7 +601,7 @@ describe('Worker', () => {
 
     it('returns 400 for invalid item in array', async () => {
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', [{ id: '' }]);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -503,7 +615,7 @@ describe('Worker', () => {
         { id: '2', exerciseId: 'ex2', timestamp: 124, weight: 150, reps: 5 }
       ];
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(200);
       const data = await response.json() as any;
@@ -515,7 +627,7 @@ describe('Worker', () => {
     it('returns 400 if bulk payload exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api/bulk', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -530,7 +642,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -541,7 +653,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: -10, weight: 100, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -552,7 +664,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: NaN, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -563,7 +675,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 2001, reps: 10
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid weight' });
@@ -573,7 +685,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 1001
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid reps' });
@@ -583,7 +695,7 @@ describe('Worker', () => {
       const request = createRequest('POST', 'http://localhost/gym-api', {
         id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10, sets: 101
       });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid sets' });
@@ -592,7 +704,7 @@ describe('Worker', () => {
     it('returns 400 if items array exceeds 10,000 items', async () => {
       const items = Array(10001).fill({ id: '1', exerciseId: 'ex1', timestamp: 123, weight: 100, reps: 10 });
       const request = createRequest('POST', 'http://localhost/gym-api', items);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       const data = await response.json() as any;
@@ -603,7 +715,7 @@ describe('Worker', () => {
   describe('DELETE Requests', () => {
     it('returns 400 if body is empty', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', {});
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -613,7 +725,7 @@ describe('Worker', () => {
 
     it('returns 400 if exerciseId is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { exerciseId: '' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -623,7 +735,7 @@ describe('Worker', () => {
 
     it('returns 400 if id is invalid', async () => {
       const request = createRequest('DELETE', 'http://localhost/gym-api', { id: '' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -632,7 +744,7 @@ describe('Worker', () => {
   });
 
   describe('Storage: sets in workouts, exercises in their own table', () => {
-    const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+    const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
     const curl = { id: 'DUMBBELL_CURL', name: 'Dumbbell Bicep Curls', muscleGroup: 'Biceps', defaultWeight: 25, increment: 5, targetReps: 12, dayType: 'PULL' };
     const definitionRow = (ex: object, id = 'def_DUMBBELL_CURL') =>
       ({ id, exerciseId: '__DEFINITION__', timestamp: 1, weight: 0, reps: 0, sets: 0, notes: JSON.stringify(ex) });
@@ -686,8 +798,26 @@ describe('Worker', () => {
       expect(mockQuery).not.toHaveBeenCalled();
     });
 
+    it('refuses reserved set IDs on both write paths before touching either table', async () => {
+      const row = { id: 'def_custom-9', exerciseId: 'curl', timestamp: 1, weight: 10, reps: 1 };
+      for (const [path, body] of [['/gym-api', row], ['/gym-api/bulk', [row]]] as const) {
+        const response = await worker.fetch(createRequest('POST', 'http://localhost' + path, body), env, {} as any);
+        expect(response.status).toBe(400);
+      }
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('requires an explicit target for an ambiguous legacy delete and can remove a pre-existing set safely', async () => {
+      const remove = (body: object) => worker.fetch(createRequest('DELETE', 'http://localhost/gym-api', body), env, {} as any);
+      expect((await remove({ id: 'def_custom-9' })).status).toBe(409);
+      expect((await remove({ setId: 'def_custom-9', definitionId: 'custom-9' })).status).toBe(400);
+      expect(mockQuery).not.toHaveBeenCalled();
+      expect((await remove({ setId: 'def_custom-9' })).status).toBe(200);
+      expect(mockQuery).toHaveBeenCalledWith('DELETE FROM workouts WHERE id = $1', ['def_custom-9']);
+    });
+
     it('deletes an exercise from its own table', async () => {
-      await worker.fetch(createRequest('DELETE', 'http://localhost/gym-api', { id: 'def_custom-9' }), env, {} as any);
+      await worker.fetch(createRequest('DELETE', 'http://localhost/gym-api', { definitionId: 'custom-9' }), env, {} as any);
       expect(sqlOf(mockQuery.mock.calls[0])).toBe('DELETE FROM exercises WHERE id = $1');
       expect(mockQuery.mock.calls[0][1]).toEqual(['custom-9']);
     });
@@ -703,7 +833,7 @@ describe('Worker', () => {
       mockQuery.mockRejectedValueOnce(new Error('Super secret DB credentials failed'));
 
       const request = createRequest('GET', 'http://localhost/gym-api');
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(500);
@@ -712,7 +842,7 @@ describe('Worker', () => {
 
     it('returns 400 for invalid JSON payload', async () => {
       const request = new Request('http://localhost/gym-api', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookieFor(SESSION) }, body: '{ invalid json: ' });
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid JSON' });
@@ -723,7 +853,7 @@ describe('Worker', () => {
     it('rejects an overly long session cookie to prevent CPU exhaustion', async () => {
       const longSecret = 'a'.repeat(1000);
       const request = createRequest('GET', 'http://localhost/gym-api', undefined, longSecret);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(401);
@@ -733,7 +863,7 @@ describe('Worker', () => {
     it('rejects an overly long login password to prevent CPU exhaustion', async () => {
       const longPassword = 'a'.repeat(1000);
       const request = createRequest('POST', 'http://localhost/gym-api/login', { password: longPassword }, null as any);
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       const response = await worker.fetch(request, env, {} as any);
       expect(response.status).toBe(400);
@@ -741,7 +871,7 @@ describe('Worker', () => {
     });
 
     it('rejects non-object or array payloads for endpoints expecting an object', async () => {
-      const env = { DATABASE_URL: 'real', TARGET_HASH: 'testsecret', ASSETS: { fetch: vi.fn() } as any };
+      const env = { DATABASE_URL: 'real', TARGET_HASH: PASSWORD_HASH, ASSETS: { fetch: vi.fn() } as any };
 
       // 1. Login with array instead of object
       const loginRequest = createRequest('POST', 'http://localhost/gym-api/login', [1, 2, 3], null as any);

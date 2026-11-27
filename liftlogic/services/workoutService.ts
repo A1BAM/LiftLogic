@@ -2,8 +2,8 @@ import { API_URL } from '../constants';
 import { apiFetch } from './apiClient';
 
 export const workoutService = {
-  async fetchWorkouts() {
-    const res = await apiFetch(API_URL);
+  async fetchWorkouts(signal?: AbortSignal) {
+    const res = await apiFetch(API_URL, { signal });
     if (!res.ok) {
       const err = new Error('Failed to fetch data');
       (err as any).status = res.status;
@@ -17,8 +17,9 @@ export const workoutService = {
     return res.json();
   },
 
-  async saveItems(payload: any[]) {
+  async saveItems(payload: any[], signal?: AbortSignal) {
     const res = await apiFetch(`${API_URL}/bulk`, {
+      signal,
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -26,8 +27,9 @@ export const workoutService = {
     return res.json();
   },
 
-  async saveItem(payload: any) {
+  async saveItem(payload: any, signal?: AbortSignal) {
     const res = await apiFetch(API_URL, {
+      signal,
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -35,8 +37,9 @@ export const workoutService = {
     return res.json();
   },
 
-  async deleteItem(payload: any) {
+  async deleteItem(payload: any, signal?: AbortSignal) {
     const res = await apiFetch(API_URL, {
+      signal,
       method: 'DELETE',
       body: JSON.stringify(payload)
     });

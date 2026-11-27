@@ -38,7 +38,7 @@ vi.mock('./services/authService', () => ({
   }
 }));
 vi.mock('./services/exerciseService', () => ({
-  exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn() }
+  exerciseService: { getLocalExercises: () => [], setLocalExercises: vi.fn(), clearLocalExercises: vi.fn() }
 }));
 vi.mock('./services/workoutService', () => ({
   workoutService: {

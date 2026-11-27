@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { EXERCISES } from './constants';
 import { WorkoutLog, ExerciseDef, DayType } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -19,17 +19,15 @@ import { HomeScreen } from './components/HomeScreen';
 import { ChevronLeft, Loader2, AlertCircle, Plus, ClipboardList } from 'lucide-react';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { useBackToClose } from './hooks/useBackToClose';
+import { exerciseService } from './services/exerciseService';
 import { authService } from './services/authService';
 import { logger } from './utils/logger';
 import { getLocalDateKey, getLocalDayBounds } from './utils/date';
 import { ParsedBackup } from './utils/backup';
+import { generateId } from './utils/id';
 import { loadResume, saveResume } from './utils/resume';
 
-const AppScreens: React.FC = () => {
-  // Auth State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-
+const WorkoutScreens = ({ signal, onLogout }: { signal: AbortSignal; onLogout: () => void }) => {
   // UI State
   const [activeModal, setActiveModal] = useState<'log' | 'history' | 'globalHistory' | 'addExercise' | 'archived' | 'switch' | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDef | null>(null);
@@ -37,10 +35,6 @@ const AppScreens: React.FC = () => {
   const [resumed] = useState(loadResume);
   const [workoutDay, setWorkoutDay] = useState<DayType | null>(resumed.day);
   const [restEndTime, setRestEndTime] = useState<number | null>(resumed.restEndTime);
-  // True until the session check answers, and only when the cookie was good
-  // last time. It keeps a reload from flashing the lock screen at someone who
-  // is, in a moment, going to turn out to be logged in.
-  const [isResuming, setIsResuming] = useState(resumed.signedIn);
   const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
 
   // The back gesture walks out the way you walked in: sheet, then workout.
@@ -74,60 +68,11 @@ const AppScreens: React.FC = () => {
     getLogsForExercise,
     getTodaysLogs,
     getLastSessionLogs,
-  } = useWorkoutData(isAuthenticated);
+  } = useWorkoutData(signal);
 
-  // Check Auth on Mount. This only asks whether the cookie is still good:
-  // useWorkoutData does the one fetch of the history, once that answer is yes.
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        if (await authService.checkSession()) setIsAuthenticated(true);
-      } catch (err) {
-        // Offline or server down; the lock screen is the safe default.
-      } finally {
-        setIsResuming(false);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  // Keep the place up to date, so a reload at any moment comes back to it.
-  useEffect(() => {
-    // Not while the answer is still pending: writing "signed out" here would
-    // throw away the hint that is suppressing the lock screen.
-    if (isResuming) return;
-    saveResume({ day: workoutDay, restEndTime, signedIn: isAuthenticated });
-  }, [workoutDay, restEndTime, isAuthenticated, isResuming]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Logging in is enough; the history download follows from
-      // isAuthenticated, so there is no point fetching it here as well.
-      await authService.login(passwordInput);
-      setIsAuthenticated(true);
-    } catch (err: unknown) {
-      const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
-      if (status === 401) {
-        notify("Wrong password");
-      } else if (status === 429) {
-        notify("Too many attempts", "Wait a minute, then try again.");
-      } else {
-        notify("Could not connect", "Check your network and try again.");
-      }
-    }
-    setPasswordInput("");
-  };
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (err) {
-      logger.error("Logout error", err);
-    }
-    setIsAuthenticated(false);
-    setWorkoutDay(null);
-  };
+    if (!signal.aborted) saveResume({ day: workoutDay, restEndTime, signedIn: true });
+  }, [workoutDay, restEndTime, signal]);
 
   // UI Handlers
   const handleLogClick = useCallback((exercise: ExerciseDef) => {
@@ -291,11 +236,16 @@ const AppScreens: React.FC = () => {
    * edited since the backup was taken keeps its edit, and an exercise you have
    * since archived stays archived.
    */
-  const handleImportBackup = useCallback(async ({ logs: incoming, exercises }: ParsedBackup) => {
+  const handleImportBackup = useCallback(async ({ logs: incoming, exercises, originalSetIds }: ParsedBackup) => {
     const knownExercises = new Set(allExercises.map(e => e.id));
-    const knownLogs = new Set(logs.map(l => l.id));
+    const knownLogs = new Map(logs.map(log => [log.id, log]));
     const newExercises = exercises.filter(e => !knownExercises.has(e.id));
-    const newLogs = incoming.filter(l => !knownLogs.has(l.id));
+    const newLogs = incoming.filter(log => {
+      if (knownLogs.has(log.id)) return false;
+      const originalId = originalSetIds?.get(log.id);
+      const original = originalId && knownLogs.get(originalId);
+      return !original || original.exerciseId !== log.exerciseId || original.timestamp !== log.timestamp;
+    });
 
     if (newExercises.length === 0 && newLogs.length === 0) {
       notify('Nothing new', 'Everything in that backup is already here.');
@@ -407,27 +357,6 @@ const AppScreens: React.FC = () => {
 
   // --- RENDERING ---
 
-  // 1. LOCK SCREEN
-  // 0. COMING BACK: the page was reloaded and the session check is in flight.
-  if (isResuming && !isAuthenticated) {
-    return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-cream-400">
-        <Loader2 className="animate-spin" size={20} />
-        <p className="text-[14px]">Picking up where you left off…</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <LockScreen
-        password={passwordInput}
-        onPasswordChange={setPasswordInput}
-        onSubmit={handleLogin}
-      />
-    );
-  }
-
   // 2. LOADING STATE
   // Also covers coming back into a workout after a reload: until the history
   // is in, the card would otherwise be drawn from nothing and claim it was
@@ -465,7 +394,7 @@ const AppScreens: React.FC = () => {
           onPick={setWorkoutDay}
           onJournal={() => setActiveModal('globalHistory')}
           onExercises={() => setActiveModal('archived')}
-          onLogout={handleLogout}
+          onLogout={onLogout}
         />
 
         {activeModal === 'globalHistory' && (
@@ -678,12 +607,120 @@ const AppScreens: React.FC = () => {
   );
 };
 
-/** The screens, plus the one place in-app dialogs are drawn from. */
-const App: React.FC = () => (
-  <>
-    <AppScreens />
-    <DialogHost />
-  </>
-);
+const LOGOUT_KEY = 'liftlogic_logout';
+
+const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isResuming, setIsResuming] = useState(() => loadResume().signedIn);
+  const [passwordInput, setPasswordInput] = useState('');
+  const session = useRef(new AbortController());
+  const logoutChannel = useRef<BroadcastChannel | null>(null);
+  const lastLogout = useRef<string | null>(null);
+
+  const lock = useCallback((id: string) => {
+    if (lastLogout.current === id) return;
+    lastLogout.current = id;
+    session.current.abort();
+    session.current = new AbortController();
+    setIsAuthenticated(false);
+    setIsResuming(false);
+    setPasswordInput('');
+    exerciseService.clearLocalExercises();
+    saveResume({ day: null, restEndTime: null, signedIn: false });
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const { signal } = session.current;
+    authService.checkSession(signal).then(valid => {
+      if (!mounted || signal.aborted) return;
+      if (valid) setIsAuthenticated(true);
+      else {
+        exerciseService.clearLocalExercises();
+        saveResume({ day: null, restEndTime: null, signedIn: false });
+      }
+    }).catch(() => { /* Keep the app locked when the session cannot be checked. */ })
+      .finally(() => { if (mounted && !signal.aborted) setIsResuming(false); });
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LOGOUT_KEY && event.newValue) lock(event.newValue);
+    };
+    const catchUp = () => {
+      try {
+        const id = localStorage.getItem(LOGOUT_KEY);
+        if (id && id !== lastLogout.current) lock(id);
+      } catch { /* BroadcastChannel also works when storage is unavailable. */ }
+    };
+    try { lastLogout.current = localStorage.getItem(LOGOUT_KEY); } catch { /* Storage may be blocked. */ }
+    const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(LOGOUT_KEY) : null;
+    if (channel) channel.onmessage = event => { if (typeof event.data === 'string') lock(event.data); };
+    logoutChannel.current = channel;
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('pageshow', catchUp);
+    return () => {
+      mounted = false;
+      channel?.close();
+      logoutChannel.current = null;
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('pageshow', catchUp);
+    };
+  }, [lock]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    session.current.abort();
+    session.current = new AbortController();
+    setIsResuming(false);
+    const { signal } = session.current;
+    try {
+      // Logging in is enough; the history download follows from
+      // isAuthenticated, so there is no point fetching it here as well.
+      await authService.login(passwordInput, signal);
+      if (!signal.aborted) setIsAuthenticated(true);
+    } catch (err: unknown) {
+      if (signal.aborted) return;
+      const status = err !== null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : undefined;
+      if (status === 401) {
+        notify("Wrong password");
+      } else if (status === 429) {
+        notify("Too many attempts", "Wait a minute, then try again.");
+      } else {
+        notify("Could not connect", "Check your network and try again.");
+      }
+    }
+    setPasswordInput("");
+  };
+
+  const handleLogout = async () => {
+    const { signal } = session.current;
+    try {
+      await authService.logout();
+    } catch (err) {
+      logger.error("Logout error", err);
+      if (!signal.aborted) notify("Sign-out unconfirmed", "Check your connection and tap Lock again.");
+      return;
+    }
+    if (signal.aborted) return;
+    const id = generateId();
+    lock(id);
+    try { localStorage.setItem(LOGOUT_KEY, id); } catch { /* Notify other tabs through the channel. */ }
+    logoutChannel.current?.postMessage(id);
+  };
+
+  let screen;
+  if (isAuthenticated) {
+    screen = <WorkoutScreens signal={session.current.signal} onLogout={handleLogout} />;
+  } else if (isResuming) {
+    screen = (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-cream-400">
+        <Loader2 className="animate-spin" size={20} />
+        <p className="text-[14px]">Picking up where you left off…</p>
+      </div>
+    );
+  } else {
+    screen = <LockScreen password={passwordInput} onPasswordChange={setPasswordInput} onSubmit={handleLogin} />;
+  }
+  return <>{screen}<DialogHost key={isAuthenticated ? 'open' : 'locked'} /></>;
+};
 
 export default App;
